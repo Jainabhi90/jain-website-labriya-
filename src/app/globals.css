@@ -98,3 +98,10 @@ body {
 .animate-pulse-soft {
   animation: pulse-soft 4s infinite ease-in-out;
 }
+
+/* Fallback for SSR opacity: 0 stuck elements if JS fails to load or runs slowly */
+html:not(.js-loaded) [style*="opacity:0"],
+html:not(.js-loaded) [style*="opacity: 0"] {
+  opacity: 1 !important;
+  transform: none !important;
+}

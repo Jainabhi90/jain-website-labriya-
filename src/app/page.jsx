@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Countdown from "@/components/Countdown";
 import { db } from "@/services/db";
+import { translations } from "@/services/translations";
 
 // Framer Motion staggered transition variants
 const containerVariants = {
@@ -39,6 +40,7 @@ const itemVariants = {
 export default function Home() {
   const [schedules, setSchedules] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [lang, setLang] = useState("en");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,14 +48,26 @@ export default function Home() {
         const schedData = await db.getSchedules();
         const annData = await db.getAnnouncements();
         
-        setSchedules(schedData);
-        setAnnouncements(annData);
+        setSchedules(schedData || []);
+        setAnnouncements(annData || []);
       } catch (err) {
         console.error("Error loading homepage data", err);
       }
     };
+    
     fetchData();
+
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+      const syncLang = () => {
+        setLang(localStorage.getItem("lang") || "en");
+      };
+      window.addEventListener("languageChange", syncLang);
+      return () => window.removeEventListener("languageChange", syncLang);
+    }
   }, []);
+
+  const t = translations[lang] || translations["en"];
 
   const morningSchedules = schedules.filter(s => s.session === "morning");
   const eveningSchedules = schedules.filter(s => s.session === "evening");
@@ -69,7 +83,7 @@ export default function Home() {
     <div className="w-full flex flex-col items-center overflow-x-hidden">
       
       {/* 1. HERO SECTION */}
-      <section className="relative w-full min-h-[92vh] flex flex-col items-center justify-center text-center px-6 py-20 bg-gradient-to-b from-secondary/40 via-white to-bg-custom">
+      <section className="relative w-full min-h-[95vh] flex flex-col items-center justify-center text-center px-6 py-16 bg-gradient-to-b from-secondary/40 via-white to-bg-custom">
         {/* Background Saffron/Yellow Circle Orbs representing purity */}
         <motion.div 
           animate={{ 
@@ -101,46 +115,68 @@ export default function Home() {
           initial="hidden"
           animate="visible"
           variants={containerVariants}
-          className="max-w-4xl flex flex-col items-center gap-6"
+          className="max-w-4xl flex flex-col items-center gap-5 mt-6"
         >
           {/* Badge */}
           <motion.span 
             variants={itemVariants}
-            className="px-4 py-1.5 rounded-full bg-secondary border border-primary/10 text-xs font-semibold uppercase tracking-widest text-primary flex items-center gap-2"
+            className="px-4 py-1.5 rounded-full bg-secondary border border-primary/10 text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-            Jai Jinendra
+            {t.jaiJinendra}
           </motion.span>
 
           {/* Temple Name */}
           <motion.h2 
             variants={itemVariants}
-            className="font-display font-medium text-text-secondary text-sm tracking-widest uppercase mt-1"
+            className="font-display font-medium text-text-secondary text-xs sm:text-sm tracking-widest uppercase mt-1"
           >
-            Shree Labriya Jain Shwetambar Mandir
+            {t.shreeLabriyaMandir}
           </motion.h2>
 
           {/* Main Title */}
           <motion.h1 
             variants={itemVariants}
-            className="font-display font-semibold text-text-primary text-4xl sm:text-5xl md:text-6xl tracking-tight leading-tight max-w-3xl"
+            className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight leading-tight max-w-3xl"
           >
-            Sacred Chaturmas <br />
-            <span className="text-primary font-bold">Festival 2026</span>
+            {lang === "en" ? (
+              <>
+                Sacred Chaturmas <br />
+                <span className="text-primary font-extrabold">Festival 2026</span>
+              </>
+            ) : (
+              <>
+                पावन चातुर्मास <br />
+                <span className="text-primary font-extrabold">महोत्सव २०२६</span>
+              </>
+            )}
           </motion.h1>
 
           {/* Description */}
           <motion.p 
             variants={itemVariants}
-            className="text-text-secondary text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed"
+            className="text-text-secondary text-xs sm:text-sm md:text-base max-w-2xl leading-relaxed"
           >
-            Welcome the season of reflection, purification, and spiritual discourse. Connect with the daily pravachans, holy chants, and auspicious timings from wherever you are.
+            {t.welcomeDescription}
           </motion.p>
+
+          {/* Spiritual Hero Image Frame */}
+          <motion.div 
+            variants={itemVariants}
+            className="relative w-full max-w-2xl aspect-[16/10] sm:aspect-[16/9.5] rounded-custom-lg overflow-hidden shadow-premium border border-primary/10 mt-2 mb-4 group bg-secondary"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent z-10" />
+            <img 
+              src="/jain_hero_spiritual.png" 
+              alt="Shree Labriya Jain Shwetambar Mandir Chaturmas 2026" 
+              className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-700" 
+            />
+          </motion.div>
 
           {/* Main CTA */}
           <motion.div 
             variants={itemVariants}
-            className="flex items-center justify-center mt-6 w-full"
+            className="flex items-center justify-center mt-2 w-full"
           >
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -148,14 +184,14 @@ export default function Home() {
               onClick={() => scrollToSection("schedule")}
               className="px-10 py-4 rounded-custom-md bg-primary text-white font-bold text-sm shadow-premium hover:shadow-premium-hover hover:bg-primary/95 transition-all w-full sm:w-auto cursor-pointer"
             >
-              View Today's Schedule
+              {t.viewTodaySchedule}
             </motion.button>
           </motion.div>
           
           {/* Countdown timer */}
           <motion.div 
             variants={itemVariants}
-            className="mt-10 w-full"
+            className="mt-6 w-full"
           >
             <Countdown />
           </motion.div>
@@ -163,7 +199,7 @@ export default function Home() {
       </section>
 
       {/* 2. QUICK ACCESS GRID */}
-      <section className="max-w-6xl w-full px-6 py-16">
+      <section className="max-w-6xl w-full px-6 py-12">
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -171,6 +207,36 @@ export default function Home() {
           variants={containerVariants}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
+          
+          {/* Featured Sadhana Tracker Banner */}
+          <motion.div 
+            variants={itemVariants}
+            className="col-span-full group relative overflow-hidden p-6 sm:p-8 rounded-custom-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-premium transition-all duration-300 min-h-[160px] flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer"
+            onClick={() => window.location.href = "/dashboard"}
+          >
+            {/* Ambient background decoration */}
+            <div className="absolute right-0 bottom-0 translate-y-12 translate-x-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+              <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-2xl shrink-0">
+                🏆
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg sm:text-xl mb-1 flex items-center justify-center sm:justify-start gap-2">
+                  <span>{t.sadhanaTracker}</span>
+                  <span className="text-[9px] bg-white text-orange-600 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {t.sadhanaTrackerJoin}
+                  </span>
+                </h3>
+                <p className="text-xs text-orange-50 leading-relaxed max-w-xl">
+                  {t.sadhanaTrackerDesc}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 flex items-center gap-2 bg-white text-orange-600 hover:bg-orange-50 font-bold text-xs uppercase tracking-wider px-5 py-3.5 rounded-custom-md shadow-md transition-colors w-full md:w-auto justify-center">
+              <span>{t.goToDevoteePortal}</span>
+              <ArrowRight size={14} />
+            </div>
+          </motion.div>
           
           {/* Schedule Card */}
           <motion.div 
@@ -186,8 +252,8 @@ export default function Home() {
               <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
             </div>
             <div>
-              <h3 className="font-display font-semibold text-text-primary text-base mb-1">{"Today's Schedule"}</h3>
-              <p className="text-xs text-text-secondary">View daily morning and evening worship timelines.</p>
+              <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.todaysSchedule}</h3>
+              <p className="text-xs text-text-secondary">{t.todaysScheduleDesc}</p>
             </div>
           </motion.div>
 
@@ -201,8 +267,8 @@ export default function Home() {
                 <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
               </div>
               <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">Jain Panchang</h3>
-                <p className="text-xs text-text-secondary">Explore auspicious tithis, sunrise, sunset, and Choghadiyas.</p>
+                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.jainPanchang}</h3>
+                <p className="text-xs text-text-secondary">{t.jainPanchangDesc}</p>
               </div>
             </Link>
           </motion.div>
@@ -221,8 +287,8 @@ export default function Home() {
               <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
             </div>
             <div>
-              <h3 className="font-display font-semibold text-text-primary text-base mb-1">Latest Updates</h3>
-              <p className="text-xs text-text-secondary">Read official news, upcoming programs, and trust notices.</p>
+              <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.latestUpdates}</h3>
+              <p className="text-xs text-text-secondary">{t.latestUpdatesDesc}</p>
             </div>
           </motion.div>
 
@@ -236,8 +302,8 @@ export default function Home() {
                 <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
               </div>
               <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">Events & Programs</h3>
-                <p className="text-xs text-text-secondary">Browse upcoming festival slots and register for waitlists.</p>
+                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.eventsPrograms}</h3>
+                <p className="text-xs text-text-secondary">{t.eventsProgramsDesc}</p>
               </div>
             </Link>
           </motion.div>
@@ -252,8 +318,8 @@ export default function Home() {
                 <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
               </div>
               <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">Donation Desk</h3>
-                <p className="text-xs text-text-secondary">Support Chaturmas arrangements and temple welfare projects.</p>
+                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.donationDesk}</h3>
+                <p className="text-xs text-text-secondary">{t.donationDeskDesc}</p>
               </div>
             </Link>
           </motion.div>
@@ -268,8 +334,8 @@ export default function Home() {
                 <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
               </div>
               <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">About Mandir</h3>
-                <p className="text-xs text-text-secondary">Read historical scrolls, Guru lineage, and trust mission details.</p>
+                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.aboutMandir}</h3>
+                <p className="text-xs text-text-secondary">{t.aboutMandirDesc}</p>
               </div>
             </Link>
           </motion.div>
@@ -282,87 +348,107 @@ export default function Home() {
         <div className="max-w-5xl mx-auto flex flex-col items-center">
           
           <div className="text-center max-w-2xl mb-16">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">Daily Worship Timeline</span>
-            <h2 className="font-display font-semibold text-text-primary text-3xl mt-1">{"Today's Schedule"}</h2>
-            <p className="text-sm text-text-secondary mt-2">Daily spiritual programs, Pujas, and discourses at Shree Labriya Mandir. Updates made by the administration are reflected instantly.</p>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{t.dailyWorshipTimeline}</span>
+            <h2 className="font-display font-semibold text-text-primary text-3xl mt-1">{t.todaysSchedule}</h2>
+            <p className="text-sm text-text-secondary mt-2">{t.scheduleSubtitle}</p>
           </div>
 
-          <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
-            {/* Morning Timeline */}
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-3 pb-3 border-b border-border-custom">
-                <span className="text-lg">☀️</span>
-                <h3 className="font-display font-semibold text-text-primary text-base uppercase tracking-wider">Morning Sessions</h3>
-              </div>
+          {schedules.length > 0 ? (
+            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12">
               
-              <div className="flex flex-col gap-4">
-                {morningSchedules.length > 0 ? (
-                  morningSchedules.map((item, idx) => (
-                    <motion.div 
-                      key={item.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }}
-                      viewport={{ once: true, margin: "-50px" }}
-                      className="flex items-center gap-5 p-4 rounded-custom-md bg-white border border-border-custom shadow-premium"
-                    >
-                      <div className="flex flex-col items-center justify-center py-2 px-3 bg-secondary text-primary rounded-custom-sm font-semibold text-[10px] tracking-wider uppercase min-w-[90px] border border-primary/5">
-                        {item.time}
-                      </div>
-                      <div className="text-sm font-medium text-text-primary">
-                        {item.activity}
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-xs text-text-secondary italic text-center py-6">No scheduled morning programs.</div>
-                )}
+              {/* Morning Timeline */}
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-3 pb-3 border-b border-border-custom">
+                  <span className="text-lg">☀️</span>
+                  <h3 className="font-display font-semibold text-text-primary text-base uppercase tracking-wider">{t.morningSessions}</h3>
+                </div>
+                
+                <div className="flex flex-col gap-4">
+                  {morningSchedules.length > 0 ? (
+                    morningSchedules.map((item, idx) => (
+                      <motion.div 
+                        key={item.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="flex items-center gap-5 p-4 rounded-custom-md bg-white border border-border-custom shadow-premium"
+                      >
+                        <div className="flex flex-col items-center justify-center py-2 px-3 bg-secondary text-primary rounded-custom-sm font-semibold text-[10px] tracking-wider uppercase min-w-[90px] border border-primary/5">
+                          {item.time}
+                        </div>
+                        <div className="text-sm font-medium text-text-primary">
+                          {item.activity}
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-text-secondary italic text-center py-6">{t.noMorningSchedules}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Evening Timeline */}
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-3 pb-3 border-b border-border-custom">
+                  <span className="text-lg">🌙</span>
+                  <h3 className="font-display font-semibold text-text-primary text-base uppercase tracking-wider">{t.eveningSessions}</h3>
+                </div>
+                
+                <div className="flex flex-col gap-4">
+                  {eveningSchedules.length > 0 ? (
+                    eveningSchedules.map((item, idx) => (
+                      <motion.div 
+                        key={item.id}
+                        initial={{ opacity: 0, x: 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="flex items-center gap-5 p-4 rounded-custom-md bg-white border border-border-custom shadow-premium"
+                      >
+                        <div className="flex flex-col items-center justify-center py-2 px-3 bg-secondary text-primary rounded-custom-sm font-semibold text-[10px] tracking-wider uppercase min-w-[90px] border border-primary/5">
+                          {item.time}
+                        </div>
+                        <div className="text-sm font-medium text-text-primary">
+                          {item.activity}
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-text-secondary italic text-center py-6">{t.noEveningSchedules}</div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            /* Illustrated empty state banner for schedule */
+            <div className="w-full max-w-2xl mx-auto p-8 sm:p-10 rounded-custom-lg bg-white border border-border-custom shadow-premium text-center flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center text-primary text-3xl border border-primary/15 animate-pulse-soft">
+                🪷
+              </div>
+              <div>
+                <h3 className="font-display font-semibold text-text-primary text-base">
+                  {lang === "en" ? "Daily Timetable Syncing" : "दैनिक समय-सारणी उपलब्ध होगी"}
+                </h3>
+                <p className="text-xs text-text-secondary mt-2 max-w-md mx-auto leading-relaxed">
+                  {t.programsWillBeUpdated}
+                </p>
+              </div>
+              <div className="px-4 py-2 rounded-custom-sm bg-secondary text-primary border border-primary/10 text-[10px] font-bold uppercase tracking-wider mt-1">
+                {lang === "en" ? "Chaturmas 2026 Season" : "चातुर्मास २०२६ सत्र"}
               </div>
             </div>
-
-            {/* Evening Timeline */}
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-3 pb-3 border-b border-border-custom">
-                <span className="text-lg">🌙</span>
-                <h3 className="font-display font-semibold text-text-primary text-base uppercase tracking-wider">Evening Sessions</h3>
-              </div>
-              
-              <div className="flex flex-col gap-4">
-                {eveningSchedules.length > 0 ? (
-                  eveningSchedules.map((item, idx) => (
-                    <motion.div 
-                      key={item.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }}
-                      viewport={{ once: true, margin: "-50px" }}
-                      className="flex items-center gap-5 p-4 rounded-custom-md bg-white border border-border-custom shadow-premium"
-                    >
-                      <div className="flex flex-col items-center justify-center py-2 px-3 bg-secondary text-primary rounded-custom-sm font-semibold text-[10px] tracking-wider uppercase min-w-[90px] border border-primary/5">
-                        {item.time}
-                      </div>
-                      <div className="text-sm font-medium text-text-primary">
-                        {item.activity}
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-xs text-text-secondary italic text-center py-6">No scheduled evening programs.</div>
-                )}
-              </div>
-            </div>
-
-          </div>
+          )}
         </div>
       </section>
 
       {/* 4. ANNOUNCEMENTS SECTION */}
       <section id="announcements" className="max-w-6xl w-full px-6 py-24 scroll-mt-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-primary">Stay Connected</span>
-          <h2 className="font-display font-semibold text-text-primary text-3xl mt-1">Announcements & Notices</h2>
-          <p className="text-sm text-text-secondary mt-2">Latest updates, programs, and guidelines from the Temple Committee.</p>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{t.stayConnected}</span>
+          <h2 className="font-display font-semibold text-text-primary text-3xl mt-1">{t.announcementsTitle}</h2>
+          <p className="text-sm text-text-secondary mt-2">{t.announcementsSub}</p>
         </div>
 
         <motion.div 
@@ -380,6 +466,14 @@ export default function Home() {
                 ? "bg-blue-50 text-blue-700 border-blue-500/10" 
                 : "bg-orange-50 text-primary border-primary/10";
 
+              const typeText = lang === "en"
+                ? ann.type.toUpperCase()
+                : ann.type === "program"
+                ? "उत्सव कार्यक्रम"
+                : ann.type === "update"
+                ? "अपडेट"
+                : "सूचना";
+
               return (
                 <motion.div 
                   key={ann.id}
@@ -390,10 +484,10 @@ export default function Home() {
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <span className={`text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${typeLabelStyles}`}>
-                        {ann.type}
+                        {typeText}
                       </span>
                       <span className="text-[10px] text-text-secondary">
-                        {new Date(ann.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {new Date(ann.createdAt).toLocaleDateString(lang === "en" ? "en-US" : "hi-IN", { month: "short", day: "numeric" })}
                       </span>
                     </div>
                     <h3 className="font-display font-semibold text-text-primary text-base leading-snug">
@@ -407,9 +501,17 @@ export default function Home() {
               );
             })
           ) : (
-            <div className="col-span-full py-16 text-center border border-dashed border-border-custom rounded-custom-lg flex flex-col items-center justify-center gap-3">
-              <span className="text-2xl">📢</span>
-              <p className="text-xs text-text-secondary font-semibold">No recent announcements available</p>
+            /* Custom illustrated empty state for announcements */
+            <div className="col-span-full py-16 text-center border border-dashed border-border-custom rounded-custom-lg flex flex-col items-center justify-center gap-3 bg-white p-8 shadow-premium">
+              <span className="text-3xl text-primary animate-bounce-soft">📢</span>
+              <h3 className="font-display font-semibold text-text-primary text-sm mt-1">
+                {lang === "en" ? "Updates Pending" : "नवीनतम समाचार प्रतीक्षित"}
+              </h3>
+              <p className="text-xs text-text-secondary max-w-sm leading-relaxed mt-1">
+                {lang === "en" 
+                  ? "Daily notices, program lists, and trust announcements will be posted here. Check back soon." 
+                  : "दैनिक सूचनाएं, विशेष घोषणाएं और प्रवचन कार्यक्रम यहां पोस्ट किए जाएंगे। कृपया शीघ्र जांचें।"}
+              </p>
             </div>
           )}
         </motion.div>

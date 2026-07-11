@@ -227,6 +227,35 @@ function getLocalItem(key, defaultValue) {
   }
 }
 
+export function initializeLocalDefaults(force = false) {
+  if (typeof window === "undefined") return;
+  const keys = [
+    { key: "temp_schedules", val: DEFAULT_SCHEDULE },
+    { key: "temp_announcements", val: DEFAULT_ANNOUNCEMENTS },
+    { key: "temp_tithi_panchang", val: DEFAULT_PANCHANG },
+    { key: "temp_events", val: DEFAULT_EVENTS },
+    { key: "temp_sadhana_activities", val: DEFAULT_SADHANA_ACTIVITIES },
+    { key: "temp_sadhana_profiles", val: DEFAULT_DEVOTEE_PROFILES },
+    { key: "temp_sadhana_logs", val: DEFAULT_SADHANA_LOGS }
+  ];
+  
+  keys.forEach(({ key, val }) => {
+    try {
+      const existing = localStorage.getItem(key);
+      if (force || !existing || existing === "[]" || existing === "{}") {
+        localStorage.setItem(key, JSON.stringify(val));
+      }
+    } catch (e) {
+      console.error("Error initializing key " + key, e);
+    }
+  });
+}
+
+// Automatically seed client-side storage on import
+if (typeof window !== "undefined") {
+  initializeLocalDefaults();
+}
+
 function setLocalItem(key, value) {
   if (typeof window === "undefined") return;
   try {

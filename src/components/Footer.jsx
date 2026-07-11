@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   MapPin, 
   Phone, 
@@ -8,9 +8,24 @@ import {
   MessageSquare
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { translations } from "@/services/translations";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const [lang, setLang] = useState("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+      const syncLang = () => {
+        setLang(localStorage.getItem("lang") || "en");
+      };
+      window.addEventListener("languageChange", syncLang);
+      return () => window.removeEventListener("languageChange", syncLang);
+    }
+  }, []);
+
+  const t = translations[lang] || translations["en"];
 
   return (
     <footer className="w-full bg-secondary border-t border-border-custom transition-all duration-300 pt-16 pb-28 md:pb-16 mt-auto">
@@ -22,25 +37,28 @@ export default function Footer() {
             <span className="text-2xl">📿</span>
             <div>
               <h3 className="font-display font-semibold text-text-primary text-lg">
-                Shree Labriya Jain Mandir
+                {t.shreeLabriyaMandir}
               </h3>
               <p className="text-xs text-text-secondary uppercase tracking-widest font-medium">
-                Shwetambar Mandap Trust
+                {lang === "en" ? "Shwetambar Mandap Trust" : "श्वेतांबर मंडल ट्रस्ट"}
               </p>
             </div>
           </div>
           
           <p className="text-sm text-text-secondary leading-relaxed max-w-sm">
-            Experience peace and divine vibes at Shree Labriya Jain Mandir during the Chaturmas 2026 festival. We welcome all devotees.
+            {lang === "en" 
+              ? "Experience peace and divine vibes at Shree Labriya Jain Mandir during the Chaturmas 2026 festival. We welcome all devotees." 
+              : "चातुर्मास २०२६ महोत्सव के पावन अवसर पर श्री लाबरिया जैन मंदिर में अपूर्व शांति और आत्मिक आनंद का अनुभव करें। सभी भक्तों का स्वागत है।"}
           </p>
 
           <div className="flex flex-col gap-3 text-sm text-text-secondary">
             <div className="flex items-start gap-3">
               <MapPin className="text-primary w-5 h-5 shrink-0 mt-0.5" />
               <span>
-                Shree Labriya Jain Shwetambar Mandir, <br />
-                Mandir Marg, Labriya, Dhar District, <br />
-                Madhya Pradesh - 454111, India
+                {lang === "en" ? "Shree Labriya Jain Shwetambar Mandir," : "श्री लाबरिया जैन श्वेतांबर मंदिर,"} <br />
+                {lang === "en" 
+                  ? "Mandir Marg, Labriya, Dhar District, Madhya Pradesh - 454111, India" 
+                  : "मंदिर मार्ग, लाबरिया, जिला धार, मध्य प्रदेश - 454111, भारत"}
               </span>
             </div>
             
@@ -63,11 +81,13 @@ export default function Footer() {
         {/* Quick Links & WhatsApp Help */}
         <div className="flex flex-col gap-6">
           <h4 className="font-display font-semibold text-text-primary text-base">
-            Quick Connect & Socials
+            {lang === "en" ? "Quick Connect & Socials" : "त्वरित संपर्क एवं सोशल मीडिया"}
           </h4>
           
           <p className="text-sm text-text-secondary leading-relaxed">
-            Have questions regarding Chaturmas schedule, accommodation, or donations? Contact our volunteer desk directly via WhatsApp.
+            {lang === "en" 
+              ? "Have questions regarding Chaturmas schedule, accommodation, or donations? Contact our volunteer desk directly via WhatsApp." 
+              : "चातुर्मास कार्यक्रम, आवास या दान सहयोग के संबंध में कोई प्रश्न है? व्हाट्सएप के माध्यम से हमारे स्वयंसेवक डेस्क से सीधे संपर्क करें।"}
           </p>
 
           <a 
@@ -81,7 +101,7 @@ export default function Footer() {
               className="flex items-center gap-2.5 px-5 py-3 rounded-custom-md bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-premium hover:shadow-premium-hover transition-all w-fit cursor-pointer"
             >
               <MessageSquare size={18} />
-              <span>Chat on WhatsApp</span>
+              <span>{lang === "en" ? "Chat on WhatsApp" : "व्हाट्सएप पर चैट करें"}</span>
             </motion.button>
           </a>
 
@@ -101,9 +121,9 @@ export default function Footer() {
         {/* Map Location */}
         <div className="flex flex-col gap-4">
           <h4 className="font-display font-semibold text-text-primary text-base">
-            Location Map
+            {lang === "en" ? "Location Map" : "स्थान मानचित्र"}
           </h4>
-          <div className="w-full h-44 rounded-custom-md overflow-hidden border border-border-custom shadow-premium relative">
+          <div className="w-full h-64 rounded-custom-md overflow-hidden border border-border-custom shadow-premium relative">
             <iframe 
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14748.868779954045!2d75.05051918349503!3d22.458428589255866!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x396263595679930f%3A0xe54e60bf76d0590c!2sLabriya%2C%20Madhya%20Pradesh%20454111!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
               width="100%" 
@@ -121,10 +141,10 @@ export default function Footer() {
 
       <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-border-custom flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-text-secondary">
         <p>
-          &copy; {currentYear} Shree Labriya Jain Shwetambar Mandir Trust. All Rights Reserved.
+          &copy; {currentYear} {lang === "en" ? "Shree Labriya Jain Shwetambar Mandir Trust. All Rights Reserved." : "श्री लाबरिया जैन श्वेतांबर मंदिर ट्रस्ट। सर्वाधिकार सुरक्षित।"}
         </p>
         <p className="flex items-center gap-1">
-          Designed with peace and simplicity. 🪷 Jai Jinendra.
+          {lang === "en" ? "Designed with peace and simplicity. 🪷 Jai Jinendra." : "शांति और सादगी के साथ निर्मित। 🪷 जय जिनेन्द्र।"}
         </p>
       </div>
     </footer>

@@ -15,27 +15,43 @@ import {
   LogOut
 } from "lucide-react";
 import { db } from "@/services/db";
+import { translations } from "@/services/translations";
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [lang, setLang] = useState("en");
   
   useEffect(() => {
-    // Check if user is logged in
+    // Add js-loaded class to document once React bundle is loaded and hydrated
+    document.documentElement.classList.add("js-loaded");
+
     const currentUser = db.getCurrentUser();
     setUser(currentUser);
     
+    // Read initial language
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+    }
+
     // Listen for custom storage events to keep auth state sync'd
     const syncAuth = () => {
       setUser(db.getCurrentUser());
     };
+    
+    const syncLang = () => {
+      setLang(localStorage.getItem("lang") || "en");
+    };
+
     window.addEventListener("storage", syncAuth);
     window.addEventListener("authChange", syncAuth);
+    window.addEventListener("languageChange", syncLang);
     
     return () => {
       window.removeEventListener("storage", syncAuth);
       window.removeEventListener("authChange", syncAuth);
+      window.removeEventListener("languageChange", syncLang);
     };
   }, [pathname]);
 
@@ -46,12 +62,21 @@ export default function Navigation() {
     router.push("/");
   };
 
+  const toggleLanguage = () => {
+    const nextLang = lang === "en" ? "hi" : "en";
+    localStorage.setItem("lang", nextLang);
+    setLang(nextLang);
+    window.dispatchEvent(new Event("languageChange"));
+  };
+
+  const t = translations[lang] || translations["en"];
+
   const navLinks = [
-    { label: "Home", href: "/", icon: Home },
-    { label: "Events", href: "/events", icon: Sparkles },
-    { label: "Panchang", href: "/panchang", icon: Calendar },
-    { label: "Donate", href: "/donate", icon: Heart },
-    { label: "About", href: "/about", icon: Info },
+    { label: t.home, href: "/", icon: Home },
+    { label: t.events, href: "/events", icon: Sparkles },
+    { label: t.panchang, href: "/panchang", icon: Calendar },
+    { label: t.donate, href: "/donate", icon: Heart },
+    { label: t.about, href: "/about", icon: Info },
   ];
 
   return (
@@ -67,10 +92,10 @@ export default function Navigation() {
             </div>
             <div>
               <h1 className="font-display font-semibold text-text-primary text-base tracking-wide leading-tight group-hover:text-primary transition-colors duration-300">
-                Shree Labriya Mandir
+                {t.shreeLabriyaMandir}
               </h1>
               <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
-                Chaturmas 2026
+                {lang === "en" ? "Chaturmas 2026" : "चातुर्मास २०२६"}
               </p>
             </div>
           </Link>
@@ -104,6 +129,17 @@ export default function Navigation() {
 
           {/* Action Area */}
           <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleLanguage}
+              className="px-3 py-1.5 rounded-custom-md border border-border-custom hover:border-primary/20 bg-white text-xs font-bold tracking-wider text-text-secondary hover:text-primary transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+              title="Change Language / भाषा बदलें"
+            >
+              <span>🌐</span>
+              <span className="text-[10px]">{lang === "en" ? "हिन्दी" : "ENG"}</span>
+            </motion.button>
+
             {/* Auth Button */}
             {user ? (
               <div className="flex items-center gap-2">
@@ -114,7 +150,7 @@ export default function Navigation() {
                     className="flex items-center gap-2 px-4 py-2 rounded-custom-md bg-secondary text-accent border border-accent/20 hover:border-accent text-xs font-semibold tracking-wide uppercase transition-all cursor-pointer"
                   >
                     <LayoutDashboard size={14} />
-                    <span>{user.role === "admin" ? "Admin" : "Portal"}</span>
+                    <span>{user.role === "admin" ? t.admin : t.portal}</span>
                   </motion.button>
                 </Link>
                 
@@ -122,7 +158,7 @@ export default function Navigation() {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
                   className="w-10 h-10 rounded-custom-md bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors duration-200 cursor-pointer"
-                  title="Logout"
+                  title={t.logout}
                 >
                   <LogOut size={16} />
                 </motion.button>
@@ -134,7 +170,7 @@ export default function Navigation() {
                   whileTap={{ scale: 0.98 }}
                   className="px-5 py-2 rounded-custom-md bg-primary text-white text-xs font-bold tracking-wider uppercase shadow-premium hover:shadow-premium-hover hover:bg-primary/95 transition-all cursor-pointer"
                 >
-                  Login
+                  {t.login}
                 </motion.button>
               </Link>
             )}
@@ -190,10 +226,22 @@ export default function Navigation() {
               ? "text-primary font-semibold" 
               : "text-text-secondary"
           }`}>
-            {user ? (user.role === "admin" ? "Admin" : "Portal") : "Login"}
+            {user ? (user.role === "admin" ? t.admin : t.portal) : t.login}
           </span>
         </Link>
       </nav>
+
+      {/* Floating Language Toggle for Mobile */}
+      <div className="fixed bottom-24 right-4 z-40 md:hidden">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={toggleLanguage}
+          className="w-12 h-12 rounded-full glass-panel shadow-premium flex flex-col items-center justify-center text-[10px] font-bold text-primary border border-primary/20 cursor-pointer"
+        >
+          <span>🌐</span>
+          <span>{lang === "en" ? "हिन्दी" : "ENG"}</span>
+        </motion.button>
+      </div>
     </>
   );
 }

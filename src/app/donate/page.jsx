@@ -1,21 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Heart, 
   Copy, 
   Check, 
-  QrCode, 
   Building, 
   FileCheck, 
   Download,
   AlertCircle
 } from "lucide-react";
 import { db } from "@/services/db";
+import { translations } from "@/services/translations";
 import confetti from "canvas-confetti";
 
 export default function Donate() {
+  const [lang, setLang] = useState("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+      const syncLang = () => {
+        setLang(localStorage.getItem("lang") || "en");
+      };
+      window.addEventListener("languageChange", syncLang);
+      return () => window.removeEventListener("languageChange", syncLang);
+    }
+  }, []);
+
+  const t = translations[lang] || translations["en"];
+
   const upiId = "shreelabriyatrust@okaxis";
   const bankDetails = {
     bankName: "State Bank of India",
@@ -52,16 +67,16 @@ export default function Donate() {
   const handleDonationSubmit = async (e) => {
     e.preventDefault();
     if (!donorName.trim() || !phone.trim() || !amount.trim() || !txnId.trim()) {
-      setErrorMsg("Please fill in all fields to register the donation.");
+      setErrorMsg(lang === "en" ? "Please fill in all fields to register the donation." : "कृपया दान दर्ज करने के लिए सभी क्षेत्रों को भरें।");
       return;
     }
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setErrorMsg("Please enter a valid donation amount.");
+      setErrorMsg(lang === "en" ? "Please enter a valid donation amount." : "कृपया एक मान्य दान राशि दर्ज करें।");
       return;
     }
     if (txnId.trim().length < 8) {
-      setErrorMsg("Transaction Reference ID must be at least 8 characters.");
+      setErrorMsg(lang === "en" ? "Transaction Reference ID must be at least 8 characters." : "ट्रांजैक्शन संदर्भ आईडी कम से कम ८ वर्णों की होनी चाहिए।");
       return;
     }
 
@@ -91,7 +106,7 @@ export default function Donate() {
       setTxnId("");
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || "An error occurred. Please check details and try again.");
+      setErrorMsg(err.message || (lang === "en" ? "An error occurred. Please check details and try again." : "त्रुटि हुई। कृपया विवरण जांचें और पुनः प्रयास करें।"));
     } finally {
       setIsSubmitting(false);
     }
@@ -211,7 +226,7 @@ export default function Donate() {
             </div>
             
             <div class="title">DONATION RECEIPT VOUCHER</div>
-
+ 
             <div class="details-grid">
               <div class="detail-item">
                 <strong>Receipt Number</strong>
@@ -238,12 +253,12 @@ export default function Donate() {
                 Pending Verification
               </div>
             </div>
-
+ 
             <div class="amount-word">
               <strong style="display:block; font-size:11px; text-transform:uppercase; color:#EA580C; margin-bottom:5px;">Amount Donated</strong>
               INR ${donation.amount.toLocaleString("en-IN")}.00
             </div>
-
+ 
             <div class="signatures">
               <div class="sig-line">Donor Signature</div>
               <div class="sig-line" style="color: #EA580C; font-weight: bold;">
@@ -251,7 +266,7 @@ export default function Donate() {
                 Authorized Signatory
               </div>
             </div>
-
+ 
             <div class="footer-notes">
               Thank you for your generous contribution towards the Chaturmas 2026 arrangements. <br />
               This is a computer-generated voucher and does not require a physical stamp. <br />
@@ -271,13 +286,13 @@ export default function Donate() {
       <div className="text-center max-w-2xl mb-16">
         <span className="px-3 py-1 rounded-full bg-secondary border border-primary/10 text-[10px] font-semibold uppercase tracking-widest text-primary flex items-center gap-1.5 w-fit mx-auto">
           <Heart size={12} fill="currentColor" />
-          Seva & Contribution
+          {t.sevaContribution}
         </span>
         <h1 className="font-display font-semibold text-text-primary text-3xl sm:text-4xl mt-3">
-          Support Chaturmas 2026
+          {t.supportChaturmas}
         </h1>
         <p className="text-sm text-text-secondary mt-2">
-          Your donations support daily Pravachan setups, Sadhu-Sadhvi Vayavachya (care), Bhandara (meals), accommodation, and medical arrangements.
+          {t.donateDescription}
         </p>
       </div>
 
@@ -289,24 +304,25 @@ export default function Donate() {
           {/* UPI and QR Card */}
           <div className="p-6 sm:p-8 rounded-custom-lg bg-white border border-border-custom shadow-premium flex flex-col sm:flex-row gap-8 items-center">
             
-            {/* Simulated QR Code box */}
+            {/* Realistic QR Code Graphic */}
             <div className="flex flex-col items-center gap-3 shrink-0">
-              <div className="w-44 h-44 rounded-custom-lg bg-secondary border border-primary/10 p-4 flex flex-col items-center justify-center relative overflow-hidden group">
-                <QrCode size={120} className="text-accent group-hover:scale-102 transition-transform duration-300" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow flex items-center justify-center border border-primary/30">
-                  <span className="text-[10px]">🪷</span>
-                </div>
+              <div className="w-44 h-44 rounded-custom-lg bg-white border border-border-custom overflow-hidden shadow-sm relative group flex items-center justify-center p-1">
+                <img 
+                  src="/upi_qr_code.png" 
+                  alt="UPI QR Code for Donations" 
+                  className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300" 
+                />
               </div>
               <span className="text-[10px] text-text-secondary font-bold tracking-widest uppercase flex items-center gap-1">
-                Scan with any UPI app
+                {t.scanWithUPI}
               </span>
             </div>
 
             <div className="flex flex-col justify-center gap-4 w-full">
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-primary">Easy Transfer</span>
-                <h3 className="font-display font-semibold text-text-primary text-lg mt-0.5">UPI Donation Address</h3>
-                <p className="text-xs text-text-secondary mt-1">Instant, zero-charge transfer using BHIM, Google Pay, PhonePe, or Paytm.</p>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-primary">{t.easyTransfer}</span>
+                <h3 className="font-display font-semibold text-text-primary text-lg mt-0.5">{t.upiDonationAddress}</h3>
+                <p className="text-xs text-text-secondary mt-1">{t.upiDescription}</p>
               </div>
 
               <div className="flex items-center gap-2 p-3 bg-bg-custom border border-border-custom rounded-custom-md">
@@ -316,7 +332,7 @@ export default function Donate() {
                 <button 
                   onClick={() => copyToClipboard(upiId, "upi")}
                   className="p-2 rounded-custom-sm bg-white border border-border-custom hover:border-primary/50 text-text-secondary hover:text-primary transition-all cursor-pointer shrink-0"
-                  title="Copy UPI ID"
+                  title={t.copyUPIID}
                 >
                   {copiedUpi ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
                 </button>
@@ -330,23 +346,23 @@ export default function Donate() {
             <div className="flex items-center gap-3 pb-3 border-b border-border-custom">
               <Building size={20} className="text-primary" />
               <div>
-                <h3 className="font-display font-semibold text-text-primary text-base">Direct Bank Transfer</h3>
-                <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">NEFT / RTGS / IMPS</p>
+                <h3 className="font-display font-semibold text-text-primary text-base">{t.directBankTransfer}</h3>
+                <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">{t.neftRtgsImps}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">Account Name</span>
+                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">{t.accountName}</span>
                 <span className="font-semibold text-text-primary">{bankDetails.accountName}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">Bank Name</span>
+                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">{t.bankName}</span>
                 <span className="font-semibold text-text-primary">{bankDetails.bankName}</span>
               </div>
 
               <div className="flex flex-col gap-1 relative group">
-                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">Account Number</span>
+                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">{t.accountNumber}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-text-primary select-all">{bankDetails.accountNumber}</span>
                   <button 
@@ -359,7 +375,7 @@ export default function Donate() {
               </div>
 
               <div className="flex flex-col gap-1 relative group">
-                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">IFSC Code</span>
+                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">{t.ifscCode}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-text-primary select-all">{bankDetails.ifscCode}</span>
                   <button 
@@ -372,18 +388,43 @@ export default function Donate() {
               </div>
 
               <div className="sm:col-span-2 flex flex-col gap-1">
-                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">Branch Details</span>
+                <span className="text-xs text-text-secondary font-bold uppercase tracking-wider">{t.branchDetails}</span>
                 <span className="font-medium text-text-primary">{bankDetails.branch}</span>
               </div>
             </div>
           </div>
 
-          {/* Guidelines */}
+          {/* Guidelines Exemption Notice */}
           <div className="p-5 rounded-custom-lg bg-orange-50/50 border border-primary/10 flex items-start gap-3">
             <FileCheck size={18} className="text-primary shrink-0 mt-0.5" />
             <div className="text-xs text-text-secondary leading-relaxed flex flex-col gap-1">
-              <strong className="text-text-primary font-bold">Important Tax Notice:</strong>
-              <p>All contributions to Shree Labriya Jain Mandir Trust are exempt under Section 80G of the Income Tax Act. Please record your transaction details on the registration form to download your 80G tax receipt immediately.</p>
+              <strong className="text-text-primary font-bold">{t.taxNoticeTitle}</strong>
+              <p>{t.taxNoticeText}</p>
+            </div>
+          </div>
+
+          {/* Trust Credentials Card */}
+          <div className="p-6 rounded-custom-lg bg-white border border-border-custom shadow-premium flex flex-col gap-4">
+            <h4 className="font-display font-semibold text-text-primary text-xs uppercase tracking-wider border-b border-border-custom pb-2">
+              {t.trustCredentials}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Registration Number" : "पंजीकरण संख्या"}</span>
+                <span className="font-semibold text-text-primary">{t.trustRegNo}</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "80G Tax Exemption Status" : "80G टैक्स छूट प्रमाण पत्र"}</span>
+                <span className="font-semibold text-text-primary">{t.eightyGNo}</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "PAN Card Number" : "ट्रस्ट पैन नंबर"}</span>
+                <span className="font-semibold text-text-primary">{t.panNo}</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Trust Address" : "ट्रस्ट पंजीकृत पता"}</span>
+                <span className="font-semibold text-text-primary">{t.trustAddress}</span>
+              </div>
             </div>
           </div>
 
@@ -394,18 +435,18 @@ export default function Donate() {
           
           <div className="p-6 sm:p-8 rounded-custom-lg bg-white border border-border-custom shadow-premium flex flex-col gap-6">
             <div className="flex flex-col">
-              <h3 className="font-display font-semibold text-text-primary text-base">Report Transaction</h3>
-              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold mt-0.5">Generate 80G Receipt</p>
+              <h3 className="font-display font-semibold text-text-primary text-base">{t.reportTransaction}</h3>
+              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold mt-0.5">{t.generateReceipt}</p>
             </div>
 
             <form onSubmit={handleDonationSubmit} className="flex flex-col gap-4">
               
               <div className="flex flex-col gap-1">
-                <label htmlFor="donor-name" className="text-xs text-text-secondary font-semibold">Donor Name</label>
+                <label htmlFor="donor-name" className="text-xs text-text-secondary font-semibold">{t.donorNameLabel}</label>
                 <input 
                   id="donor-name"
                   type="text" 
-                  placeholder="e.g. Abhi Jain"
+                  placeholder={lang === "en" ? "e.g. Abhi Jain" : "जैसे: अभय कुमार जैन"}
                   value={donorName}
                   onChange={(e) => setDonorName(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
@@ -413,12 +454,12 @@ export default function Donate() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="donor-phone" className="text-xs text-text-secondary font-semibold">Phone Number</label>
+                <label htmlFor="donor-phone" className="text-xs text-text-secondary font-semibold">{t.phoneNumberLabel}</label>
                 <input 
                   id="donor-phone"
                   type="tel" 
                   maxLength={10}
-                  placeholder="e.g. 9876543210"
+                  placeholder={lang === "en" ? "e.g. 9876543210" : "जैसे: 9876543210"}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                   className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
@@ -426,11 +467,11 @@ export default function Donate() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="donor-amount" className="text-xs text-text-secondary font-semibold">Amount Donated (INR)</label>
+                <label htmlFor="donor-amount" className="text-xs text-text-secondary font-semibold">{t.amountDonatedLabel}</label>
                 <input 
                   id="donor-amount"
                   type="number" 
-                  placeholder="e.g. 5100"
+                  placeholder={lang === "en" ? "e.g. 5100" : "जैसे: 5100"}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
@@ -438,11 +479,11 @@ export default function Donate() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="txn-ref" className="text-xs text-text-secondary font-semibold">UPI/Bank Reference ID (Txn ID)</label>
+                <label htmlFor="txn-ref" className="text-xs text-text-secondary font-semibold">{t.upiReferenceLabel}</label>
                 <input 
                   id="txn-ref"
                   type="text" 
-                  placeholder="e.g. U240711..."
+                  placeholder={lang === "en" ? "e.g. U240711..." : "जैसे: U240711..."}
                   value={txnId}
                   onChange={(e) => setTxnId(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
@@ -462,7 +503,7 @@ export default function Donate() {
                 disabled={isSubmitting}
                 className="w-full py-3.5 rounded-custom-md bg-primary hover:bg-primary/95 text-white font-bold text-xs uppercase tracking-wider shadow-premium hover:shadow-premium-hover transition-all mt-2 cursor-pointer flex items-center justify-center"
               >
-                {isSubmitting ? "Registering..." : "Submit Transaction"}
+                {isSubmitting ? t.submitting : t.submitTransaction}
               </motion.button>
             </form>
 
@@ -477,8 +518,14 @@ export default function Donate() {
                   <div className="flex items-start gap-2.5 text-emerald-800">
                     <FileCheck size={18} className="shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold text-xs">Transaction Registered</p>
-                      <p className="text-[10px] text-emerald-600/80 mt-0.5">Thank you! Your donation of INR {completedDonation.amount.toLocaleString("en-IN")} has been filed under transaction ID: {completedDonation.txnId}.</p>
+                      <p className="font-bold text-xs">
+                        {lang === "en" ? "Transaction Registered" : "लेनदेन सफलतापूर्वक दर्ज"}
+                      </p>
+                      <p className="text-[10px] text-emerald-600/80 mt-0.5">
+                        {lang === "en" 
+                          ? `Thank you! Your donation of INR ${completedDonation.amount.toLocaleString("en-IN")} has been filed under transaction ID: ${completedDonation.txnId}.`
+                          : `धन्यवाद! आपकी INR ${completedDonation.amount.toLocaleString("en-IN")} की दान राशि संदर्भ आईडी: ${completedDonation.txnId} के तहत दर्ज कर ली गई है।`}
+                      </p>
                     </div>
                   </div>
 
@@ -488,13 +535,13 @@ export default function Donate() {
                       className="flex-1 py-2 px-3 rounded-custom-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] uppercase tracking-wider shadow flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Download size={12} />
-                      <span>Download Receipt</span>
+                      <span>{lang === "en" ? "Download Receipt" : "रसीद डाउनलोड करें"}</span>
                     </button>
                     <button 
                       onClick={() => setCompletedDonation(null)}
                       className="py-2 px-3 rounded-custom-md bg-white border border-border-custom hover:border-emerald-500/30 text-text-secondary hover:text-emerald-700 font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
                     >
-                      Close
+                      {lang === "en" ? "Close" : "बंद करें"}
                     </button>
                   </div>
                 </motion.div>

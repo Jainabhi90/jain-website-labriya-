@@ -12,18 +12,36 @@ import {
   AlertCircle
 } from "lucide-react";
 import { db } from "@/services/db";
+import { translations } from "@/services/translations";
 
 export default function Panchang() {
   const [selectedDate, setSelectedDate] = useState("");
   const [panchang, setPanchang] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lang, setLang] = useState("en");
 
-  // Set today's date default to "2026-07-11" which matches seed data
+  // Set today's date dynamically to local date formatted YYYY-MM-DD
   useEffect(() => {
-    const formattedDate = "2026-07-11";
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const formattedDate = `${yyyy}-${mm}-${dd}`;
+    
     setSelectedDate(formattedDate);
     fetchPanchang(formattedDate);
+
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+      const syncLang = () => {
+        setLang(localStorage.getItem("lang") || "en");
+      };
+      window.addEventListener("languageChange", syncLang);
+      return () => window.removeEventListener("languageChange", syncLang);
+    }
   }, []);
+
+  const t = translations[lang] || translations["en"];
 
   const fetchPanchang = async (dateStr) => {
     setIsLoading(true);
@@ -116,6 +134,57 @@ export default function Panchang() {
     ? calculateChoghadiyas(panchang.sunrise, panchang.sunset, selectedDate)
     : [];
 
+  const translateTithi = (tithiText) => {
+    if (!tithiText || lang === "en") return tithiText;
+    return tithiText
+      .replace("Jeth", "ज्येष्ठ")
+      .replace("Ashadh", "आषाढ़")
+      .replace("Shraavan", "श्रावण")
+      .replace("Bhadarvo", "भाद्रपद")
+      .replace("Aaso", "आश्विन")
+      .replace("Sud", "सुद (शुक्ल)")
+      .replace("Vad", "वद (कृष्ण)")
+      .replace("Krishna Dwadashi (12th)", "कृष्ण द्वादशी (१२वीं)");
+  };
+
+  const translateChoghadiyaName = (name) => {
+    if (lang === "en") return name;
+    return name
+      .replace("Udveg", "उद्वेग")
+      .replace("Chala", "चल")
+      .replace("Labh", "लाभ")
+      .replace("Amrit", "अमृत")
+      .replace("Kaal", "काल")
+      .replace("Shubh", "शुभ")
+      .replace("Roga", "रोग")
+      .replace("Choghadiya", "चौघड़िया");
+  };
+
+  const translateChoghadiyaStatus = (status) => {
+    if (lang === "en") return status;
+    if (status === "Auspicious") return "शुभ";
+    if (status === "Inauspicious") return "अशुभ";
+    return "सामान्य";
+  };
+
+  const translatePaksha = (paksha) => {
+    if (lang === "en") return paksha;
+    return paksha
+      .replace("Shukla (Sud)", "शुक्ल पक्ष (सुद)")
+      .replace("Krishna (Vad)", "कृष्ण पक्ष (वद)")
+      .replace("Krishna Paksha", "कृष्ण पक्ष");
+  };
+
+  const translateMonth = (month) => {
+    if (lang === "en") return month;
+    return month
+      .replace("Jeth", "ज्येष्ठ")
+      .replace("Ashadh", "आषाढ़")
+      .replace("Shraavan", "श्रावण")
+      .replace("Bhadarvo", "भाद्रपद")
+      .replace("Aaso", "आश्विन");
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center">
       
@@ -123,20 +192,20 @@ export default function Panchang() {
       <div className="text-center max-w-2xl mb-12">
         <span className="px-3 py-1 rounded-full bg-secondary border border-primary/10 text-[10px] font-semibold uppercase tracking-widest text-primary flex items-center gap-1.5 w-fit mx-auto">
           <CalendarIcon size={12} />
-          Spiritual Calendar
+          {t.spiritualCalendar}
         </span>
         <h1 className="font-display font-semibold text-text-primary text-3xl sm:text-4xl mt-3">
-          Jain Panchang & Choghadiya
+          {t.panchangTitle}
         </h1>
         <p className="text-sm text-text-secondary mt-2">
-          Daily lunar calculations, Tithis, and auspicious intervals of the day. Essential guide for vows, fasts (Tapas), and starting new activities during Chaturmas.
+          {t.panchangSub}
         </p>
       </div>
 
       {/* Date Picker Section */}
       <div className="w-full max-w-md bg-white border border-border-custom shadow-premium p-4 rounded-custom-lg mb-10 flex flex-col sm:flex-row items-center gap-4">
         <label htmlFor="panchang-date" className="text-xs text-text-secondary font-bold uppercase tracking-wider shrink-0">
-          Select Date:
+          {t.selectDate}
         </label>
         <input 
           id="panchang-date"
@@ -151,7 +220,7 @@ export default function Panchang() {
       {isLoading ? (
         <div className="w-full max-w-5xl h-96 flex flex-col items-center justify-center gap-3">
           <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-xs text-text-secondary">Recalculating alignments...</p>
+          <p className="text-xs text-text-secondary">{t.recalculatingAlignments}</p>
         </div>
       ) : panchang ? (
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -169,9 +238,9 @@ export default function Panchang() {
               
               <div className="flex flex-col gap-5">
                 <div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-primary">Tithi of the Day</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-primary">{t.tithiOfDay}</span>
                   <h2 className="font-display font-semibold text-text-primary text-2xl sm:text-3xl mt-1 leading-snug">
-                    {panchang.tithi}
+                    {translateTithi(panchang.tithi)}
                   </h2>
                   {panchang.event && (
                     <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-primary/20 text-xs font-bold text-primary">
@@ -183,17 +252,21 @@ export default function Panchang() {
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border-custom">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">Paksha</span>
+                    <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">
+                      {lang === "en" ? "Paksha" : "पक्ष"}
+                    </span>
                     <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
                       <Moon size={14} className="text-accent" />
-                      {panchang.paksha}
+                      {translatePaksha(panchang.paksha)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">Month</span>
+                    <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">
+                      {lang === "en" ? "Month" : "माह"}
+                    </span>
                     <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
                       <CalendarIcon size={14} className="text-accent" />
-                      {panchang.month} Mah
+                      {translateMonth(panchang.month)} {lang === "en" ? "Mah" : "माह"}
                     </span>
                   </div>
                 </div>
@@ -208,7 +281,7 @@ export default function Panchang() {
                   <Sun size={20} />
                 </div>
                 <div>
-                  <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">Sunrise</span>
+                  <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">{t.sunrise}</span>
                   <h4 className="font-display font-bold text-text-primary text-lg">{panchang.sunrise}</h4>
                 </div>
               </div>
@@ -218,7 +291,7 @@ export default function Panchang() {
                   <Moon size={20} />
                 </div>
                 <div>
-                  <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">Sunset</span>
+                  <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">{t.sunset}</span>
                   <h4 className="font-display font-bold text-text-primary text-lg">{panchang.sunset}</h4>
                 </div>
               </div>
@@ -229,7 +302,7 @@ export default function Panchang() {
             <div className="p-5 rounded-custom-lg bg-secondary/35 border border-border-custom flex items-start gap-3">
               <Compass size={18} className="text-accent shrink-0 mt-0.5" />
               <p className="text-xs text-text-secondary leading-relaxed">
-                Panchang metrics are calculated based on Local Standard Time for Labriya coordinates. Under standard conditions, Choghadiya intervals shift by approximately 4 minutes per day. For special Pujas or Vrat rules, please cross-verify with Pujya Swamiji or the Temple office.
+                {t.panchangFootnote}
               </p>
             </div>
 
@@ -244,8 +317,8 @@ export default function Panchang() {
                   <Clock size={18} />
                 </div>
                 <div>
-                  <h3 className="font-display font-semibold text-text-primary text-base">Auspicious Timings</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">Choghadiya Intervals</p>
+                  <h3 className="font-display font-semibold text-text-primary text-base">{t.auspiciousTimings}</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">{t.choghadiyaIntervals}</p>
                 </div>
               </div>
 
@@ -264,11 +337,13 @@ export default function Panchang() {
                       className="flex items-center justify-between p-3.5 rounded-custom-md bg-bg-custom border border-border-custom"
                     >
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-text-primary">{time.name}</span>
+                        <span className="text-sm font-semibold text-text-primary">
+                          {translateChoghadiyaName(time.name)}
+                        </span>
                         <span className="text-[10px] text-text-secondary mt-0.5">{time.time}</span>
                       </div>
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border ${statusColor}`}>
-                        {time.status}
+                        {translateChoghadiyaStatus(time.status)}
                       </span>
                     </div>
                   );
@@ -282,7 +357,9 @@ export default function Panchang() {
       ) : (
         <div className="p-6 rounded-custom-lg bg-red-50 border border-red-500/10 flex items-center gap-3">
           <AlertCircle size={20} className="text-red-600 shrink-0" />
-          <p className="text-sm text-red-600">Panchang details could not be parsed for this date.</p>
+          <p className="text-sm text-red-600">
+            {lang === "en" ? "Panchang details could not be parsed for this date." : "इस तिथि के लिए पंचांग विवरण की गणना नहीं की जा सकी।"}
+          </p>
         </div>
       )}
 

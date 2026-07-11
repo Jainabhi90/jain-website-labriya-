@@ -7,47 +7,79 @@ export default function Countdown() {
   const targetDate = "2026-07-25T08:00:00+05:30"; // Chaturmas Start: July 25, 2026
   
   const [timeLeft, setTimeLeft] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const [lang, setLang] = useState("en");
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = +new Date(targetDate) - +new Date();
-      if (difference <= 0) {
-        setTimeLeft(null);
-        return;
-      }
+    setMounted(true);
+    
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+      const syncLang = () => {
+        setLang(localStorage.getItem("lang") || "en");
+      };
+      window.addEventListener("languageChange", syncLang);
       
-      setTimeLeft({
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
-      });
-    };
+      const calculateTimeLeft = () => {
+        const difference = +new Date(targetDate) - +new Date();
+        if (difference <= 0) {
+          setTimeLeft(null);
+          return;
+        }
+        
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        });
+      };
 
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
-    return () => clearInterval(timer);
+      calculateTimeLeft();
+      const timer = setInterval(calculateTimeLeft, 1000);
+      
+      return () => {
+        window.removeEventListener("languageChange", syncLang);
+        clearInterval(timer);
+      };
+    }
   }, []);
+
+  if (!mounted) {
+    // Avoid hydration mismatch by rendering a clean empty placeholder layout on SSR
+    return <div className="h-28" />;
+  }
 
   if (!timeLeft) {
     return (
       <div className="flex items-center justify-center py-4 bg-emerald-50 text-emerald-700 rounded-custom-md px-6 border border-emerald-500/10">
-        <span className="font-semibold text-sm">🪷 Chaturmas 2026 has commenced in full purity. Jai Jinendra.</span>
+        <span className="font-semibold text-sm">
+          🪷 {lang === "en" 
+            ? "Chaturmas 2026 has commenced in full purity. Jai Jinendra." 
+            : "चातुर्मास २०२६ पूर्ण शुद्धता के साथ प्रारंभ हो चुका है। जय जिनेन्द्र।"}
+        </span>
       </div>
     );
   }
 
+  const labelMap = {
+    Days: lang === "en" ? "Days" : "दिन",
+    Hours: lang === "en" ? "Hours" : "घंटे",
+    Minutes: lang === "en" ? "Minutes" : "मिनट",
+    Seconds: lang === "en" ? "Seconds" : "सेकंड",
+  };
+
   const items = [
-    { label: "Days", value: timeLeft.days },
-    { label: "Hours", value: timeLeft.hours },
-    { label: "Minutes", value: timeLeft.minutes },
-    { label: "Seconds", value: timeLeft.seconds },
+    { label: labelMap.Days, value: timeLeft.days },
+    { label: labelMap.Hours, value: timeLeft.hours },
+    { label: labelMap.Minutes, value: timeLeft.minutes },
+    { label: labelMap.Seconds, value: timeLeft.seconds },
   ];
 
   return (
     <div className="flex flex-col items-center gap-4">
       <p className="text-xs text-text-secondary uppercase tracking-widest font-medium">
-        Countdown to Chaturmas 2026
+        {lang === "en" ? "Countdown to Chaturmas 2026" : "चातुर्मास २०२६ की उलटी गिनती"}
       </p>
       
       <div className="flex items-center gap-3 sm:gap-4">
