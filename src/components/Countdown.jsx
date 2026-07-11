@@ -1,0 +1,88 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+export default function Countdown() {
+  const targetDate = "2026-07-25T08:00:00+05:30"; // Chaturmas Start: July 25, 2026
+  
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = +new Date(targetDate) - +new Date();
+      if (difference <= 0) {
+        setTimeLeft(null);
+        return;
+      }
+      
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      });
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!timeLeft) {
+    return (
+      <div className="flex items-center justify-center py-4 bg-emerald-50 text-emerald-700 rounded-custom-md px-6 border border-emerald-500/10">
+        <span className="font-semibold text-sm">🪷 Chaturmas 2026 has commenced in full purity. Jai Jinendra.</span>
+      </div>
+    );
+  }
+
+  const items = [
+    { label: "Days", value: timeLeft.days },
+    { label: "Hours", value: timeLeft.hours },
+    { label: "Minutes", value: timeLeft.minutes },
+    { label: "Seconds", value: timeLeft.seconds },
+  ];
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <p className="text-xs text-text-secondary uppercase tracking-widest font-medium">
+        Countdown to Chaturmas 2026
+      </p>
+      
+      <div className="flex items-center gap-3 sm:gap-4">
+        {items.map((item, idx) => (
+          <div key={item.label} className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-col items-center justify-center bg-white border border-border-custom shadow-premium w-18 h-20 sm:w-20 sm:h-22 rounded-custom-lg relative overflow-hidden">
+              {/* Saffron top border line */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
+              
+              <AnimatePresence mode="popLayout">
+                <motion.span
+                  key={item.value}
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -15, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 120, damping: 14 }}
+                  className="font-display font-semibold text-2xl sm:text-3xl text-text-primary"
+                >
+                  {item.value.toString().padStart(2, "0")}
+                </motion.span>
+              </AnimatePresence>
+
+              <span className="text-[10px] sm:text-[11px] text-text-secondary uppercase tracking-wider font-semibold mt-1">
+                {item.label}
+              </span>
+            </div>
+            
+            {idx < items.length - 1 && (
+              <span className="text-xl sm:text-2xl font-bold text-primary/60 animate-pulse-soft">
+                :
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

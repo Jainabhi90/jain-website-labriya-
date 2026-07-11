@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #EA580C; /* Auspicious Saffron */
+  --color-secondary: #FFF7ED; /* Saffron Tint */
+  --color-bg-custom: #FFFFFF; /* Peace White */
+  --color-card-custom: #FFFFFF;
+  --color-accent: #C28A3E; /* Shastra Gold/Bronze */
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #4B5563;
+  --color-border-custom: #F3F4F6;
+  
+  /* Jain Flag Colors */
+  --color-jain-red: #DC2626; /* Siddha */
+  --color-jain-saffron: #EA580C; /* Arihanta */
+  --color-jain-white: #FFFFFF; /* Sadhu */
+  --color-jain-green: #16A34A; /* Upadhyaya */
+  --color-jain-blue: #1D4ED8; /* Acharya */
+
+  /* Typography */
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-poppins), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Borders & Shadows */
+  --radius-custom-sm: 8px;
+  --radius-custom-md: 12px;
+  --radius-custom-lg: 20px;
+  
+  --shadow-premium: 0 4px 20px -2px rgba(234, 88, 12, 0.03), 0 2px 8px -1px rgba(0, 0, 0, 0.01);
+  --shadow-premium-hover: 0 12px 30px -4px rgba(234, 88, 12, 0.06), 0 4px 16px -2px rgba(0, 0, 0, 0.02);
+}
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #1F2937;
+}
+
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism saffron helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(234, 88, 12, 0.05);
+}
+
+/* Custom Selection Highlight */
+::selection {
+  background-color: rgba(234, 88, 12, 0.15);
+  color: #EA580C;
+}
+
+/* Custom Scrollbar for saffron feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(234, 88, 12, 0.12);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(234, 88, 12, 0.25);
+}
+
+/* Micro-animations */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.015);
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 4s infinite ease-in-out;
+}
