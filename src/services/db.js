@@ -14,6 +14,64 @@ export const supabase = isSupabaseConfigured
 // SEED DATA FOR LOCAL STORAGE FALLBACK
 // ==========================================
 
+const DEFAULT_SADHANA_ACTIVITIES = [
+  { id: "act_upvas", name: "Upvas", points: 10, category: "Tapas" },
+  { id: "act_ekasana", name: "Ekasana", points: 5, category: "Tapas" },
+  { id: "act_beasana", name: "Beasana", points: 4, category: "Tapas" },
+  { id: "act_ayambil", name: "Ayambil", points: 8, category: "Tapas" },
+  { id: "act_navkar", name: "Navkar Mala", points: 2, category: "Chant" },
+  { id: "act_samayik", name: "Samayik", points: 3, category: "Meditation" },
+  { id: "act_pratikraman", name: "Pratikraman", points: 5, category: "Repentance" },
+  { id: "act_pravachan", name: "Pravachan Attendance", points: 2, category: "Learning" },
+  { id: "act_temple", name: "Temple Visit", points: 1, category: "Devotion" },
+  { id: "act_swadhyay", name: "Swadhyay", points: 3, category: "Learning" },
+  { id: "act_chaitya", name: "Chaitya Vandan", points: 2, category: "Devotion" },
+  { id: "act_pooja", name: "Pooja", points: 2, category: "Devotion" },
+  { id: "act_guru", name: "Guru Bhakti", points: 3, category: "Devotion" },
+  { id: "act_seva", name: "Volunteer Seva", points: 5, category: "Service" },
+  { id: "act_donation", name: "Donation", points: 0, category: "Charity" }
+];
+
+const DEFAULT_DEVOTEE_PROFILES = {
+  "usr_9999999000": {
+    id: "usr_9999999000",
+    fullName: "Temple Administrator",
+    phone: "9999999000",
+    city: "Labriya",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
+    totalPoints: 350,
+    streak: 42,
+    badges: ["badge_first_upvas", "badge_10_upvas", "badge_100_points", "badge_30_streak", "badge_30_pravachans"],
+    totalTaps: 12
+  },
+  "usr_9876543210": {
+    id: "usr_9876543210",
+    fullName: "Devendra Shah",
+    phone: "9876543210",
+    city: "Indore",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+    totalPoints: 125,
+    streak: 7,
+    badges: ["badge_first_upvas", "badge_100_points"],
+    totalTaps: 3
+  },
+  "l1": { id: "l1", fullName: "Vardhman Jain", city: "Ujjain", totalPoints: 940, streak: 105, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop", badges: ["badge_first_upvas", "badge_10_upvas", "badge_100_points", "badge_500_points", "badge_30_streak", "badge_30_pravachans"], totalTaps: 25 },
+  "l2": { id: "l2", fullName: "Pujita Mehta", city: "Mumbai", totalPoints: 850, streak: 88, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop", badges: ["badge_first_upvas", "badge_100_points", "badge_500_points"], totalTaps: 20 },
+  "l3": { id: "l3", fullName: "Ketan Khabia", city: "Dhar", totalPoints: 720, streak: 64, avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points", "badge_500_points"], totalTaps: 15 },
+  "l4": { id: "l4", fullName: "Samyak Doshi", city: "Labriya", totalPoints: 630, streak: 30, avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points", "badge_500_points", "badge_30_streak"], totalTaps: 18 },
+  "l5": { id: "l5", fullName: "Kiran Kataria", city: "Ratlam", totalPoints: 490, streak: 28, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 10 },
+  "l6": { id: "l6", fullName: "Naveen Shah", city: "Ahmedabad", totalPoints: 420, streak: 21, avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 8 },
+  "l7": { id: "l7", fullName: "Jinal Doshi", city: "Baroda", totalPoints: 310, streak: 15, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 5 },
+  "l8": { id: "l8", fullName: "Rishabh Khabia", city: "Indore", totalPoints: 280, streak: 12, avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 6 },
+  "l9": { id: "l9", fullName: "Mangal Bhandari", city: "Labriya", totalPoints: 210, streak: 9, avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 4 }
+};
+
+const DEFAULT_SADHANA_LOGS = [
+  { id: "log_1", userId: "usr_9876543210", dateStr: "2026-07-10", activities: ["act_upvas", "act_samayik", "act_temple"], points: 14 },
+  { id: "log_2", userId: "usr_9876543210", dateStr: "2026-07-09", activities: ["act_ekasana", "act_navkar", "act_swadhyay"], points: 10 },
+  { id: "log_3", userId: "usr_9876543210", dateStr: "2026-07-08", activities: ["act_ayambil", "act_pooja", "act_chaitya"], points: 12 }
+];
+
 const DEFAULT_SCHEDULE = [
   { id: "s1", time: "06:30 AM", activity: "Dev Darshan & Pakshal Puja", session: "morning", orderNum: 1 },
   { id: "s2", time: "08:00 AM", activity: "Pravachan by Pujya Gurudev", session: "morning", orderNum: 2 },
@@ -49,38 +107,90 @@ const DEFAULT_ANNOUNCEMENTS = [
   },
 ];
 
-const DEFAULT_PANCHANG = {
-  "2026-07-11": {
-    dateStr: "2026-07-11",
+const generatePanchangData = () => {
+  const panchang = {};
+  
+  const addMonth = (year, monthNum, monthStr, tithis, sunrises, sunsets, shubhIndices, samayikIndices, customEvents = {}) => {
+    for (let day = 1; day <= tithis.length; day++) {
+      const dateStr = `${year}-${monthNum.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+      const tithi = tithis[day - 1];
+      
+      const parts = tithi.split(" ");
+      const monthName = parts[0];
+      const pakshaName = parts[1];
+      
+      panchang[dateStr] = {
+        dateStr,
+        tithi,
+        sunrise: sunrises[day - 1],
+        sunset: sunsets[day - 1],
+        paksha: pakshaName === "Sud" ? "Shukla (Sud)" : "Krishna (Vad)",
+        month: monthName,
+        festival: customEvents[day] || "",
+        shubh_din: shubhIndices.includes(day),
+        samayik: samayikIndices.includes(day),
+        event: customEvents[day] || ""
+      };
+    }
+  };
+
+  // July 2026
+  addMonth("2026", 7, "July", 
+    ["Jeth Vad 1", "Jeth Vad 2", "Jeth Vad 3", "Jeth Vad 4", "Jeth Vad 5", "Jeth Vad 6", "Jeth Vad 7", "Jeth Vad 8", "Jeth Vad 9", "Jeth Vad 11", "Jeth Vad 12", "Jeth Vad 13", "Jeth Vad 14", "Jeth Vad 30", "Ashadh Sud 1", "Ashadh Sud 2", "Ashadh Sud 3", "Ashadh Sud 5", "Ashadh Sud 6", "Ashadh Sud 7", "Ashadh Sud 8", "Ashadh Sud 9", "Ashadh Sud 9", "Ashadh Sud 10", "Ashadh Sud 11", "Ashadh Sud 12", "Ashadh Sud 13", "Ashadh Sud 14", "Ashadh Sud 15", "Ashadh Vad 1", "Ashadh Vad 2"],
+    ["07:39", "07:39", "07:39", "07:38", "07:38", "07:38", "07:38", "07:38", "07:37", "07:37", "07:37", "07:36", "07:36", "07:36", "07:35", "07:35", "07:34", "07:34", "07:33", "07:32", "07:32", "07:31", "07:30", "07:30", "07:29", "07:28", "07:27", "07:27", "07:26", "07:25", "07:24"],
+    ["17:08", "17:09", "17:09", "17:10", "17:10", "17:11", "17:11", "17:12", "17:13", "17:13", "17:14", "17:14", "17:15", "17:16", "17:16", "17:17", "17:18", "17:19", "17:19", "17:20", "17:21", "17:21", "17:22", "17:23", "17:24", "17:25", "17:25", "17:26", "17:27", "17:28", "17:29"],
+    [2, 3, 16, 17, 20, 24, 27, 30, 31],
+    [5, 19],
+    {}
+  );
+
+  // August 2026
+  addMonth("2026", 8, "August",
+    ["Ashadh Vad 3", "Ashadh Vad 4", "Ashadh Vad 5", "Ashadh Vad 6", "Ashadh Vad 7", "Ashadh Vad 8", "Ashadh Vad 9", "Ashadh Vad 10", "Ashadh Vad 11", "Ashadh Vad 12", "Ashadh Vad 14", "Ashadh Vad 30", "Shraavan Sud 1", "Shraavan Sud 2", "Shraavan Sud 3", "Shraavan Sud 4", "Shraavan Sud 5", "Shraavan Sud 6", "Shraavan Sud 7", "Shraavan Sud 8", "Shraavan Sud 9", "Shraavan Sud 10", "Shraavan Sud 11", "Shraavan Sud 12", "Shraavan Sud 13", "Shraavan Sud 13", "Shraavan Sud 14", "Shraavan Sud 15", "Shraavan Vad 1", "Shraavan Vad 2", "Shraavan Vad 3"],
+    ["07:23", "07:22", "07:21", "07:20", "07:19", "07:18", "07:17", "07:16", "07:15", "07:14", "07:13", "07:11", "07:10", "07:09", "07:08", "07:07", "07:05", "07:04", "07:03", "07:01", "07:00", "06:59", "06:57", "06:56", "06:55", "06:53", "06:52", "06:51", "06:49", "06:48", "06:46"],
+    ["17:29", "17:30", "17:31", "17:32", "17:33", "17:34", "17:34", "17:35", "17:36", "17:37", "17:38", "17:39", "17:39", "17:40", "17:41", "17:42", "17:43", "17:44", "17:44", "17:45", "17:46", "17:47", "17:48", "17:49", "17:49", "17:50", "17:51", "17:52", "17:53", "17:54", "17:54"],
+    [3, 9, 13, 14, 17, 23, 25, 28, 31],
+    [2, 16, 30],
+    { 30: "Shri Shreyanshnath Bhagwan Nirvan Kalyanak" }
+  );
+
+  // September 2026
+  addMonth("2026", 9, "September",
+    ["Shraavan Vad 5", "Shraavan Vad 6", "Shraavan Vad 7", "Shraavan Vad 8", "Shraavan Vad 9", "Shraavan Vad 10", "Shraavan Vad 11", "Shraavan Vad 12", "Shraavan Vad 13", "Shraavan Vad 14", "Shraavan Vad 30", "Bhadarvo Sud 1", "Bhadarvo Sud 2", "Bhadarvo Sud 3", "Bhadarvo Sud 4", "Bhadarvo Sud 5", "Bhadarvo Sud 6", "Bhadarvo Sud 7", "Bhadarvo Sud 8", "Bhadarvo Sud 9", "Bhadarvo Sud 10", "Bhadarvo Sud 11", "Bhadarvo Sud 12", "Bhadarvo Sud 13", "Bhadarvo Sud 14", "Bhadarvo Sud 15", "Bhadarvo Vad 1", "Bhadarvo Vad 2", "Bhadarvo Vad 3", "Bhadarvo Vad 4"],
+    ["06:45", "06:43", "06:42", "06:40", "06:39", "06:37", "06:36", "06:34", "06:33", "06:31", "06:30", "06:28", "06:27", "06:25", "06:24", "06:22", "06:21", "06:19", "06:17", "06:16", "06:14", "06:13", "06:11", "06:10", "06:08", "06:07", "06:05", "06:03", "06:02", "06:00"],
+    ["17:55", "17:56", "17:57", "17:58", "17:59", "17:59", "18:00", "18:01", "18:02", "18:03", "18:04", "18:04", "18:05", "18:06", "18:07", "18:08", "18:09", "18:09", "18:10", "18:11", "18:12", "18:13", "18:14", "18:15", "18:15", "18:16", "18:17", "18:18", "18:19", "18:20"],
+    [6, 7, 9, 22],
+    [13, 27],
+    {}
+  );
+
+  // October 2026
+  addMonth("2026", 10, "October",
+    ["Bhadarvo Vad 5", "Bhadarvo Vad 6", "Bhadarvo Vad 8", "Bhadarvo Vad 9", "Bhadarvo Vad 10", "Bhadarvo Vad 11", "Bhadarvo Vad 12", "Bhadarvo Vad 13", "Bhadarvo Vad 14", "Bhadarvo Vad 30", "Aaso Sud 1", "Aaso Sud 2", "Aaso Sud 3", "Aaso Sud 4", "Aaso Sud 5", "Aaso Sud 6", "Aaso Sud 7", "Aaso Sud 7", "Aaso Sud 8", "Aaso Sud 9", "Aaso Sud 10", "Aaso Sud 11", "Aaso Sud 12", "Aaso Sud 13", "Aaso Sud 14", "Aaso Sud 15", "Aaso Vad 2", "Aaso Vad 3", "Aaso Vad 4", "Aaso Vad 5", "Aaso Vad 6"],
+    ["05:59", "05:57", "05:56", "05:54", "06:53", "06:51", "06:50", "06:48", "06:47", "06:45", "06:44", "06:42", "06:41", "06:40", "06:38", "06:37", "06:35", "06:34", "06:33", "06:31", "06:30", "06:29", "06:27", "06:26", "06:25", "06:23", "06:22", "06:21", "06:20", "06:19", "06:17"],
+    ["18:21", "18:22", "18:22", "18:23", "19:24", "19:25", "19:26", "19:27", "19:28", "19:29", "19:30", "19:31", "19:32", "19:33", "19:34", "19:35", "19:35", "19:36", "19:37", "19:38", "19:39", "19:40", "19:41", "19:42", "19:43", "19:45", "19:46", "19:47", "19:48", "19:49", "19:50"],
+    [13, 15, 18, 22, 23, 26, 27, 28, 30],
+    [11, 25],
+    {}
+  );
+
+  panchang["default"] = {
+    dateStr: "Today",
     tithi: "Ashadh Krishna Dwadashi (12th)",
     sunrise: "05:48 AM",
     sunset: "07:12 PM",
     paksha: "Krishna Paksha",
     month: "Ashadh",
-    festival: "Pradosh Vrat & Shravan Prep",
-    auspiciousTimings: [
-      { name: "Amrit Choghadiya", time: "05:48 AM - 07:28 AM", status: "Auspicious" },
-      { name: "Shubh Choghadiya", time: "09:08 AM - 10:48 AM", status: "Auspicious" },
-      { name: "Rahu Kaal (Avoid)", time: "09:08 AM - 10:48 AM", status: "Inauspicious" },
-      { name: "Char Choghadiya", time: "02:08 PM - 03:48 PM", status: "Normal" },
-    ],
-  },
-  "default": {
-    dateStr: "Today",
-    tithi: "Shrawan Shukla Ekadashi (11th)",
-    sunrise: "05:52 AM",
-    sunset: "07:09 PM",
-    paksha: "Shukla Paksha",
-    month: "Shrawan",
-    festival: "Chaturmas Swadhyay Utsav",
-    auspiciousTimings: [
-      { name: "Amrit Choghadiya", time: "06:00 AM - 07:30 AM", status: "Auspicious" },
-      { name: "Shubh Choghadiya", time: "09:00 AM - 10:30 AM", status: "Auspicious" },
-      { name: "Rahu Kaal (Avoid)", time: "04:30 PM - 06:00 PM", status: "Inauspicious" },
-      { name: "Labh Choghadiya", time: "12:00 PM - 01:30 PM", status: "Auspicious" },
-    ]
-  }
+    festival: "",
+    shubh_din: false,
+    samayik: false,
+    event: ""
+  };
+
+  return panchang;
 };
+
+const DEFAULT_PANCHANG = generatePanchangData();
 
 const DEFAULT_EVENTS = [
   {
@@ -284,16 +394,32 @@ export const db = {
           paksha: data.paksha,
           month: data.month,
           festival: data.festival,
-          auspiciousTimings: data.auspicious_timings
+          shubh_din: data.shubh_din,
+          samayik: data.samayik,
+          event: data.event
         };
       }
     }
 
-    const records = getLocalItem("temp_panchang", DEFAULT_PANCHANG);
+    const records = getLocalItem("temp_tithi_panchang", DEFAULT_PANCHANG);
     return records[dateStr] || {
       ...records["default"],
       dateStr: dateStr
     };
+  },
+
+  async getPanchangForMonth(year, month) {
+    // month is 1-based (1-12)
+    const prefix = `${year}-${month.toString().padStart(2, "0")}`;
+    const records = getLocalItem("temp_tithi_panchang", DEFAULT_PANCHANG);
+    
+    const monthData = {};
+    for (const [date, val] of Object.entries(records)) {
+      if (date.startsWith(prefix)) {
+        monthData[date] = val;
+      }
+    }
+    return monthData;
   },
 
   async updatePanchang(dateStr, updates) {
@@ -311,14 +437,16 @@ export const db = {
           paksha: updated.paksha,
           month: updated.month,
           festival: updated.festival,
-          auspicious_timings: updated.auspiciousTimings
+          shubh_din: updated.shubh_din,
+          samayik: updated.samayik,
+          event: updated.event
         });
       if (!error) return updated;
     }
 
-    const records = getLocalItem("temp_panchang", DEFAULT_PANCHANG);
+    const records = getLocalItem("temp_tithi_panchang", DEFAULT_PANCHANG);
     records[dateStr] = updated;
-    setLocalItem("temp_panchang", records);
+    setLocalItem("temp_tithi_panchang", records);
     return updated;
   },
 
@@ -520,6 +648,170 @@ export const db = {
   getCurrentUser() {
     if (typeof window === "undefined") return null;
     return getLocalItem("session_user", null);
+  },
+
+  // --- Sadhana Tracker ---
+  async getSadhanaActivities() {
+    return getLocalItem("temp_sadhana_activities", DEFAULT_SADHANA_ACTIVITIES);
+  },
+
+  async updateSadhanaActivities(list) {
+    setLocalItem("temp_sadhana_activities", list);
+    return list;
+  },
+
+  async isLeaderboardEnabled() {
+    return getLocalItem("temp_leaderboard_toggle", false);
+  },
+
+  async setLeaderboardEnabled(enabled) {
+    setLocalItem("temp_leaderboard_toggle", enabled);
+    return enabled;
+  },
+
+  async getDevoteeProfile(userId) {
+    const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
+    if (!profiles[userId]) {
+      const currentUser = this.getCurrentUser();
+      profiles[userId] = {
+        id: userId,
+        fullName: currentUser?.fullName || "Jain Devotee",
+        phone: currentUser?.phone || "Unknown",
+        city: "Labriya",
+        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
+        totalPoints: 0,
+        streak: 0,
+        badges: [],
+        totalTaps: 0
+      };
+      setLocalItem("temp_sadhana_profiles", profiles);
+    }
+    return profiles[userId];
+  },
+
+  async updateDevoteeProfile(userId, updates) {
+    const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
+    if (!profiles[userId]) {
+      await this.getDevoteeProfile(userId);
+    }
+    profiles[userId] = { ...profiles[userId], ...updates };
+    setLocalItem("temp_sadhana_profiles", profiles);
+    return profiles[userId];
+  },
+
+  async getSadhanaLogs(userId) {
+    const logs = getLocalItem("temp_sadhana_logs", DEFAULT_SADHANA_LOGS);
+    return logs.filter(l => l.userId === userId).sort((a, b) => b.dateStr.localeCompare(a.dateStr));
+  },
+
+  async submitDailySadhana(userId, dateStr, activityIds) {
+    const activities = await this.getSadhanaActivities();
+    const logs = getLocalItem("temp_sadhana_logs", DEFAULT_SADHANA_LOGS);
+    
+    let pointsEarned = 0;
+    activityIds.forEach(id => {
+      const act = activities.find(a => a.id === id);
+      if (act) {
+        pointsEarned += act.points;
+      }
+    });
+
+    const existingIdx = logs.findIndex(l => l.userId === userId && l.dateStr === dateStr);
+    
+    let previousPoints = 0;
+    if (existingIdx !== -1) {
+      previousPoints = logs[existingIdx].points;
+      logs[existingIdx] = {
+        id: logs[existingIdx].id,
+        userId,
+        dateStr,
+        activities: activityIds,
+        points: pointsEarned
+      };
+    } else {
+      logs.unshift({
+        id: "log_" + Math.random().toString(36).substr(2, 9),
+        userId,
+        dateStr,
+        activities: activityIds,
+        points: pointsEarned
+      });
+    }
+
+    setLocalItem("temp_sadhana_logs", logs);
+
+    const profile = await this.getDevoteeProfile(userId);
+    const pointDifference = pointsEarned - previousPoints;
+    const newTotalPoints = Math.max(0, profile.totalPoints + pointDifference);
+
+    let newStreak = profile.streak;
+    if (existingIdx === -1) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      
+      const hadYesterdayLog = logs.some(l => l.userId === userId && l.dateStr === yesterdayStr);
+      if (hadYesterdayLog || newStreak === 0) {
+        newStreak += 1;
+      } else {
+        newStreak = 1;
+      }
+    }
+
+    const currentBadges = [...(profile.badges || [])];
+    const checkAndAddBadge = (badgeId) => {
+      if (!currentBadges.includes(badgeId)) {
+        currentBadges.push(badgeId);
+      }
+    };
+
+    let upvasTotalCount = 0;
+    let pravachanTotalCount = 0;
+    let templeTotalCount = 0;
+
+    const userLogs = logs.filter(l => l.userId === userId);
+    userLogs.forEach(l => {
+      if (l.activities.includes("act_upvas")) upvasTotalCount++;
+      if (l.activities.includes("act_pravachan")) pravachanTotalCount++;
+      if (l.activities.includes("act_temple")) templeTotalCount++;
+    });
+
+    if (upvasTotalCount >= 1) checkAndAddBadge("badge_first_upvas");
+    if (upvasTotalCount >= 10) checkAndAddBadge("badge_10_upvas");
+    if (pravachanTotalCount >= 30) checkAndAddBadge("badge_30_pravachans");
+    if (templeTotalCount >= 100) checkAndAddBadge("badge_100_temple");
+    if (newStreak >= 30) checkAndAddBadge("badge_30_streak");
+    
+    if (newTotalPoints >= 100) checkAndAddBadge("badge_100_points");
+    if (newTotalPoints >= 500) checkAndAddBadge("badge_500_points");
+    if (newTotalPoints >= 1000) checkAndAddBadge("badge_1000_points");
+
+    const updatedProfile = await this.updateDevoteeProfile(userId, {
+      totalPoints: newTotalPoints,
+      streak: newStreak,
+      badges: currentBadges,
+      totalTaps: upvasTotalCount + (userLogs.filter(l => l.activities.some(a => ["act_ekasana", "act_beasana", "act_ayambil"].includes(a))).length)
+    });
+
+    return {
+      log: existingIdx === -1 ? logs[0] : logs[existingIdx],
+      profile: updatedProfile
+    };
+  },
+
+  async getLeaderboard() {
+    const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
+    const isEnabled = await this.isLeaderboardEnabled();
+    if (!isEnabled) return [];
+
+    return Object.values(profiles)
+      .sort((a, b) => b.totalPoints - a.totalPoints)
+      .slice(0, 10);
+  },
+
+  async getAdminSadhanaReports() {
+    const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
+    return Object.values(profiles).sort((a, b) => b.totalPoints - a.totalPoints);
   },
 
   logout() {

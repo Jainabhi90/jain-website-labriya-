@@ -14,7 +14,10 @@ import {
   Trash2, 
   Check, 
   Save, 
-  LogOut
+  LogOut,
+  Award,
+  Trophy,
+  Download
 } from "lucide-react";
 import { db } from "@/services/db";
 
@@ -34,7 +37,13 @@ export default function Admin() {
   const [newAnn, setNewAnn] = useState({ title: "", content: "", type: "program", active: true });
   const [newEvent, setNewEvent] = useState({ title: "", description: "", date: "", location: "", imageUrl: "" });
   const [panchangDate, setPanchangDate] = useState("2026-07-11");
-  const [panchangVal, setPanchangVal] = useState({ tithi: "", festival: "", month: "", paksha: "", sunrise: "", sunset: "" });
+  const [panchangVal, setPanchangVal] = useState({ tithi: "", festival: "", month: "", paksha: "", sunrise: "", sunset: "", shubh_din: false, samayik: false, event: "" });
+  
+  // Sadhana Configurations State
+  const [sadhanaActivities, setSadhanaActivities] = useState([]);
+  const [leaderboardToggle, setLeaderboardToggle] = useState(false);
+  const [sadhanaReports, setSadhanaReports] = useState([]);
+  const [newSadhanaAct, setNewSadhanaAct] = useState({ name: "", points: 5, category: "Devotion" });
 
   useEffect(() => {
     const checkAuth = () => {
@@ -67,12 +76,23 @@ export default function Admin() {
       const panchangData = await db.getPanchang(panchangDate);
       setPanchangVal({
         tithi: panchangData.tithi,
-        festival: panchangData.festival || "",
         month: panchangData.month,
         paksha: panchangData.paksha,
         sunrise: panchangData.sunrise,
-        sunset: panchangData.sunset
+        sunset: panchangData.sunset,
+        shubh_din: !!panchangData.shubh_din,
+        samayik: !!panchangData.samayik,
+        event: panchangData.event || ""
       });
+
+      const activitiesList = await db.getSadhanaActivities();
+      setSadhanaActivities(activitiesList);
+
+      const lbToggle = await db.isLeaderboardEnabled();
+      setLeaderboardToggle(lbToggle);
+
+      const reportsList = await db.getAdminSadhanaReports();
+      setSadhanaReports(reportsList);
     } catch (e) {
       console.error(e);
     } finally {
@@ -90,7 +110,10 @@ export default function Admin() {
           month: data.month,
           paksha: data.paksha,
           sunrise: data.sunrise,
-          sunset: data.sunset
+          sunset: data.sunset,
+          shubh_din: !!data.shubh_din,
+          samayik: !!data.samayik,
+          event: data.event || ""
         });
       };
       fetchPanchangForDate();
@@ -172,6 +195,54 @@ export default function Admin() {
     }
   };
 
+  // --- Sadhana Config Handlers ---
+  const handleToggleLeaderboardState = async () => {
+    const nextVal = !leaderboardToggle;
+    await db.setLeaderboardEnabled(nextVal);
+    setLeaderboardToggle(nextVal);
+  };
+
+  const handleUpdateSadhanaPointVal = async (id, points) => {
+    const list = sadhanaActivities.map(act => act.id === id ? { ...act, points: parseInt(points) || 0 } : act);
+    await db.updateSadhanaActivities(list);
+    setSadhanaActivities(list);
+  };
+
+  const handleCreateSadhanaActivity = async (e) => {
+    e.preventDefault();
+    if (!newSadhanaAct.name) return;
+    const newAct = {
+      id: "act_" + Math.random().toString(36).substr(2, 9),
+      name: newSadhanaAct.name,
+      points: parseInt(newSadhanaAct.points) || 0,
+      category: newSadhanaAct.category
+    };
+    const list = [...sadhanaActivities, newAct];
+    await db.updateSadhanaActivities(list);
+    setSadhanaActivities(list);
+    setNewSadhanaAct({ name: "", points: 5, category: "Devotion" });
+  };
+
+  const handleDeleteSadhanaActivity = async (id) => {
+    const list = sadhanaActivities.filter(act => act.id !== id);
+    await db.updateSadhanaActivities(list);
+    setSadhanaActivities(list);
+  };
+
+  const handleExportSadhanaReports = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Name,Phone,City,Total Points,Current Streak,Tap Count,Badges Count\n";
+    sadhanaReports.forEach(r => {
+      csvContent += `"${r.fullName}","${r.phone}","${r.city}",${r.totalPoints},${r.streak},${r.totalTaps},${r.badges?.length || 0}\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Jain_Sadhana_Tracker_Audit_Report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (isLoading || !admin) {
     return (
       <div className="w-full h-96 flex flex-col items-center justify-center gap-3">
@@ -217,6 +288,7 @@ export default function Admin() {
             { id: "panchang", label: "Panchang Calendar", icon: CalendarIcon },
             { id: "events", label: "Event Organizer", icon: CalendarDays },
             { id: "donations", label: "Donation Audit Desk", icon: Heart },
+            { id: "sadhana", label: "Sadhana Configuration", icon: Award },
           ].map((tab) => {
             const Icon = tab.icon;
             const isTabActive = activeTab === tab.id;
@@ -400,11 +472,11 @@ export default function Admin() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-text-secondary uppercase font-bold">Festival Info (Optional)</label>
+                    <label className="text-[10px] text-text-secondary uppercase font-bold">Jain Event / Kalyanak Name (Optional)</label>
                     <input 
                       type="text" 
-                      value={panchangVal.festival}
-                      onChange={(e) => setPanchangVal(prev => ({ ...prev, festival: e.target.value }))}
+                      value={panchangVal.event}
+                      onChange={(e) => setPanchangVal(prev => ({ ...prev, event: e.target.value, festival: e.target.value }))}
                       className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
                     />
                   </div>
@@ -443,6 +515,29 @@ export default function Admin() {
                       onChange={(e) => setPanchangVal(prev => ({ ...prev, sunset: e.target.value }))}
                       className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
                     />
+                  </div>
+
+                  {/* Toggles for flags */}
+                  <div className="flex items-center gap-4 sm:col-span-2 py-2">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                      <input 
+                        type="checkbox"
+                        checked={!!panchangVal.shubh_din}
+                        onChange={(e) => setPanchangVal(prev => ({ ...prev, shubh_din: e.target.checked }))}
+                        className="rounded border-border-custom text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                      />
+                      <span>Shubh Din (卐 Swastik Marker)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                      <input 
+                        type="checkbox"
+                        checked={!!panchangVal.samayik}
+                        onChange={(e) => setPanchangVal(prev => ({ ...prev, samayik: e.target.checked }))}
+                        className="rounded border-border-custom text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                      />
+                      <span>Samayik Day (📖 Book Marker)</span>
+                    </label>
                   </div>
                 </div>
 
@@ -589,6 +684,170 @@ export default function Admin() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* TAB 6: SADHANA CONFIGURATION */}
+          {activeTab === "sadhana" && (
+            <div className="flex flex-col gap-8">
+              
+              <div className="p-5 rounded-custom-lg bg-bg-custom border border-border-custom flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-display font-semibold text-text-primary text-sm font-bold">Leaderboard Toggle & Reports</h4>
+                  <p className="text-[10px] text-text-secondary mt-0.5 font-medium">Choose to enable/disable leaderboard and audit devotee stats.</p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={handleToggleLeaderboardState}
+                    className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-wider shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      leaderboardToggle 
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                        : "bg-neutral-200 text-text-secondary hover:bg-neutral-300"
+                    }`}
+                  >
+                    <span>Leaderboard: {leaderboardToggle ? "Active" : "Disabled"}</span>
+                  </button>
+
+                  <button
+                    onClick={handleExportSadhanaReports}
+                    className="px-4 py-2 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Download size={14} />
+                    <span>Export CSV Data</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Activity Form */}
+              <form onSubmit={handleCreateSadhanaActivity} className="p-5 rounded-custom-lg bg-bg-custom border border-border-custom flex flex-col gap-4">
+                <h4 className="font-display font-semibold text-text-primary text-sm font-bold">Create New Spiritual Activity</h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-text-secondary uppercase font-bold">Activity Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Navkarshi vow"
+                      value={newSadhanaAct.name}
+                      onChange={(e) => setNewSadhanaAct(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                      className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-text-secondary uppercase font-bold">Points Awarded</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={newSadhanaAct.points}
+                      onChange={(e) => setNewSadhanaAct(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
+                      required
+                      className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-text-secondary uppercase font-bold">Category</label>
+                    <select
+                      value={newSadhanaAct.category}
+                      onChange={(e) => setNewSadhanaAct(prev => ({ ...prev, category: e.target.value }))}
+                      className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-secondary font-semibold cursor-pointer"
+                    >
+                      <option value="Devotion">Devotion</option>
+                      <option value="Tapas">Tapas / Fasting</option>
+                      <option value="Meditation">Meditation</option>
+                      <option value="Learning">Learning & Swadhyay</option>
+                      <option value="Chant">Chant / Mantra</option>
+                      <option value="Service">Volunteer Seva</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button 
+                  type="submit"
+                  className="px-4 py-2 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 w-fit cursor-pointer ml-auto"
+                >
+                  <Plus size={14} />
+                  <span>Add Activity</span>
+                </button>
+              </form>
+
+              {/* Activities Points List */}
+              <div className="flex flex-col gap-4">
+                <h4 className="font-display font-semibold text-text-primary text-sm font-bold border-b border-border-custom pb-2">Active Spiritual Tasks & Point Allocation</h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {sadhanaActivities.map((act) => (
+                    <div key={act.id} className="p-4 rounded bg-bg-custom border border-border-custom flex items-center justify-between gap-4">
+                      <div>
+                        <span className="text-xs font-semibold text-text-primary">{act.name}</span>
+                        <p className="text-[9px] text-text-secondary mt-0.5">{act.category}</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <input 
+                            type="number"
+                            min="0"
+                            value={act.points}
+                            onChange={(e) => handleUpdateSadhanaPointVal(act.id, e.target.value)}
+                            className="w-14 px-2 py-1 text-center rounded border border-border-custom text-xs font-bold text-primary focus:outline-none focus:border-primary/50"
+                          />
+                          <span className="text-[10px] font-bold text-text-secondary">pts</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteSadhanaActivity(act.id)}
+                          className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+                          title="Delete activity"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Devotee Reports Table */}
+              <div className="flex flex-col gap-4 mt-2">
+                <h4 className="font-display font-semibold text-text-primary text-sm font-bold border-b border-border-custom pb-2">Devotee Sadhana Status Reports</h4>
+                
+                <div className="overflow-hidden border border-border-custom rounded-custom-lg bg-white">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-bg-custom border-b border-border-custom text-[10px] text-text-secondary font-bold uppercase tracking-wider font-semibold">
+                          <th className="p-3">Devotee</th>
+                          <th className="p-3">City</th>
+                          <th className="p-3">Streak</th>
+                          <th className="p-3">Taps Completed</th>
+                          <th className="p-3 text-right">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sadhanaReports.map((dev) => (
+                          <tr key={dev.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
+                            <td className="p-3 font-semibold text-text-primary">
+                              <div className="flex items-center gap-2">
+                                <img src={dev.avatar} alt={dev.fullName} className="w-6 h-6 rounded-full object-cover" />
+                                <span>{dev.fullName} (+91 {dev.phone})</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-text-secondary">{dev.city}</td>
+                            <td className="p-3 font-bold text-primary">🔥 {dev.streak || 0} days</td>
+                            <td className="p-3 text-text-secondary font-semibold">{dev.totalTaps || 0} taps</td>
+                            <td className="p-3 text-right font-extrabold text-primary">{dev.totalPoints || 0} pts</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 

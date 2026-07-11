@@ -18,6 +18,7 @@ export default function Panchang() {
   const [panchang, setPanchang] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Set today's date default to "2026-07-11" which matches seed data
   useEffect(() => {
     const formattedDate = "2026-07-11";
     setSelectedDate(formattedDate);
@@ -41,6 +42,79 @@ export default function Panchang() {
     setSelectedDate(val);
     fetchPanchang(val);
   };
+
+  // Helper to dynamically calculate Day Choghadiya intervals based on Sunrise & Sunset
+  const calculateChoghadiyas = (sunriseStr, sunsetStr, dateStr) => {
+    if (!sunriseStr || !sunsetStr) return [];
+
+    const parseToMin = (tStr) => {
+      const clean = tStr.replace(/(AM|PM)/i, "").trim();
+      const [h, m] = clean.split(":").map(Number);
+      let hours = h;
+      if (tStr.toLowerCase().includes("pm") && h < 12) hours += 12;
+      if (tStr.toLowerCase().includes("am") && h === 12) hours = 0;
+      return hours * 60 + m;
+    };
+
+    const formatToTimeStr = (totalMin) => {
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = Math.floor(totalMin % 60);
+      const period = h >= 12 ? "PM" : "AM";
+      const displayH = h % 12 === 0 ? 12 : h % 12;
+      return `${displayH.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${period}`;
+    };
+
+    const srMin = parseToMin(sunriseStr);
+    const ssMin = parseToMin(sunsetStr);
+    const dayLength = ssMin - srMin;
+    const partSize = dayLength / 8;
+
+    // Day of the week index (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = new Date(dateStr).getDay();
+
+    const CHOGHADIYA_DAYS = [
+      // 0: Sunday
+      ["Udveg", "Chala", "Labh", "Amrit", "Kaal", "Shubh", "Roga", "Udveg"],
+      // 1: Monday
+      ["Amrit", "Kaal", "Shubh", "Roga", "Udveg", "Chala", "Labh", "Amrit"],
+      // 2: Tuesday
+      ["Roga", "Udveg", "Chala", "Labh", "Amrit", "Kaal", "Shubh", "Roga"],
+      // 3: Wednesday
+      ["Labh", "Amrit", "Kaal", "Shubh", "Roga", "Udveg", "Chala", "Labh"],
+      // 4: Thursday
+      ["Shubh", "Roga", "Udveg", "Chala", "Labh", "Amrit", "Kaal", "Shubh"],
+      // 5: Friday
+      ["Chala", "Labh", "Amrit", "Kaal", "Shubh", "Roga", "Udveg", "Chala"],
+      // 6: Saturday
+      ["Kaal", "Shubh", "Roga", "Udveg", "Chala", "Labh", "Amrit", "Kaal"],
+    ];
+
+    const STATUS_MAP = {
+      "Amrit": "Auspicious",
+      "Shubh": "Auspicious",
+      "Labh": "Auspicious",
+      "Chala": "Normal",
+      "Udveg": "Inauspicious",
+      "Roga": "Inauspicious",
+      "Kaal": "Inauspicious",
+    };
+
+    const daySequence = CHOGHADIYA_DAYS[dayOfWeek] || CHOGHADIYA_DAYS[0];
+
+    return daySequence.map((name, i) => {
+      const start = srMin + i * partSize;
+      const end = srMin + (i + 1) * partSize;
+      return {
+        name: `${name} Choghadiya`,
+        time: `${formatToTimeStr(start)} - ${formatToTimeStr(end)}`,
+        status: STATUS_MAP[name] || "Normal"
+      };
+    });
+  };
+
+  const choghadiyaIntervals = panchang 
+    ? calculateChoghadiyas(panchang.sunrise, panchang.sunset, selectedDate)
+    : [];
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center">
@@ -91,7 +165,6 @@ export default function Panchang() {
               animate={{ opacity: 1, y: 0 }}
               className="p-6 sm:p-8 rounded-custom-lg bg-white border border-border-custom shadow-premium relative overflow-hidden"
             >
-              {/* Sun/Moon absolute graphics */}
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-primary/5 rounded-full blur-xl pointer-events-none" />
               
               <div className="flex flex-col gap-5">
@@ -100,10 +173,10 @@ export default function Panchang() {
                   <h2 className="font-display font-semibold text-text-primary text-2xl sm:text-3xl mt-1 leading-snug">
                     {panchang.tithi}
                   </h2>
-                  {panchang.festival && (
+                  {panchang.event && (
                     <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-primary/20 text-xs font-bold text-primary">
                       <Sparkles size={12} />
-                      <span>{panchang.festival}</span>
+                      <span>{panchang.event}</span>
                     </div>
                   )}
                 </div>
@@ -177,7 +250,7 @@ export default function Panchang() {
               </div>
 
               <div className="flex flex-col gap-3.5">
-                {panchang.auspiciousTimings.map((time, idx) => {
+                {choghadiyaIntervals.map((time, idx) => {
                   let statusColor = "bg-neutral-50 text-neutral-700 border-neutral-200/50";
                   if (time.status === "Auspicious") {
                     statusColor = "bg-emerald-50 text-emerald-700 border-emerald-500/10";
