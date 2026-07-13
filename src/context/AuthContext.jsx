@@ -57,6 +57,10 @@ export function AuthProvider({ children }) {
 
   // Expose function to refresh session manually
   const refreshSession = useCallback(async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     try {
       const { data: { session: currentSession }, error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -82,6 +86,9 @@ export function AuthProvider({ children }) {
 
   // Sign In function via Supabase OTP
   const login = useCallback(async (phone) => {
+    if (!supabase) {
+      throw new Error("Supabase is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to your environment.");
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithOtp({ phone });
@@ -97,6 +104,16 @@ export function AuthProvider({ children }) {
 
   // Sign Out function
   const logout = useCallback(async () => {
+    if (!supabase) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      lastFetchedUserId.current = null;
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("session_user");
+      }
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
@@ -122,6 +139,11 @@ export function AuthProvider({ children }) {
 
   // Initialize Auth state listener
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // Initial session recovery
     refreshSession();
 

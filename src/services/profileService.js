@@ -14,6 +14,7 @@ export const profileService = {
    */
   async getCurrentProfile(userId) {
     if (!userId) throw new Error("User ID is required to fetch profile.");
+    if (!supabase) throw new Error("Supabase is not configured.");
     
     const { data, error } = await supabase
       .from("profiles")
@@ -38,6 +39,7 @@ export const profileService = {
    */
   async updateProfile(userId, updates) {
     if (!userId) throw new Error("User ID is required to update profile.");
+    if (!supabase) throw new Error("Supabase is not configured.");
     
     const dbUpdates = {
       full_name: updates.fullName || updates.full_name,
@@ -69,6 +71,7 @@ export const profileService = {
    */
   async completeProfile(userId, updates) {
     if (!userId) throw new Error("User ID is required to complete profile.");
+    if (!supabase) throw new Error("Supabase is not configured.");
     
     const dbUpdates = {
       full_name: (updates.fullName || updates.full_name).trim(),
@@ -100,6 +103,7 @@ export const profileService = {
    */
   async updateLastLogin(userId) {
     if (!userId) return;
+    if (!supabase) return;
     
     const { error } = await supabase
       .from("profiles")
