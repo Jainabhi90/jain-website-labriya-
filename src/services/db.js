@@ -1,14 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabase as libSupabase } from "@/lib/supabase";
 
-// Initialize Supabase if environment variables are provided
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
-
-export const supabase = isSupabaseConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+export const supabase = libSupabase;
+export const isSupabaseConfigured = !!supabase;
 
 // ==========================================
 // SEED DATA FOR LOCAL STORAGE FALLBACK
@@ -333,15 +326,15 @@ export const db = {
       const { data, error } = await supabase
         .from("announcements")
         .select("*")
-        .eq("active", true)
+        .eq("published", true)
         .order("created_at", { ascending: false });
       if (!error && data) {
         return data.map(item => ({
           id: item.id,
           title: item.title,
-          content: item.content,
-          type: item.type,
-          active: item.active,
+          content: item.message,
+          type: item.priority === "high" ? "program" : item.priority === "low" ? "notice" : "update",
+          active: item.published,
           createdAt: item.created_at
         }));
       }
@@ -359,13 +352,14 @@ export const db = {
     };
 
     if (isSupabaseConfigured && supabase) {
+      const dbPriority = announcement.type === "program" ? "high" : announcement.type === "notice" ? "low" : "normal";
       const { data, error } = await supabase
         .from("announcements")
         .insert({
           title: announcement.title,
-          content: announcement.content,
-          type: announcement.type,
-          active: announcement.active
+          message: announcement.content,
+          priority: dbPriority,
+          published: announcement.active
         })
         .select()
         .single();
@@ -373,9 +367,9 @@ export const db = {
         return {
           id: data.id,
           title: data.title,
-          content: data.content,
-          type: data.type,
-          active: data.active,
+          content: data.message,
+          type: data.priority === "high" ? "program" : data.priority === "low" ? "notice" : "update",
+          active: data.published,
           createdAt: data.created_at
         };
       }
@@ -391,7 +385,7 @@ export const db = {
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase
         .from("announcements")
-        .update({ active: false })
+        .update({ published: false })
         .eq("id", id);
       if (!error) return true;
     }
@@ -485,9 +479,17 @@ export const db = {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .order("date", { ascending: true });
+        .order("event_date", { ascending: true })
+        .order("event_time", { ascending: true });
       if (!error && data) {
-        return data;
+        return data.map(d => ({
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          location: d.location,
+          date: `${d.event_date}T${d.event_time}`,
+          imageUrl: d.image_url
+        }));
       }
     }
     return getLocalItem("temp_events", DEFAULT_EVENTS)
@@ -501,12 +503,31 @@ export const db = {
     };
 
     if (isSupabaseConfigured && supabase) {
+      const dateObj = new Date(event.date);
+      const eventDate = isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0];
+      const eventTime = isNaN(dateObj.getTime()) ? new Date().toTimeString().split(" ")[0] : dateObj.toTimeString().split(" ")[0];
       const { data, error } = await supabase
         .from("events")
-        .insert(event)
+        .insert({
+          title: event.title,
+          description: event.description,
+          location: event.location,
+          event_date: eventDate,
+          event_time: eventTime,
+          image_url: event.imageUrl
+        })
         .select()
         .single();
-      if (!error && data) return data;
+      if (!error && data) {
+        return {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          location: data.location,
+          date: `${data.event_date}T${data.event_time}`,
+          imageUrl: data.image_url
+        };
+      }
     }
 
     const items = getLocalItem("temp_events", DEFAULT_EVENTS);
@@ -619,65 +640,7 @@ export const db = {
     return items[idx];
   },
 
-  // --- Authentication Sim ---
-  async sendOTP(phone) {
-    const mockOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithOtp({ phone });
-      if (error) throw error;
-      return "OTP Sent Successfully (Real SMS)";
-    }
-    
-    // Simulate SMS sending by logging and saving in storage for recovery
-    setLocalItem(`mock_otp_${phone}`, mockOTP);
-    console.log(`[OTP SIMULATOR] Code sent to ${phone}: ${mockOTP}`);
-    return mockOTP;
-  },
 
-  async verifyOTP(phone, otp) {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: "sms" });
-      if (error) throw error;
-      
-      const user = data.user;
-      // Get role from public.profiles
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      return {
-        id: user.id,
-        phone: phone,
-        fullName: profile?.full_name || "Devotee",
-        role: profile?.role || "user"
-      };
-    }
-
-    // Mock Login
-    const savedOTP = getLocalItem(`mock_otp_${phone}`, null);
-    // Allow '123456' as master bypass for easy evaluation
-    if (otp === "123456" || otp === savedOTP) {
-      // Determine if admin (any number ending in '9000' is an admin for mock purposes)
-      const role = phone.endsWith("9000") ? "admin" : "user";
-      const profile = {
-        id: "usr_" + phone,
-        phone,
-        fullName: role === "admin" ? "Temple Administrator" : "Jain Devotee",
-        role
-      };
-      setLocalItem("session_user", profile);
-      return profile;
-    } else {
-      throw new Error("Invalid verification code");
-    }
-  },
-
-  getCurrentUser() {
-    if (typeof window === "undefined") return null;
-    return getLocalItem("session_user", null);
-  },
 
   // --- Sadhana Tracker ---
   async getSadhanaActivities() {
@@ -701,11 +664,10 @@ export const db = {
   async getDevoteeProfile(userId) {
     const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
     if (!profiles[userId]) {
-      const currentUser = this.getCurrentUser();
       profiles[userId] = {
         id: userId,
-        fullName: currentUser?.fullName || "Jain Devotee",
-        phone: currentUser?.phone || "Unknown",
+        fullName: "Jain Devotee",
+        phone: "Unknown",
         city: "Labriya",
         avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
         totalPoints: 0,
@@ -843,8 +805,4 @@ export const db = {
     return Object.values(profiles).sort((a, b) => b.totalPoints - a.totalPoints);
   },
 
-  logout() {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem("session_user");
-  }
 };

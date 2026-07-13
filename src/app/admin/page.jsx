@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { 
   User, 
   Clock, 
@@ -16,13 +15,14 @@ import {
   Save, 
   LogOut,
   Award,
-  Trophy,
   Download
 } from "lucide-react";
 import { db } from "@/services/db";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Admin() {
   const router = useRouter();
+  const { user, profile, loading, isAdmin, logout } = useAuth();
   const [admin, setAdmin] = useState(null);
   const [activeTab, setActiveTab] = useState("schedules");
   const [isLoading, setIsLoading] = useState(true);
@@ -46,17 +46,15 @@ export default function Admin() {
   const [newSadhanaAct, setNewSadhanaAct] = useState({ name: "", points: 5, category: "Devotion" });
 
   useEffect(() => {
-    const checkAuth = () => {
-      const currentUser = db.getCurrentUser();
-      if (!currentUser || currentUser.role !== "admin") {
+    if (!loading) {
+      if (!user || !isAdmin || !profile) {
         router.push("/login");
         return;
       }
-      setAdmin(currentUser);
+      setAdmin(profile);
       refreshData();
-    };
-    checkAuth();
-  }, [router]);
+    }
+  }, [loading, user, isAdmin, profile, router]);
 
   const refreshData = async () => {
     setIsLoading(true);
@@ -120,16 +118,18 @@ export default function Admin() {
     }
   }, [panchangDate, admin]);
 
-  const handleLogout = () => {
-    db.logout();
-    window.dispatchEvent(new Event("authChange"));
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/");
+    } catch (err) {
+      console.error("Admin logout failed:", err.message);
+    }
   };
 
   // Schedule Update handler
   const handleScheduleUpdate = async (id, field, value) => {
     try {
-      const item = schedules.find(s => s.id === id);
       const updates = { [field]: value };
       const updated = await db.updateSchedule(id, updates);
       setSchedules(prev => prev.map(s => s.id === id ? updated : s));
@@ -296,7 +296,7 @@ export default function Admin() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-left ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer lg:w-full text-left ${
                   isTabActive 
                     ? "bg-primary text-white shadow-premium" 
                     : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
@@ -322,7 +322,7 @@ export default function Admin() {
 
               <div className="flex flex-col gap-4">
                 {schedules.map((item) => (
-                  <div key={item.id} className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-custom-md bg-bg-custom border border-border-custom">
+                  <div key={item.id} className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-custom-md bg-bg-custom border border-border-custom gap-4 font-medium text-text-primary">
                     
                     <div className="w-full sm:w-28 shrink-0">
                       <input 
@@ -672,7 +672,7 @@ export default function Admin() {
                           className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] uppercase tracking-wider shadow transition-colors cursor-pointer w-full sm:w-auto flex items-center justify-center gap-1"
                         >
                           <Check size={12} />
-                          <span>Approve & Exemp</span>
+                          <span>Approve & Exempt</span>
                         </button>
                       )}
                     </div>
@@ -780,7 +780,7 @@ export default function Admin() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {sadhanaActivities.map((act) => (
-                    <div key={act.id} className="p-4 rounded bg-bg-custom border border-border-custom flex items-center justify-between gap-4">
+                    <div key={act.id} className="p-4 rounded bg-bg-custom border border-border-custom flex items-center justify-between gap-4 font-medium text-text-primary">
                       <div>
                         <span className="text-xs font-semibold text-text-primary">{act.name}</span>
                         <p className="text-[9px] text-text-secondary mt-0.5">{act.category}</p>
@@ -819,7 +819,7 @@ export default function Admin() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
-                        <tr className="bg-bg-custom border-b border-border-custom text-[10px] text-text-secondary font-bold uppercase tracking-wider font-semibold">
+                        <tr className="bg-bg-custom border-b border-border-custom text-[10px] text-text-secondary font-bold uppercase tracking-wider">
                           <th className="p-3">Devotee</th>
                           <th className="p-3">City</th>
                           <th className="p-3">Streak</th>
@@ -829,7 +829,7 @@ export default function Admin() {
                       </thead>
                       <tbody>
                         {sadhanaReports.map((dev) => (
-                          <tr key={dev.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
+                          <tr key={dev.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors font-medium text-text-primary">
                             <td className="p-3 font-semibold text-text-primary">
                               <div className="flex items-center gap-2">
                                 <img src={dev.avatar} alt={dev.fullName} className="w-6 h-6 rounded-full object-cover" />

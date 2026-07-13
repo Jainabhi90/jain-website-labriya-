@@ -14,52 +14,42 @@ import {
   LayoutDashboard,
   LogOut
 } from "lucide-react";
-import { db } from "@/services/db";
+import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { user, profile, isAuthenticated, logout } = useAuth();
   const [lang, setLang] = useState("en");
   
   useEffect(() => {
     // Add js-loaded class to document once React bundle is loaded and hydrated
     document.documentElement.classList.add("js-loaded");
-
-    const currentUser = db.getCurrentUser();
-    setUser(currentUser);
     
     // Read initial language
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("lang") || "en");
     }
 
-    // Listen for custom storage events to keep auth state sync'd
-    const syncAuth = () => {
-      setUser(db.getCurrentUser());
-    };
-    
     const syncLang = () => {
       setLang(localStorage.getItem("lang") || "en");
     };
 
-    window.addEventListener("storage", syncAuth);
-    window.addEventListener("authChange", syncAuth);
     window.addEventListener("languageChange", syncLang);
     
     return () => {
-      window.removeEventListener("storage", syncAuth);
-      window.removeEventListener("authChange", syncAuth);
       window.removeEventListener("languageChange", syncLang);
     };
-  }, [pathname]);
+  }, []);
 
-  const handleLogout = () => {
-    db.logout();
-    setUser(null);
-    window.dispatchEvent(new Event("authChange"));
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/");
+    } catch (err) {
+      console.error("Navigation: Logout failed:", err.message);
+    }
   };
 
   const toggleLanguage = () => {
@@ -141,16 +131,16 @@ export default function Navigation() {
             </motion.button>
 
             {/* Auth Button */}
-            {user ? (
+            {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                <Link href={user.role === "admin" ? "/admin" : "/dashboard"}>
+                <Link href={profile?.role === "admin" ? "/admin" : "/dashboard"}>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className="flex items-center gap-2 px-4 py-2 rounded-custom-md bg-secondary text-accent border border-accent/20 hover:border-accent text-xs font-semibold tracking-wide uppercase transition-all cursor-pointer"
                   >
                     <LayoutDashboard size={14} />
-                    <span>{user.role === "admin" ? t.admin : t.portal}</span>
+                    <span>{profile?.role === "admin" ? t.admin : t.portal}</span>
                   </motion.button>
                 </Link>
                 
@@ -177,7 +167,7 @@ export default function Navigation() {
           </div>
         </div>
       </header>
-
+ 
       {/* MOBILE BOTTOM NAVIGATION */}
       <nav className="fixed bottom-6 left-4 right-4 z-50 glass-panel border border-border-custom/80 shadow-premium rounded-custom-lg py-3 px-4 flex items-center justify-around md:hidden">
         {navLinks.map((link) => {
@@ -205,10 +195,10 @@ export default function Navigation() {
             </Link>
           );
         })}
-
+ 
         {/* User Portal Link / Login on Mobile */}
         <Link 
-          href={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/login"}
+          href={isAuthenticated ? (profile?.role === "admin" ? "/admin" : "/dashboard") : "/login"}
           className="flex flex-col items-center justify-center relative py-1"
         >
           <motion.div
@@ -226,7 +216,7 @@ export default function Navigation() {
               ? "text-primary font-semibold" 
               : "text-text-secondary"
           }`}>
-            {user ? (user.role === "admin" ? t.admin : t.portal) : t.login}
+            {isAuthenticated ? (profile?.role === "admin" ? t.admin : t.portal) : t.login}
           </span>
         </Link>
       </nav>

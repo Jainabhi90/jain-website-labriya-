@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User, 
-  Heart, 
-  Calendar as CalendarIcon, 
-  LogOut, 
+import {
+  User,
+  Heart,
+  Calendar as CalendarIcon,
+  LogOut,
   Download,
   AlertCircle,
   FileCheck,
@@ -25,6 +25,8 @@ import {
   UserCheck
 } from "lucide-react";
 import { db } from "@/services/db";
+import { useAuth } from "@/context/AuthContext";
+import { profileService } from "@/services/profileService";
 
 const BADGES_DEFINITIONS = {
   "badge_first_upvas": { name: "First Upvas", desc: "Completed your first complete day fast", icon: "🌸" },
@@ -49,14 +51,13 @@ const MOTIVATIONAL_QUOTES = [
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  
+  const { user, profile, loading, logout, refreshProfile } = useAuth();
+
   // Dashboard Tabs: 'sadhana', 'badges', 'history', 'leaderboard', 'donations', 'profile'
   const [activeTab, setActiveTab] = useState("sadhana");
   const [isLoading, setIsLoading] = useState(true);
 
   // Devotee Sadhana States
-  const [profile, setProfile] = useState(null);
   const [activities, setActivities] = useState([]);
   const [logs, setLogs] = useState([]);
   const [checkedActivities, setCheckedActivities] = useState([]);
@@ -65,7 +66,7 @@ export default function Dashboard() {
   const [leaderboardEnabled, setLeaderboardEnabled] = useState(false);
   const [quote, setQuote] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-  
+
   // Devotee Donation History
   const [donations, setDonations] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
@@ -76,33 +77,41 @@ export default function Dashboard() {
   const [editCity, setEditCity] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
 
+  // Setup quote once on mount
   useEffect(() => {
-    // Pick a random motivational quote
     const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
     setQuote(randomQuote);
+  }, []);
 
-    const checkAuth = async () => {
-      const currentUser = db.getCurrentUser();
-      if (!currentUser) {
-        router.push("/login");
-        return;
-      }
-      setUser(currentUser);
+  // Sync profile details into editing form fields
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.fullName || profile.full_name || "");
+      setEditCity(profile.city || "Labriya");
+      setEditAvatar(profile.avatar || profile.avatar_url || "");
+    }
+  }, [profile]);
 
+  // Auth and general data loading mount effect
+  useEffect(() => {
+    if (loading) return;
+    if (!user || !profile) {
+      router.push("/login");
+      return;
+    }
+
+    const loadDashboardData = async () => {
+      setIsLoading(true);
       try {
-        // Load Sadhana Profile
-        const sadhanaProf = await db.getDevoteeProfile(currentUser.id);
-        setProfile(sadhanaProf);
-        setEditName(sadhanaProf.fullName);
-        setEditCity(sadhanaProf.city || "Labriya");
-        setEditAvatar(sadhanaProf.avatar || "");
+        // Initialize local profile fallback properties (leaderboard compatibility)
+        await db.getDevoteeProfile(user.id);
 
         // Load Sadhana Activities
         const acts = await db.getSadhanaActivities();
         setActivities(acts);
 
         // Load Devotee Sadhana Logs
-        const sadhanaLogs = await db.getSadhanaLogs(currentUser.id);
+        const sadhanaLogs = await db.getSadhanaLogs(user.id);
         setLogs(sadhanaLogs);
 
         // Precheck activities if user has already checked in for today
@@ -121,7 +130,13 @@ export default function Dashboard() {
 
         // Load Donations Receipts
         const donationsList = await db.getDonations();
-        const userDonations = donationsList.filter(d => d.phone === currentUser.phone);
+        const userPhone = user.phone || profile.mobile || profile.phone || "";
+        const cleanPhone = userPhone.replace("+91", "");
+        const userDonations = donationsList.filter(d =>
+          d.phone === cleanPhone ||
+          d.phone === userPhone ||
+          (d.profileId && d.profileId === user.id)
+        );
         setDonations(userDonations);
 
         // Load Announcements/Noticeboards
@@ -138,8 +153,8 @@ export default function Dashboard() {
       }
     };
 
-    checkAuth();
-  }, [router]);
+    loadDashboardData();
+  }, [user, profile, loading, router]);
 
   // Load check-in checkboxes for a specific selected date
   useEffect(() => {
@@ -153,14 +168,17 @@ export default function Dashboard() {
     }
   }, [checkInDate, logs]);
 
-  const handleLogout = () => {
-    db.logout();
-    window.dispatchEvent(new Event("authChange"));
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/");
+    } catch (err) {
+      console.error("Dashboard logout failed:", err.message);
+    }
   };
 
   const handleToggleActivity = (id) => {
-    setCheckedActivities(prev => 
+    setCheckedActivities(prev =>
       prev.includes(id) ? prev.filter(aId => aId !== id) : [...prev, id]
     );
   };
@@ -169,8 +187,16 @@ export default function Dashboard() {
     if (!user) return;
     try {
       const result = await db.submitDailySadhana(user.id, checkInDate, checkedActivities);
-      setProfile(result.profile);
-      
+
+      // Keep points and streaks synced in the Supabase database profiles table
+      await profileService.updateProfile(user.id, {
+        totalPoints: result.profile.totalPoints,
+        streak: result.profile.streak
+      });
+
+      // Refresh AuthContext profile details
+      await refreshProfile(user.id);
+
       // Reload logs
       const updatedLogs = await db.getSadhanaLogs(user.id);
       setLogs(updatedLogs);
@@ -200,24 +226,28 @@ export default function Dashboard() {
     e.preventDefault();
     if (!user) return;
     try {
-      const updated = await db.updateDevoteeProfile(user.id, {
+      // 1. Update in local storage fallback database for leaderboard compatibility
+      await db.updateDevoteeProfile(user.id, {
         fullName: editName,
         city: editCity,
         avatar: editAvatar
       });
-      setProfile(updated);
-      
-      // Update session user display in banner
-      const sessionUser = db.getCurrentUser();
-      if (sessionUser) {
-        sessionUser.fullName = editName;
-        localStorage.setItem("session_user", JSON.stringify(sessionUser));
-      }
+
+      // 2. Persist profile edits ONLY through Supabase
+      await profileService.updateProfile(user.id, {
+        fullName: editName,
+        city: editCity,
+        avatar: editAvatar
+      });
+
+      // 3. Refresh context profile details
+      await refreshProfile(user.id);
 
       setStatusMessage("🌸 Profile details updated successfully.");
       setTimeout(() => setStatusMessage(""), 4000);
     } catch (err) {
       console.error(err);
+      setStatusMessage("❌ Failed to update profile details.");
     }
   };
 
@@ -234,7 +264,7 @@ export default function Dashboard() {
   // Helper for analytic summaries
   const getMonthlySummary = () => {
     if (logs.length === 0) return { count: 0, points: 0, mostPerformed: "None" };
-    
+
     let totalPoints = 0;
     const actCount = {};
 
@@ -369,15 +399,15 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 md:py-16">
-      
+
       {/* Devotee Header Profile Banner */}
       <div className="w-full bg-white border border-border-custom shadow-premium p-6 sm:p-8 rounded-custom-lg mb-10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-full bg-secondary/30 -skew-x-12 pointer-events-none" />
-        
+
         {/* Profile Info */}
         <div className="flex flex-col sm:flex-row items-center gap-5 w-full md:w-auto text-center sm:text-left">
-          <img 
-            src={profile.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"} 
+          <img
+            src={profile.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"}
             alt="Profile Avatar"
             className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 bg-secondary"
           />
@@ -394,7 +424,7 @@ export default function Dashboard() {
 
         {/* Sadhana Points & Streak Counters */}
         <div className="flex flex-wrap items-center justify-center gap-6 shrink-0 w-full md:w-auto border-t md:border-t-0 border-neutral-100 pt-4 md:pt-0">
-          
+
           <div className="flex items-center gap-3 bg-secondary/50 px-4 py-3 rounded-custom-md border border-primary/10">
             <span className="text-xl">🪷</span>
             <div className="flex flex-col">
@@ -425,7 +455,7 @@ export default function Dashboard() {
       {/* Message Notifications Banner */}
       <AnimatePresence>
         {statusMessage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -439,7 +469,7 @@ export default function Dashboard() {
 
       {/* Main Grid */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Left Side: Navigation Tabs Sidebar */}
         <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-thin">
           {[
@@ -456,11 +486,10 @@ export default function Dashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-left ${
-                  isTabActive 
-                    ? "bg-primary text-white shadow-premium" 
+                className={`flex items-center gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-left ${isTabActive
+                    ? "bg-primary text-white shadow-premium"
                     : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
-                }`}
+                  }`}
               >
                 <Icon size={16} />
                 <span>{tab.label}</span>
@@ -479,11 +508,11 @@ export default function Dashboard() {
 
         {/* Right Side: Tab workspace */}
         <div className="lg:col-span-9 bg-white border border-border-custom shadow-premium p-6 sm:p-8 rounded-custom-lg min-h-[500px]">
-          
+
           {/* TAB 1: DAILY CHECK-IN */}
           {activeTab === "sadhana" && (
             <div className="flex flex-col gap-6">
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-border-custom">
                 <div>
                   <h3 className="font-display font-semibold text-text-primary text-base">Daily Sadhana Check-In</h3>
@@ -492,7 +521,7 @@ export default function Dashboard() {
 
                 <div className="flex items-center gap-2">
                   <label htmlFor="check-in-date" className="text-[10px] uppercase font-bold text-text-secondary">Target Date:</label>
-                  <input 
+                  <input
                     id="check-in-date"
                     type="date"
                     value={checkInDate}
@@ -519,20 +548,19 @@ export default function Dashboard() {
                 {activities.map((act) => {
                   const isChecked = checkedActivities.includes(act.id);
                   return (
-                    <div 
+                    <div
                       key={act.id}
                       onClick={() => handleToggleActivity(act.id)}
-                      className={`p-3.5 border rounded-custom-md flex items-center justify-between cursor-pointer transition-all ${
-                        isChecked 
-                          ? "bg-secondary/40 border-primary shadow-premium" 
+                      className={`p-3.5 border rounded-custom-md flex items-center justify-between cursor-pointer transition-all ${isChecked
+                          ? "bg-secondary/40 border-primary shadow-premium"
                           : "bg-white border-border-custom hover:border-primary/10"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
-                        <input 
+                        <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => {}} // handled by div click
+                          onChange={() => { }} // handled by div click
                           className="w-4 h-4 rounded text-primary border-border-custom focus:ring-primary cursor-pointer shrink-0"
                         />
                         <div className="flex flex-col">
@@ -564,7 +592,7 @@ export default function Dashboard() {
           {/* TAB 2: EARNED BADGES */}
           {activeTab === "badges" && (
             <div className="flex flex-col gap-6">
-              
+
               <div>
                 <h3 className="font-display font-semibold text-text-primary text-base">Devotional Achievements</h3>
                 <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Spiritual milestone badges</p>
@@ -574,24 +602,22 @@ export default function Dashboard() {
                 {Object.entries(BADGES_DEFINITIONS).map(([badgeId, val]) => {
                   const isUnlocked = profile.badges?.includes(badgeId);
                   return (
-                    <div 
+                    <div
                       key={badgeId}
-                      className={`p-5 rounded-custom-lg border text-center flex flex-col items-center justify-center gap-3 transition-all ${
-                        isUnlocked 
-                          ? "bg-white border-primary shadow-premium ring-2 ring-primary/5" 
+                      className={`p-5 rounded-custom-lg border text-center flex flex-col items-center justify-center gap-3 transition-all ${isUnlocked
+                          ? "bg-white border-primary shadow-premium ring-2 ring-primary/5"
                           : "bg-neutral-50/50 border-neutral-100 opacity-40 select-none"
-                      }`}
+                        }`}
                     >
-                      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-sm ${
-                        isUnlocked ? "bg-secondary text-primary" : "bg-neutral-200"
-                      }`}>
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-sm ${isUnlocked ? "bg-secondary text-primary" : "bg-neutral-200"
+                        }`}>
                         {val.icon}
                       </div>
                       <div>
                         <h4 className={`text-xs font-bold ${isUnlocked ? "text-text-primary" : "text-text-secondary"}`}>{val.name}</h4>
                         <p className="text-[9px] text-text-secondary mt-1 leading-normal max-w-xs">{val.desc}</p>
                       </div>
-                      
+
                       {isUnlocked ? (
                         <span className="text-[8px] uppercase tracking-wider font-extrabold text-primary bg-secondary px-2 py-0.5 rounded border border-primary/10">Unlocked</span>
                       ) : (
@@ -608,7 +634,7 @@ export default function Dashboard() {
           {/* TAB 3: HISTORY & SUMMARY LOGS */}
           {activeTab === "history" && (
             <div className="flex flex-col gap-6">
-              
+
               <div>
                 <h3 className="font-display font-semibold text-text-primary text-base">Spiritual Logs & Metrics</h3>
                 <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Summary analyses of monthly routines</p>
@@ -616,7 +642,7 @@ export default function Dashboard() {
 
               {/* Monthly Analytics Strip */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                
+
                 <div className="p-4 rounded-custom-md bg-secondary/35 border border-primary/10 flex items-center gap-3">
                   <span className="text-xl">📅</span>
                   <div className="flex flex-col">
@@ -694,7 +720,7 @@ export default function Dashboard() {
           {/* TAB 4: LEADERBOARD */}
           {activeTab === "leaderboard" && leaderboardEnabled && (
             <div className="flex flex-col gap-6">
-              
+
               <div className="pb-3 border-b border-border-custom">
                 <h3 className="font-display font-semibold text-text-primary text-base">Participant Inspiration</h3>
                 <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Top 10 devotees consistency board</p>
@@ -718,21 +744,20 @@ export default function Dashboard() {
                   else if (index === 2) medal = "🥉";
 
                   return (
-                    <div 
+                    <div
                       key={item.id}
-                      className={`p-4 border rounded-custom-md flex items-center justify-between gap-4 transition-all ${
-                        isCurrentUser 
-                          ? "bg-secondary/40 border-primary ring-1 ring-primary/10" 
+                      className={`p-4 border rounded-custom-md flex items-center justify-between gap-4 transition-all ${isCurrentUser
+                          ? "bg-secondary/40 border-primary ring-1 ring-primary/10"
                           : "bg-white border-border-custom"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="w-6 text-center font-bold text-xs text-text-secondary shrink-0">
                           {medal || `${index + 1}`}
                         </span>
 
-                        <img 
-                          src={item.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"} 
+                        <img
+                          src={item.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"}
                           alt={item.fullName}
                           className="w-10 h-10 rounded-full object-cover shrink-0 border border-neutral-100"
                         />
@@ -762,7 +787,7 @@ export default function Dashboard() {
           {/* TAB 5: TAX RECEIPTS */}
           {activeTab === "donations" && (
             <div className="flex flex-col gap-6">
-              
+
               <div className="flex items-center gap-3 pb-4 border-b border-border-custom">
                 <Heart size={18} className="text-primary" />
                 <div>
@@ -774,8 +799,8 @@ export default function Dashboard() {
               {donations.length > 0 ? (
                 <div className="flex flex-col gap-4">
                   {donations.map((donation) => (
-                    <div 
-                      key={donation.id} 
+                    <div
+                      key={donation.id}
                       className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-custom-md bg-bg-custom border border-border-custom gap-4"
                     >
                       <div className="flex items-start gap-3">
@@ -787,11 +812,10 @@ export default function Dashboard() {
                             <span className="text-sm font-semibold text-text-primary">
                               INR {donation.amount.toLocaleString("en-IN")}.00
                             </span>
-                            <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                              donation.verified 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" 
+                            <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${donation.verified
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-500/10"
                                 : "bg-amber-50 text-amber-700 border-amber-500/10"
-                            }`}>
+                              }`}>
                               {donation.verified ? "Verified" : "Pending"}
                             </span>
                           </div>
@@ -799,7 +823,7 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => triggerPrintReceipt(donation)}
                         className="px-4 py-2 rounded-custom-md bg-white border border-border-custom hover:border-primary/50 text-accent text-xs font-bold uppercase tracking-wider shadow flex items-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto justify-center"
                       >
@@ -825,18 +849,18 @@ export default function Dashboard() {
           {/* TAB 6: EDIT PROFILE */}
           {activeTab === "profile" && (
             <div className="flex flex-col gap-6">
-              
+
               <div className="pb-3 border-b border-border-custom">
                 <h3 className="font-display font-semibold text-text-primary text-base">Edit Devotee Profile</h3>
                 <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Personalize your sadhana identity</p>
               </div>
 
               <form onSubmit={handleUpdateProfile} className="p-5 rounded-custom-lg bg-bg-custom border border-border-custom flex flex-col gap-4 max-w-xl">
-                
+
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] text-text-secondary uppercase font-bold">Full Name</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     required
@@ -846,8 +870,8 @@ export default function Dashboard() {
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] text-text-secondary uppercase font-bold">City / Residence</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={editCity}
                     onChange={(e) => setEditCity(e.target.value)}
                     required
@@ -857,14 +881,14 @@ export default function Dashboard() {
 
                 <div className="flex flex-col gap-2.5">
                   <label className="text-[10px] text-text-secondary uppercase font-bold">Avatar Image Preset URL</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={editAvatar}
                     onChange={(e) => setEditAvatar(e.target.value)}
                     placeholder="https://images.unsplash.com..."
                     className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium"
                   />
-                  
+
                   <div className="flex items-center gap-3.5 mt-1 bg-white p-3 rounded border border-border-custom">
                     <span className="text-[9px] uppercase font-bold text-text-secondary shrink-0">Quick presets:</span>
                     <div className="flex gap-2">
@@ -874,14 +898,13 @@ export default function Dashboard() {
                         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150",
                         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150"
                       ].map((presetUrl, idx) => (
-                        <img 
+                        <img
                           key={idx}
                           src={presetUrl}
                           alt="Preset Avatar"
                           onClick={() => setEditAvatar(presetUrl)}
-                          className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition-all ${
-                            editAvatar === presetUrl ? "border-primary scale-110 shadow-premium" : "border-transparent hover:border-primary/40"
-                          }`}
+                          className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition-all ${editAvatar === presetUrl ? "border-primary scale-110 shadow-premium" : "border-transparent hover:border-primary/40"
+                            }`}
                         />
                       ))}
                     </div>

@@ -8,14 +8,23 @@ import { translations } from "@/services/translations";
 import { User, MapPin, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 
 export default function CompleteProfile() {
+
   const router = useRouter();
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const { profile, loading: profileLoading, complete, isProfileComplete } = useProfile();
-  
+
+  console.log({
+    authLoading,
+    profileLoading,
+    profile,
+    isAuthenticated,
+  });
+
   const [lang, setLang] = useState("en");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showToast, setShowToast] = useState(false);
@@ -25,11 +34,11 @@ export default function CompleteProfile() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("lang") || "en");
-      
+
       const syncLang = () => {
         setLang(localStorage.getItem("lang") || "en");
       };
-      
+
       window.addEventListener("languageChange", syncLang);
       return () => window.removeEventListener("languageChange", syncLang);
     }
@@ -37,6 +46,9 @@ export default function CompleteProfile() {
 
   // Set default values from profile database record if available
   useEffect(() => {
+    if (user?.phone) {
+      setPhone(user.phone.replace("+91", ""));
+    }
     if (profile) {
       if (profile.full_name && profile.full_name !== "Devotee") {
         setFullName(profile.full_name);
@@ -44,14 +56,17 @@ export default function CompleteProfile() {
       if (profile.city) {
         setCity(profile.city);
       }
-      
+      if (profile.phone || profile.mobile) {
+        setPhone((profile.phone || profile.mobile).replace("+91", ""));
+      }
+
       // If profile is already complete, redirect immediately to target dashboard
       if (profile.is_profile_complete) {
         const destination = profile.role === "admin" ? "/admin" : "/dashboard";
         router.push(destination);
       }
     }
-  }, [profile, router]);
+  }, [profile, user, router]);
 
   // Enforce session security checks
   useEffect(() => {
@@ -79,9 +94,15 @@ export default function CompleteProfile() {
     // Validate inputs
     const trimmedName = fullName.trim();
     const trimmedCity = city.trim();
+    const trimmedPhone = phone.trim().replace(/\D/g, "");
 
     if (trimmedName.length < 3) {
       setErrorMsg(t.nameMinLengthError || "Full name must be at least 3 characters");
+      return;
+    }
+
+    if (trimmedPhone.length < 10) {
+      setErrorMsg(lang === "en" ? "Please enter a valid 10-digit phone number." : "कृपया एक वैध १० अंकों का मोबाइल नंबर दर्ज करें।");
       return;
     }
 
@@ -95,6 +116,7 @@ export default function CompleteProfile() {
       // Save updates to Supabase
       const updatedProfile = await complete({
         fullName: trimmedName,
+        phone: `+91${trimmedPhone}`,
         city: trimmedCity
       });
 
@@ -131,7 +153,7 @@ export default function CompleteProfile() {
 
   return (
     <div className="max-w-md w-full mx-auto px-6 py-16 md:py-24 flex flex-col justify-center min-h-[75vh]">
-      
+
       {/* Toast Alert Banner */}
       {showToast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3.5 bg-green-50 text-green-800 border border-green-200/50 rounded-custom-md shadow-premium max-w-sm w-full transition-all duration-300">
@@ -185,6 +207,29 @@ export default function CompleteProfile() {
                 autoFocus
               />
               <User size={16} className="text-text-secondary/60 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+
+          {/* Phone Number Input Group */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="phone-number" className="text-xs text-text-secondary font-bold uppercase tracking-wider">
+              {lang === "en" ? "Phone Number" : "मोबाइल नंबर"} <span className="text-primary">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm font-semibold select-none">
+                +91
+              </span>
+              <input
+                id="phone-number"
+                type="tel"
+                required
+                maxLength={10}
+                placeholder={lang === "en" ? "Enter 10-digit number" : "१० अंकों का नंबर दर्ज करें"}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                disabled={isSubmitting}
+                className="w-full pl-12 pr-4 py-3 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary font-medium focus:ring-1 focus:ring-primary/20"
+              />
             </div>
           </div>
 

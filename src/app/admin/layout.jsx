@@ -11,17 +11,20 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        router.push("/login");
-      } else if (profile && !profile.is_profile_complete) {
-        router.push("/complete-profile");
+        console.log("[DEBUG] Admin redirect: to /login");
+        router.replace("/login");
+      } else if (!profile || !profile.is_profile_complete) {
+        console.log("[DEBUG] Admin redirect: to /complete-profile");
+        router.replace("/complete-profile");
       } else if (!isAdmin) {
-        router.push("/dashboard");
+        console.log("[DEBUG] Admin redirect: to /dashboard");
+        router.replace("/dashboard");
       }
     }
   }, [isAuthenticated, profile, loading, isAdmin, router]);
 
   // Loading skeleton while resolving authorization
-  if (loading || !isAuthenticated || (profile && !profile.is_profile_complete) || !isAdmin) {
+  if (loading) {
     return (
       <div className="min-h-[70vh] w-full flex items-center justify-center bg-bg-custom px-6">
         <div className="flex flex-col items-center gap-4 max-w-md text-center">
