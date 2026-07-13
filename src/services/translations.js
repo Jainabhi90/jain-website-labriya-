@@ -133,6 +133,20 @@ export const translations = {
     moreProgramsSoon: "More Programs Commencing Soon",
     moreProgramsSoonDesc: "The Temple Committee is finalising dates for the grand Chaturmas Samvatsari, Diwali Snartra Puja, and Guru Vandana Varghoda. Ensure you subscribe below to receive real-time notifications.",
     selectEventToNotify: "Select an event to subscribe.",
+    
+    // Profile Completion
+    completeProfileTitle: "Complete Your Profile",
+    completeProfileSubtitle: "Please provide your details to access the devotee portal",
+    fullNameLabel: "Full Name",
+    fullNamePlaceholder: "Enter your full name",
+    cityLabel: "City",
+    cityPlaceholder: "Enter your city",
+    savingProfile: "Saving Profile...",
+    saveProfile: "Save & Continue",
+    nameMinLengthError: "Full name must be at least 3 characters",
+    cityRequiredError: "City is required",
+    profileUpdateSuccess: "Profile updated successfully! Welcome to the portal.",
+    profileUpdateError: "Failed to update profile. Please try again.",
   },
   hi: {
     // Nav
@@ -268,5 +282,19 @@ export const translations = {
     moreProgramsSoon: "अन्य कार्यक्रम शीघ्र घोषित होंगे",
     moreProgramsSoonDesc: "मंदिर समिति चातुर्मास संवत्सरि, दीपावली स्नात्र पूजा, और गुरु वंदना वरघोड़ा की तिथियां तय कर रही है। अपडेट पाने के लिए नीचे सब्सक्राइब करें।",
     selectEventToNotify: "पंजीकरण के लिए सूची में से कार्यक्रम चुनें।",
+    
+    // Profile Completion
+    completeProfileTitle: "अपनी प्रोफ़ाइल पूरी करें",
+    completeProfileSubtitle: "भक्त पोर्टल तक पहुँचने के लिए कृपया अपना विवरण प्रदान करें",
+    fullNameLabel: "पूरा नाम",
+    fullNamePlaceholder: "अपना पूरा नाम दर्ज करें",
+    cityLabel: "शहर",
+    cityPlaceholder: "अपना शहर दर्ज करें",
+    savingProfile: "प्रोफ़ाइल सहेजा जा रहा है...",
+    saveProfile: "सहेजें और जारी रखें",
+    nameMinLengthError: "पूरा नाम कम से कम ३ अक्षरों का होना चाहिए",
+    cityRequiredError: "शहर आवश्यक है",
+    profileUpdateSuccess: "प्रोफ़ाइल सफलतापूर्वक अपडेट हो गई! पोर्टल में आपका स्वागत है।",
+    profileUpdateError: "प्रोफ़ाइल अपडेट करने में विफल। कृपया पुनः प्रयास करें।",
   }
 };
