@@ -29,7 +29,11 @@ export function AuthProvider({ children }) {
 
   // Expose function to refresh user's profile details
   const refreshProfile = useCallback(async (userIdToFetch) => {
-    const targetUserId = userIdToFetch || user?.id;
+    let targetUserId = userIdToFetch;
+    if (!targetUserId && supabase) {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      targetUserId = currentSession?.user?.id;
+    }
     if (!targetUserId) {
       setProfile(null);
       return null;
@@ -53,7 +57,7 @@ export function AuthProvider({ children }) {
     } finally {
       isFetchingProfile.current = false;
     }
-  }, [user?.id]);
+  }, []);
 
   // Expose function to refresh session manually
   const refreshSession = useCallback(async () => {
