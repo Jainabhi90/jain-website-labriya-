@@ -415,8 +415,8 @@ export default function Admin() {
         category: newSadhanaAct.category
       };
       const list = [...sadhanaActivities, newAct];
-      await db.updateSadhanaActivities(list);
-      setSadhanaActivities(list);
+      const persistedList = await db.updateSadhanaActivities(list);
+      setSadhanaActivities(persistedList);
       setNewSadhanaAct({ name: "", points: 5, category: "Devotion" });
       showNotification("Sadhana vow activity created.");
     } catch (e) {

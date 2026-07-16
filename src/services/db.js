@@ -666,7 +666,23 @@ export const db = {
 
   async updateSadhanaActivities(list) {
     if (isSupabaseConfigured && supabase) {
-      // Admin update for activities configuration
+      // 1. Fetch current database activities to identify inserts, updates, and deletes
+      let dbActivities = [];
+      try {
+        const { data, error } = await supabase
+          .from("activities")
+          .select("*");
+        if (!error && data) {
+          dbActivities = data;
+        } else if (error) {
+          console.error("Error fetching activities for sync:", error);
+        }
+      } catch (err) {
+        console.error("Exception fetching activities for sync:", err);
+      }
+
+      const updatedOrInsertedIds = new Set();
+
       for (const a of list) {
         let dbCategory = a.category;
         if (dbCategory === "Tapas") dbCategory = "Fasting";
@@ -681,38 +697,80 @@ export const db = {
 
         let actId = a.id;
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actId);
-        if (!isUUID) {
-          try {
-            const { data: match } = await supabase
-              .from("activities")
-              .select("id")
-              .ilike("name", a.name)
-              .limit(1)
-              .maybeSingle();
-            if (match) {
-              actId = match.id;
-            }
-          } catch (err) {
-            console.error("Error looking up activity UUID:", err);
-          }
+        
+        let existingMatch = null;
+        if (isUUID) {
+          existingMatch = dbActivities.find(dbA => dbA.id === actId);
+        } else {
+          // Look up by name
+          existingMatch = dbActivities.find(dbA => dbA.name.toLowerCase() === a.name.toLowerCase());
         }
 
-        const isFinalUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actId);
-        if (isFinalUUID) {
+        const getCategoryIcon = (cat) => {
+          if (cat === "Fasting") return "bowl";
+          if (cat === "Prayer") return "prayer-hands";
+          if (cat === "Meditation") return "peace";
+          if (cat === "Learning") return "book-open";
+          if (cat === "Temple") return "mandir";
+          if (cat === "Seva") return "hands-helping";
+          return "sparkles";
+        };
+
+        if (existingMatch) {
+          // Update existing activity
           const { error } = await supabase
             .from("activities")
             .update({
               name: a.name,
               points: Number(a.points) || 0,
               category: dbCategory,
-              description: a.description,
+              description: a.description || "",
               active: a.active !== false
             })
-            .eq("id", actId);
+            .eq("id", existingMatch.id);
+          
           if (error) {
             console.error("Error updating activity " + a.name + ":", error);
             throw error;
           }
+          updatedOrInsertedIds.add(existingMatch.id);
+          a.id = existingMatch.id; // ensure correct UUID matches client state
+        } else {
+          // Insert new activity
+          const { data: inserted, error } = await supabase
+            .from("activities")
+            .insert({
+              name: a.name,
+              points: Number(a.points) || 0,
+              category: dbCategory,
+              description: a.description || "",
+              icon: a.icon || getCategoryIcon(dbCategory),
+              display_order: Number(a.displayOrder) || 100,
+              active: true
+            })
+            .select()
+            .single();
+
+          if (error) {
+            console.error("Error inserting activity " + a.name + ":", error);
+            throw error;
+          }
+          if (inserted) {
+            updatedOrInsertedIds.add(inserted.id);
+            a.id = inserted.id; // Update client mock ID with the real database UUID
+          }
+        }
+      }
+
+      // Mark all activities no longer in the list as active = false (soft-delete)
+      const deactivatedActivities = dbActivities.filter(dbA => dbA.active && !updatedOrInsertedIds.has(dbA.id));
+      for (const da of deactivatedActivities) {
+        const { error } = await supabase
+          .from("activities")
+          .update({ active: false })
+          .eq("id", da.id);
+        if (error) {
+          console.error("Error deactivating activity " + da.name + ":", error);
         }
       }
     }
