@@ -19,6 +19,8 @@ graph TD
         panch[Panchang Calendar]
         evt[Events Registry & ICS Export]
         don[Donation & Receipt Form]
+        profSelect[Profile Selection / Member 1 vs 2]
+        completeProf[Complete Profile Onboarding]
         dbd[Devotee Dashboard / Sadhana Vows]
         adm[Admin Management Console]
         translation[Client-Side Hindi/English Dictionary]
@@ -27,10 +29,11 @@ graph TD
     %% SDK Singleton
     lib[Supabase SDK Singleton: src/lib/supabase.js]
     dbService[Database Service Adapter: src/services/db.js]
+    profileService[Profile Service Adapter: src/services/profileService.js]
 
     %% Supabase Backend Platform
     subgraph Backend [Supabase Backend Platform]
-        auth[GoTrue Auth Service - OTP SMS / Bypass Mock]
+        auth[GoTrue Auth Service - Google Sign-In]
         postgrest[PostgREST Database API Gateway]
         storage[Storage Buckets - Public Image CDN]
     end
@@ -48,12 +51,15 @@ graph TD
     nav --> panch
     nav --> evt
     nav --> don
+    nav --> profSelect
+    nav --> completeProf
     nav --> dbd
     nav --> adm
 
     home & panch & evt & don & dbd & adm --> translation
-    home & panch & evt & don & dbd & adm --> dbService
-    dbService --> lib
+    home & panch & evt & don & dbd & adm & profSelect & completeProf --> dbService
+    profSelect & completeProf & dbd --> profileService
+    dbService & profileService --> lib
     lib --> auth
     lib --> postgrest
 
@@ -69,28 +75,54 @@ graph TD
 
 ### 1. Frontend Architecture
 The portal utilizes **Next.js 15 App Router** for static rendering and client-side page hydration:
-- **Routing**: Static path declarations (e.g. `/events`, `/panchang`) are pre-rendered on the server to optimize loading speeds.
-- **Client Hydration**: Dynamic components (like the Countdown timers and Panchang calendar pickers) are protected against hydration mismatches using state hooks.
+- **Routing**: Static paths are pre-rendered on the server to optimize loading speeds. Redirection checks intercept route changes inside `/dashboard` and `/admin` to enforce authentication and active profile resolution.
+- **Client Hydration**: Dynamic components (like countdown timers and panchang pickers) are protected against hydration mismatches using state hooks.
 - **Localization**: Localized translations are stored client-side in [translations.js](file:///src/services/translations.js) and synced via global event listeners.
-- **Micro-Animations**: Framer Motion handles staggered transitions, with standard CSS style overrides serving as a fallback on slower networks.
+- **Micro-Animations**: Framer Motion handles transition and layout animations. In the profile selector, card slots utilize spring layouts to transform smoothly into registration forms inline without layout flashes or route changes.
 
 ### 2. Backend Architecture
 The backend is serverless, relying on the **Supabase platform** to expose CRUD database operations:
 - **Client Wrapper**: A single instantiated Supabase SDK client ([supabase.js](file:///src/lib/supabase.js)) manages network sessions.
 - **API Gateway**: PostgREST maps all database schemas directly to HTTP query routes, removing the need for intermediary API controllers.
-- **Authentication**: Managed via GoTrue Auth. For evaluation and mock sessions, it uses simulated SMS delivery with a master bypass code (`123456`).
+- **Authentication**: Managed via Google Sign-In OAuth. Phone SMS OTP authentication is completely removed.
 
 ### 3. Database Engine
 The database is a managed **PostgreSQL** instance:
-- **Relational Integrity**: Foreign key constraints enforce data consistency between tables (e.g., matching Sadana Logs to Profile IDs).
-- **Security Control**: Row-Level Security (RLS) is enabled globally. Policies restrict users from accessing or modifying other devotees' profile records.
+- **Relational Integrity**: Foreign key constraints enforce data consistency between tables. Vow logs, events, and announcements reference profile UUIDs in the `profiles` table.
+- **Security Control**: Row-Level Security (RLS) is enabled globally. Policies restrict users from accessing or modifying profiles owned by other user accounts.
 - **Query Optimizations**: Indexes are applied to foreign key constraints and date coordinates to maintain fast queries as dataset sizes grow.
 
 ---
 
 ## 🔄 Core Data Flows
 
-### 1. Devotee Vow Log Flow
+### 1. Devotee Login & Profile Selection Flow
+```mermaid
+sequenceDiagram
+    participant D as Devotee Client
+    participant Auth as Supabase Auth (Google)
+    participant PS as Profile Service Layer
+    participant DB as Profiles Table
+
+    D->>Auth: Initiate Google Sign-In
+    Auth->>D: Return Auth Session
+    D->>PS: getUserProfiles(userId)
+    PS->>DB: Query profiles where user_id = auth_uid
+    DB->>PS: Return list of 1 or 2 profiles
+    alt Redirect from Layout (No profile selected yet)
+        alt 1 Profile Exists
+            PS->>D: Automatically select profile, write to localStorage & redirect to Dashboard
+        else 2 Profiles Exist
+            PS->>D: Redirect to /profile-select
+            D->>PS: User selects profile 1 or 2
+            PS->>D: Save choice to localStorage & redirect to Dashboard
+        end
+    else Direct Navigation (Switching profiles)
+        PS->>D: Render selection view (Primary Profile + Switch or Add secondary)
+    end
+```
+
+### 2. Devotee Vow Log Flow
 ```mermaid
 sequenceDiagram
     participant D as Devotee Client
@@ -98,28 +130,12 @@ sequenceDiagram
     participant S as Supabase DB API
     participant DB as PostgreSQL Table
 
-    D->>DS: submitDailySadhana(userId, dateStr, activityIds)
+    D->>DS: submitDailySadhana(profileId, dateStr, activityIds)
     DS->>S: Upsert record to `sadhana_logs`
-    S->>DB: Apply RLS Policy Check (auth.uid() = user_id)
+    S->>DB: Apply RLS Policy Check (auth.uid() = profiles.user_id)
     DB->>S: Write allowed, update devotee profile points
     S->>DS: Return updated log & profile objects
     DS->>D: Dispatch success, trigger confetti & update streak stats
-```
-
-### 2. Admin Notice Publishing Flow
-```mermaid
-sequenceDiagram
-    participant A as Admin Console
-    participant DS as DB Service Layer
-    participant S as Supabase DB API
-    participant DB as PostgreSQL Table
-
-    A->>DS: createAnnouncement(announcement)
-    DS->>S: Insert record into `announcements`
-    S->>DB: Verify administrative user session
-    DB->>S: Allow write operation
-    S->>DS: Return new announcement record
-    DS->>A: Append announcement to client view
 ```
 
 ---
@@ -131,7 +147,7 @@ sequenceDiagram
 - **Environment Isolation**: `.env.production` is mapped directly in the Vercel project environment settings.
 
 ### Scalability Strategy
-1. **Connection Pooling**: Utilize Supabase's built-in PgBouncer pooler to prevent client overload during peak festival events (such as Paryushan).
+1. **PgBouncer Pooling**: Utilize Supabase's built-in PgBouncer pooler to prevent database connection exhaustion during peak festival events (such as Paryushan).
 2. **CDN Cache Routing**: Serve static page assets (images, fonts, stylesheets) directly from Vercel's Edge Network to keep page load latency low.
 3. **Database Performance**: Configure PostgreSQL indexes on frequently filtered date fields (`date_str`, `createdAt`) to prevent full table scans.
 

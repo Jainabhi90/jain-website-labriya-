@@ -6,82 +6,112 @@ This document defines the REST API layer maps representing CRUD database actions
 
 ## 🔐 Authentication
 
-### Request OTP Code
-- **Endpoint**: `/auth/v1/otp`
-- **Method**: `POST`
+### Sign In with Google OAuth
+- **Endpoint**: `/auth/v1/authorize?provider=google`
+- **Method**: `GET`
 - **Authentication Required**: No
-- **Request**:
-  ```json
-  {
-    "phone": "+919876543210"
-  }
-  ```
 - **Response**:
-  ```json
-  {
-    "message": "Verification code dispatched."
-  }
-  ```
-- **Errors**:
-  - `400 Bad Request`: Invalid phone number structure.
+  Redirects the user to the Google Consent screen. Upon authorization, redirects back to the configured landing redirect URL (`/dashboard`) with the session tokens.
 
-### Verify OTP Code
-- **Endpoint**: `/auth/v1/verify`
+### Sign Out User
+- **Endpoint**: `/auth/v1/logout`
 - **Method**: `POST`
-- **Authentication Required**: No
-- **Request**:
-  ```json
-  {
-    "phone": "+919876543210",
-    "token": "123456",
-    "type": "sms"
-  }
-  ```
+- **Authentication Required**: Yes (Bearer JWT)
 - **Response**:
-  ```json
-  {
-    "access_token": "jwt_token_string",
-    "token_type": "bearer",
-    "expires_in": 3600,
-    "refresh_token": "refresh_token_string",
-    "user": {
-      "id": "user_uuid",
-      "phone": "+919876543210"
-    }
-  }
-  ```
-- **Errors**:
-  - `401 Unauthorized`: Invalid or expired OTP verification token.
+  Clears the session tokens.
 
 ---
 
 ## 👤 Profiles
 
-### Query Devotee Profile
-- **Endpoint**: `/rest/v1/profiles?id=eq.{user_id}`
+### Query User's Family Profiles
+- **Endpoint**: `/rest/v1/profiles?user_id=eq.{user_id}&order=member_number.asc`
 - **Method**: `GET`
 - **Authentication Required**: Yes (Bearer JWT)
 - **Response**:
   ```json
   [
     {
-      "id": "user_uuid",
-      "full_name": "Devendra Shah",
-      "phone": "9876543210",
-      "city": "Indore",
-      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+      "id": "profile_uuid_1",
+      "user_id": "user_uuid",
+      "member_number": 1,
+      "full_name": "Vardhman Jain",
+      "mobile": "+919876543210",
+      "city": "Labriya",
+      "role": "user",
       "total_points": 125,
       "streak": 7,
-      "badges": ["badge_first_upvas"],
-      "updated_at": "2026-07-11T22:43:00Z"
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+      "is_profile_complete": true,
+      "last_login_at": "2026-07-16T10:00:00Z"
+    }
+  ]
+  ```
+
+### Create Secondary Family Profile
+- **Endpoint**: `/rest/v1/profiles`
+- **Method**: `POST`
+- **Authentication Required**: Yes (Bearer JWT)
+- **Request**:
+  ```json
+  {
+    "user_id": "user_uuid",
+    "member_number": 2,
+    "full_name": "Pujita Mehta",
+    "mobile": "+919999988888",
+    "city": "Mumbai",
+    "role": "user",
+    "total_points": 0,
+    "current_streak": 0,
+    "is_active": true,
+    "is_profile_complete": true
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "id": "profile_uuid_2",
+    "user_id": "user_uuid",
+    "member_number": 2,
+    "full_name": "Pujita Mehta",
+    "mobile": "+919999988888",
+    "city": "Mumbai",
+    "role": "user",
+    "total_points": 0,
+    "current_streak": 0,
+    "is_active": true,
+    "is_profile_complete": true,
+    "created_at": "2026-07-16T11:00:00Z"
+  }
+  ```
+
+### Query Devotee Profile
+- **Endpoint**: `/rest/v1/profiles?id=eq.{profile_id}`
+- **Method**: `GET`
+- **Authentication Required**: Yes (Bearer JWT)
+- **Response**:
+  ```json
+  [
+    {
+      "id": "profile_uuid",
+      "user_id": "user_uuid",
+      "member_number": 1,
+      "full_name": "Devendra Shah",
+      "mobile": "+919876543210",
+      "city": "Indore",
+      "role": "user",
+      "total_points": 125,
+      "streak": 7,
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+      "is_profile_complete": true
     }
   ]
   ```
 
 ### Update Devotee Profile
-- **Endpoint**: `/rest/v1/profiles?id=eq.{user_id}`
+- **Endpoint**: `/rest/v1/profiles?id=eq.{profile_id}`
 - **Method**: `PATCH`
-- **Authentication Required**: Yes
+- **Authentication Required**: Yes (Bearer JWT)
 - **Request**:
   ```json
   {
@@ -92,10 +122,10 @@ This document defines the REST API layer maps representing CRUD database actions
 - **Response**:
   ```json
   {
-    "id": "user_uuid",
+    "id": "profile_uuid",
     "full_name": "Devendra Shah",
     "city": "Dhar",
-    "updated_at": "2026-07-12T12:00:00Z"
+    "updated_at": "2026-07-16T11:15:00Z"
   }
   ```
 
@@ -126,12 +156,12 @@ This document defines the REST API layer maps representing CRUD database actions
 ### Submit Vow Logs
 - **Endpoint**: `/rest/v1/sadhana_logs`
 - **Method**: `POST`
-- **Authentication Required**: Yes
+- **Authentication Required**: Yes (Bearer JWT)
 - **Request**:
   ```json
   {
-    "user_id": "user_uuid",
-    "date_str": "2026-07-12",
+    "profile_id": "profile_uuid",
+    "date_str": "2026-07-16",
     "activities": ["act_upvas", "act_samayik"],
     "points": 13
   }
@@ -140,8 +170,8 @@ This document defines the REST API layer maps representing CRUD database actions
   ```json
   {
     "id": "log_uuid",
-    "user_id": "user_uuid",
-    "date_str": "2026-07-12",
+    "profile_id": "profile_uuid",
+    "date_str": "2026-07-16",
     "activities": ["act_upvas", "act_samayik"],
     "points": 13
   }
@@ -219,22 +249,4 @@ This document defines the REST API layer maps representing CRUD database actions
     "verified": false,
     "created_at": "2026-07-12T12:10:00Z"
   }
-  ```
-
----
-
-## ⚙️ Settings
-
-### Get Leaderboard Toggle Status
-- **Endpoint**: `/rest/v1/settings?key=eq.temp_leaderboard_toggle`
-- **Method**: `GET`
-- **Authentication Required**: No
-- **Response**:
-  ```json
-  [
-    {
-      "key": "temp_leaderboard_toggle",
-      "value": "false"
-    }
-  ]
   ```

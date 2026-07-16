@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLayout({ children }) {
-  const { user, profile, loading, isAuthenticated, isAdmin } = useAuth();
+  const { user, profile, profilesList, loading, isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -13,7 +13,13 @@ export default function AdminLayout({ children }) {
       if (!isAuthenticated) {
         console.log("[DEBUG] Admin redirect: to /login");
         router.replace("/login");
-      } else if (!profile || !profile.is_profile_complete) {
+      } else if (profilesList.length === 2 && !profile) {
+        console.log("[DEBUG] Admin redirect: to /profile-select");
+        router.replace("/profile-select");
+      } else if (!profile) {
+        console.log("[DEBUG] Admin redirect: to /profile-select");
+        router.replace("/profile-select");
+      } else if (!profile.is_profile_complete) {
         console.log("[DEBUG] Admin redirect: to /complete-profile");
         router.replace("/complete-profile");
       } else if (!isAdmin) {
@@ -21,7 +27,7 @@ export default function AdminLayout({ children }) {
         router.replace("/dashboard");
       }
     }
-  }, [isAuthenticated, profile, loading, isAdmin, router]);
+  }, [isAuthenticated, profile, profilesList, loading, isAdmin, router]);
 
   // Loading skeleton while resolving authorization
   if (loading) {

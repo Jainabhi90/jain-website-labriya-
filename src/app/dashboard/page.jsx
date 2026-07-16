@@ -22,7 +22,8 @@ import {
   Compass,
   Trophy,
   Save,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from "lucide-react";
 import { db } from "@/services/db";
 import { useAuth } from "@/context/AuthContext";
@@ -51,7 +52,7 @@ const MOTIVATIONAL_QUOTES = [
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, profile, loading, logout, refreshProfile } = useAuth();
+  const { user, profile, profilesList, loading, logout, refreshProfile } = useAuth();
 
   // Dashboard Tabs: 'sadhana', 'badges', 'history', 'leaderboard', 'donations', 'profile'
   const [activeTab, setActiveTab] = useState("sadhana");
@@ -104,14 +105,14 @@ export default function Dashboard() {
       setIsLoading(true);
       try {
         // Initialize local profile fallback properties (leaderboard compatibility)
-        await db.getDevoteeProfile(user.id);
+        await db.getDevoteeProfile(profile.id);
 
         // Load Sadhana Activities
         const acts = await db.getSadhanaActivities();
         setActivities(acts);
 
         // Load Devotee Sadhana Logs
-        const sadhanaLogs = await db.getSadhanaLogs(user.id);
+        const sadhanaLogs = await db.getSadhanaLogs(profile.id);
         setLogs(sadhanaLogs);
 
         // Precheck activities if user has already checked in for today
@@ -130,12 +131,12 @@ export default function Dashboard() {
 
         // Load Donations Receipts
         const donationsList = await db.getDonations();
-        const userPhone = user.phone || profile.mobile || profile.phone || "";
+        const userPhone = profile.mobile || profile.phone || user.phone || "";
         const cleanPhone = userPhone.replace("+91", "");
         const userDonations = donationsList.filter(d =>
           d.phone === cleanPhone ||
           d.phone === userPhone ||
-          (d.profileId && d.profileId === user.id)
+          (d.profileId && d.profileId === profile.id)
         );
         setDonations(userDonations);
 
@@ -184,21 +185,21 @@ export default function Dashboard() {
   };
 
   const handleSaveSadhana = async () => {
-    if (!user) return;
+    if (!profile) return;
     try {
-      const result = await db.submitDailySadhana(user.id, checkInDate, checkedActivities);
+      const result = await db.submitDailySadhana(profile.id, checkInDate, checkedActivities);
 
       // Keep points and streaks synced in the Supabase database profiles table
-      await profileService.updateProfile(user.id, {
+      await profileService.updateProfile(profile.id, {
         totalPoints: result.profile.totalPoints,
         streak: result.profile.streak
       });
 
       // Refresh AuthContext profile details
-      await refreshProfile(user.id);
+      await refreshProfile(profile.id);
 
       // Reload logs
-      const updatedLogs = await db.getSadhanaLogs(user.id);
+      const updatedLogs = await db.getSadhanaLogs(profile.id);
       setLogs(updatedLogs);
 
       // Reload leaderboard if active
@@ -224,24 +225,24 @@ export default function Dashboard() {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    if (!profile) return;
     try {
       // 1. Update in local storage fallback database for leaderboard compatibility
-      await db.updateDevoteeProfile(user.id, {
+      await db.updateDevoteeProfile(profile.id, {
         fullName: editName,
         city: editCity,
         avatar: editAvatar
       });
 
       // 2. Persist profile edits ONLY through Supabase
-      await profileService.updateProfile(user.id, {
+      await profileService.updateProfile(profile.id, {
         fullName: editName,
         city: editCity,
         avatar: editAvatar
       });
 
       // 3. Refresh context profile details
-      await refreshProfile(user.id);
+      await refreshProfile(profile.id);
 
       setStatusMessage("🌸 Profile details updated successfully.");
       setTimeout(() => setStatusMessage(""), 4000);
@@ -440,6 +441,24 @@ export default function Dashboard() {
               <span className="text-sm font-bold text-primary">{profile.streak || 0} Days</span>
             </div>
           </div>
+
+          {profilesList.length === 1 ? (
+            <button
+              onClick={() => router.push("/profile-select")}
+              className="px-4 py-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border border-neutral-200"
+            >
+              <UserPlus size={14} />
+              <span>Add Family Member</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push("/profile-select")}
+              className="px-4 py-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border border-neutral-200"
+            >
+              <User size={14} />
+              <span>Switch Profile</span>
+            </button>
+          )}
 
           <button
             onClick={handleLogout}
@@ -737,7 +756,7 @@ export default function Dashboard() {
               {/* Top 10 Participants List */}
               <div className="flex flex-col gap-3 mt-2">
                 {leaderboard.map((item, index) => {
-                  const isCurrentUser = item.id === user.id;
+                  const isCurrentUser = item.id === profile.id;
                   let medal = "";
                   if (index === 0) medal = "🥇";
                   else if (index === 1) medal = "🥈";
@@ -837,7 +856,7 @@ export default function Dashboard() {
                 <div className="text-center py-12 border border-dashed border-border-custom rounded-custom-md flex flex-col items-center justify-center gap-3">
                   <AlertCircle size={24} className="text-text-secondary" />
                   <div>
-                    <p className="text-sm text-text-primary font-semibold">No donations registered under +91 {user.phone}</p>
+                    <p className="text-sm text-text-primary font-semibold">No donations registered under {profile.phone || profile.mobile || user.phone || ""}</p>
                     <p className="text-xs text-text-secondary max-w-sm mt-1">If you have made a transfer via QR/UPI, please report it in the Donation desk to link the receipt here.</p>
                   </div>
                 </div>

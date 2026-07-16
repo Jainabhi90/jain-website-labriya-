@@ -1,6 +1,6 @@
 # Labriya Chaturmas Portal
 
-Welcome to the official repository of the **Labriya Chaturmas Portal**, a modern digital platform designed for the Shree Labriya Jain Shwetambar Mandir. This portal connects devotees with daily spiritual schedules, lunar Panchang coordinates, community updates, calendar-exported events, waitlist notifications, and direct tax-exempt donation reporting, along with an administrative console to manage temple operations.
+Welcome to the official repository of the **Labriya Chaturmas Portal**, a modern digital platform designed for the Shree Labriya Jain Shwetambar Mandir. This portal connects devotees with daily spiritual schedules, lunar Panchang coordinates, community updates, calendar-exported events, waitlist notifications, direct tax-exempt donation reporting, and a family account system, along with an administrative console to manage temple operations.
 
 ---
 
@@ -12,7 +12,7 @@ During the Chaturmas (sacred four-month season of reflection, discourse, and fas
 3. Access verified notices and announcements.
 4. Add temple events directly to their personal calendars (Apple/Google).
 5. File and verify transactions for Section 80G tax-exempt donations.
-6. Register and track personal daily vows (Upvas, Ekasana, chanting) via the Sadhana Tracker.
+6. Register and track personal daily vows (Upvas, Ekasana, chanting) via the Sadhana Tracker using a dedicated Family Account System.
 
 ---
 
@@ -44,18 +44,26 @@ jain-website-labriya/
 ├── src/
 │   ├── app/                   # App Router Pages & Global Layouts
 │   │   ├── admin/             # Temple Admin Console
+│   │   ├── complete-profile/  # Profile Onboarding Form
 │   │   ├── dashboard/         # Devotee Vow Tracker & Portal
 │   │   ├── donate/            # Donation & 80G Verification Desk
 │   │   ├── events/            # Events Registry
-│   │   ├── login/             # Devotee OTP Sign-In
+│   │   ├── login/             # Google Sign-In Page
+│   │   ├── profile-select/    # Family Member Selector (Member 1 / 2)
 │   │   ├── panchang/          # Lunar Calendar & Choghadiyas
 │   │   ├── layout.jsx         # Root Layout
 │   │   └── page.jsx           # Main Landing Page
 │   ├── components/            # Reusable Presentational UI Components
+│   ├── context/               # React Context Providers
+│   │   └── AuthContext.jsx    # Auth, Profile, and Active Session Provider
+│   ├── hooks/                 # Custom React Hooks
+│   │   └── useProfile.js      # Active Profile Helper Hook
 │   ├── lib/                   # Config Clients & SDK Initializations
-│   │   └── supabase.js        # Supabase Client Singleton
+│   │   ├── supabase.js        # Supabase Client Singleton
+│   │   └── auth-utils.js      # Onboarding Validation Helpers
 │   └── services/              # Business Logic & Database Adapters
 │       ├── db.js              # Database Access Service Layer
+│       ├── profileService.js  # Supabase Profile Database Manager
 │       └── translations.js    # English/Hindi Translation Dictionary
 ```
 
@@ -102,6 +110,8 @@ jain-website-labriya/
 
 ## 📈 Project Status
 
+- **Authentication**: Single-Provider Google Sign-In setup complete. Phone SMS OTP completely removed.
+- **Family Accounts**: Supports up to 2 family member profiles per Google Account. Active profile state resolved post-login.
 - **UI Development**: Complete (production-grade mobile bottom-navigation and typography).
 - **Core Configurations**: Connected via Supabase JS SDK.
 - **Documentation**: Established for database schema, roadmap, and operational guidelines.

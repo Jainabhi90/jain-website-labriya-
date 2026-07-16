@@ -8,14 +8,14 @@ const AuthContext = createContext({
   user: null,
   session: null,
   profile: null,
+  profilesList: [],
   loading: true,
   isAdmin: false,
   isAuthenticated: false,
-  login: async () => {},
-  loginWithPhone: async () => {},
   loginWithGoogle: async () => {},
-  verifyOTP: async () => {},
   logout: async () => {},
+  selectProfile: async () => {},
+  createSecondaryProfile: async () => {},
   refreshProfile: async () => {},
   refreshSession: async () => {}
 });
@@ -40,13 +40,13 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [profilesList, setProfilesList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // References to keep tracking states stable and prevent recursive state triggers
   const profileRef = useRef(null);
   const isFetchingProfile = useRef(false);
   const lastFetchedUserId = useRef(null);
-  const refreshProfileCounter = useRef(0);
   const hasRegisteredListener = useRef(false);
 
   // Wrapper to keep the profileRef in sync with React state
@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
     setProfile(newProfile);
   }, []);
 
-  // Normalizes DB fields to camelCase for page compatibility (totally stable dependency)
+  // Normalizes DB fields to camelCase for page compatibility
   const normalizeProfile = useCallback((data) => {
     if (!data) return null;
     return {
@@ -68,69 +68,77 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Expose function to refresh user's profile details with latency retries.
-  // CRITICAL: Must NOT depend on "profile" state or "profileRef" object directly to keep the callback stable.
-  const refreshProfile = useCallback(async (userIdToFetch) => {
-    let targetUserId = userIdToFetch;
-    if (!targetUserId && supabase) {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      targetUserId = currentSession?.user?.id;
+  // Select profile active choice and save in localStorage
+  const selectProfile = useCallback(async (profileId) => {
+    if (!user) return null;
+    const selected = profilesList.find((p) => p.id === profileId);
+    if (selected) {
+      localStorage.setItem(`last_profile_id_${user.id}`, selected.id);
+      const normalized = normalizeProfile(selected);
+      updateProfileState(normalized);
+      return normalized;
     }
-    if (!targetUserId) {
+    return null;
+  }, [user, profilesList, normalizeProfile, updateProfileState]);
+
+  // Create secondary family profile (max 2)
+  const createSecondaryProfile = useCallback(async (details) => {
+    if (!user) throw new Error("No active authenticated session found.");
+    
+    // Safety check: ensure at most 2 profiles
+    if (profilesList.length >= 2) {
+      throw new Error("Maximum of two family members is allowed per account.");
+    }
+
+    const newProfile = await profileService.createSecondaryProfile(user.id, details);
+    
+    // Refresh user profiles list
+    const updatedList = await profileService.getUserProfiles(user.id);
+    setProfilesList(updatedList);
+
+    // Auto-select the newly created profile
+    localStorage.setItem(`last_profile_id_${user.id}`, newProfile.id);
+    const normalized = normalizeProfile(newProfile);
+    updateProfileState(normalized);
+
+    return normalized;
+  }, [user, profilesList, normalizeProfile, updateProfileState]);
+
+  // Expose function to refresh user's profile details
+  const refreshProfile = useCallback(async (profileIdToFetch) => {
+    let targetProfileId = profileIdToFetch || profileRef.current?.id;
+    if (!targetProfileId && user) {
+      const savedId = localStorage.getItem(`last_profile_id_${user.id}`);
+      if (savedId) {
+        targetProfileId = savedId;
+      }
+    }
+
+    if (!targetProfileId) {
       updateProfileState(null);
       return null;
     }
 
-    // Check if fetch is already in progress to avoid duplicate execution
-    if (isFetchingProfile.current && lastFetchedUserId.current === targetUserId) {
-      console.log("[DEBUG] refreshProfile skipped: already fetching for user", targetUserId);
-      return profileRef.current;
-    }
-
-    isFetchingProfile.current = true;
-    lastFetchedUserId.current = targetUserId;
-    refreshProfileCounter.current += 1;
-    console.log(`[DEBUG] refreshProfile started. Execution count: ${refreshProfileCounter.current} for user: ${targetUserId}`);
-
     try {
-      let data = null;
-      // Retry up to 3 times (1000ms delay) to handle delayed trigger execution
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        data = await profileService.getCurrentProfile(targetUserId);
-        if (data) {
-          break;
-        }
-        console.log(`[DEBUG] Profile row is null. Attempt ${attempt}/3. Retrying in 1000ms...`);
-        if (attempt < 3) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-
+      const data = await profileService.getCurrentProfile(targetProfileId);
       if (!data) {
-        console.warn("[DEBUG] Profile row could not be found after retries.");
         updateProfileState(null);
         return null;
       }
 
       const normalized = normalizeProfile(data);
-      // Avoid setting identical state to eliminate redundant component renders
       if (!isProfileEqual(profileRef.current, normalized)) {
-        console.log("[DEBUG] refreshProfile finished: profile changed, updating state.");
         updateProfileState(normalized);
-      } else {
-        console.log("[DEBUG] refreshProfile finished: profile unchanged, skipping state update.");
       }
       return normalized;
     } catch (err) {
       console.error("[DEBUG] Failed to fetch profile:", err.message);
       updateProfileState(null);
       return null;
-    } finally {
-      isFetchingProfile.current = false;
     }
-  }, [normalizeProfile, updateProfileState]);
+  }, [user, normalizeProfile, updateProfileState]);
 
-  // Expose function to refresh session manually (stable)
+  // Expose function to refresh session manually
   const refreshSession = useCallback(async () => {
     if (!supabase) {
       setLoading(false);
@@ -145,40 +153,38 @@ export function AuthProvider({ children }) {
       setUser(currentUser);
       
       if (currentUser) {
-        await refreshProfile(currentUser.id);
+        let list = await profileService.getUserProfiles(currentUser.id);
+        setProfilesList(list);
+
+        if (list.length === 1) {
+          const normalized = normalizeProfile(list[0]);
+          updateProfileState(normalized);
+          localStorage.setItem(`last_profile_id_${currentUser.id}`, list[0].id);
+        } else if (list.length === 2) {
+          const savedId = localStorage.getItem(`last_profile_id_${currentUser.id}`);
+          const match = list.find((p) => p.id === savedId);
+          if (match) {
+            updateProfileState(normalizeProfile(match));
+          } else {
+            updateProfileState(null);
+          }
+        } else {
+          updateProfileState(null);
+        }
       } else {
+        setProfilesList([]);
         updateProfileState(null);
       }
     } catch (err) {
       console.error("AuthContext: Error refreshing session:", err.message);
       setSession(null);
       setUser(null);
+      setProfilesList([]);
       updateProfileState(null);
     } finally {
       setLoading(false);
     }
-  }, [refreshProfile, updateProfileState]);
-
-  // Sign In function via Supabase OTP (Phone)
-  const loginWithPhone = useCallback(async (phone) => {
-    if (!supabase) {
-      throw new Error("Supabase is not configured.");
-    }
-    setLoading(true);
-    try {
-      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-      const { data, error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error("AuthContext: Login error:", err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const login = loginWithPhone;
+  }, [normalizeProfile, updateProfileState]);
 
   // Sign In function via Google OAuth
   const loginWithGoogle = useCallback(async () => {
@@ -203,40 +209,13 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // OTP Verification
-  const verifyOTP = useCallback(async (phone, token) => {
-    if (!supabase) {
-      throw new Error("Supabase is not configured.");
-    }
-    setLoading(true);
-    try {
-      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
-        token,
-        type: "sms"
-      });
-      if (error) throw error;
-      
-      if (data.user) {
-        await refreshProfile(data.user.id);
-      }
-      return data;
-    } catch (err) {
-      console.error("AuthContext: OTP verification error:", err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshProfile]);
-
   // Sign Out function
   const logout = useCallback(async () => {
     if (!supabase) {
       setSession(null);
       setUser(null);
+      setProfilesList([]);
       updateProfileState(null);
-      lastFetchedUserId.current = null;
       return;
     }
     setLoading(true);
@@ -248,14 +227,13 @@ export function AuthProvider({ children }) {
     } finally {
       setSession(null);
       setUser(null);
+      setProfilesList([]);
       updateProfileState(null);
-      lastFetchedUserId.current = null;
       setLoading(false);
     }
   }, [updateProfileState]);
 
   // Initialize Auth state listener and recover session
-  // CRITICAL: Registered exactly once. Dependencies are stable, so this effect does not rerun.
   useEffect(() => {
     console.log("[DEBUG] Provider mounted");
     if (!supabase) {
@@ -277,22 +255,75 @@ export function AuthProvider({ children }) {
       setUser(currentUser);
 
       if (currentUser) {
-        if (event === "SIGNED_IN") {
-          console.log("[DEBUG] SIGNED_IN event triggered");
-          try {
-            await profileService.updateLastLogin(currentUser.id);
-          } catch (err) {
-            console.error("AuthContext: Failed to update last login:", err.message);
+        try {
+          // Fetch profiles with retries in case the db trigger runs with minor delay
+          let list = [];
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            list = await profileService.getUserProfiles(currentUser.id);
+            if (list.length > 0) {
+              break;
+            }
+            console.log(`[DEBUG] Profiles empty on attempt ${attempt}/3. Retrying...`);
+            if (attempt < 3) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
           }
-        } else if (event === "INITIAL_SESSION") {
-          console.log("[DEBUG] INITIAL_SESSION event triggered");
-        } else if (event === "SIGNED_OUT") {
-          console.log("[DEBUG] SIGNED_OUT event triggered");
+
+          // Trigger fallback primary profile insertion if database trigger did not complete
+          if (list.length === 0) {
+            console.log("[DEBUG] Creating primary profile fallback.");
+            const { data, error } = await supabase
+              .from("profiles")
+              .insert({
+                user_id: currentUser.id,
+                member_number: 1,
+                full_name: currentUser.user_metadata?.full_name || "Devotee",
+                mobile: currentUser.phone || "",
+                city: "Labriya",
+                role: "user",
+                is_profile_complete: false
+              })
+              .select()
+              .single();
+            if (!error && data) {
+              list = [data];
+            }
+          }
+
+          setProfilesList(list);
+
+          // Determine active profile
+          if (list.length === 1) {
+            const normalized = normalizeProfile(list[0]);
+            updateProfileState(normalized);
+            localStorage.setItem(`last_profile_id_${currentUser.id}`, list[0].id);
+            
+            if (event === "SIGNED_IN") {
+              await profileService.updateLastLogin(list[0].id);
+            }
+          } else if (list.length === 2) {
+            const savedId = localStorage.getItem(`last_profile_id_${currentUser.id}`);
+            const match = list.find((p) => p.id === savedId);
+            if (match) {
+              const normalized = normalizeProfile(match);
+              updateProfileState(normalized);
+              if (event === "SIGNED_IN") {
+                await profileService.updateLastLogin(match.id);
+              }
+            } else {
+              updateProfileState(null);
+            }
+          } else {
+            updateProfileState(null);
+          }
+        } catch (err) {
+          console.error("AuthContext: Error resolving profiles:", err.message);
+          setProfilesList([]);
+          updateProfileState(null);
         }
-        await refreshProfile(currentUser.id);
       } else {
+        setProfilesList([]);
         updateProfileState(null);
-        lastFetchedUserId.current = null;
       }
       setLoading(false);
     });
@@ -300,7 +331,7 @@ export function AuthProvider({ children }) {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [refreshProfile, updateProfileState]);
+  }, [normalizeProfile, updateProfileState]);
 
   const isAdmin = profile?.role === "admin";
   const isAuthenticated = !!user;
@@ -309,14 +340,14 @@ export function AuthProvider({ children }) {
     session,
     user,
     profile,
+    profilesList,
     loading,
     isAdmin,
     isAuthenticated,
-    login,
-    loginWithPhone,
     loginWithGoogle,
-    verifyOTP,
     logout,
+    selectProfile,
+    createSecondaryProfile,
     refreshProfile,
     refreshSession
   };

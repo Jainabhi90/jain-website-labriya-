@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function DashboardLayout({ children }) {
-  const { user, profile, loading, isAuthenticated } = useAuth();
+  const { user, profile, profilesList, loading, isAuthenticated } = useAuth();
   const router = useRouter();
 
   console.log({
     loading,
     isAuthenticated,
     profile,
+    profilesCount: profilesList.length
   });
 
   useEffect(() => {
@@ -19,12 +20,18 @@ export default function DashboardLayout({ children }) {
       if (!isAuthenticated) {
         console.log("[DEBUG] Dashboard redirect: to /login");
         router.replace("/login");
-      } else if (!profile || !profile.is_profile_complete) {
+      } else if (profilesList.length === 2 && !profile) {
+        console.log("[DEBUG] ProfileSelect redirect: to /profile-select");
+        router.replace("/profile-select");
+      } else if (!profile) {
+        console.log("[DEBUG] No profile active redirect: to /profile-select");
+        router.replace("/profile-select");
+      } else if (!profile.is_profile_complete) {
         console.log("[DEBUG] CompleteProfile redirect: to /complete-profile");
         router.replace("/complete-profile");
       }
     }
-  }, [isAuthenticated, profile, loading, router]);
+  }, [isAuthenticated, profile, profilesList, loading, router]);
 
   // Render spinner ONLY during active authentication/profile loading phase
   if (loading) {

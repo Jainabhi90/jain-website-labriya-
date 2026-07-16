@@ -6,92 +6,167 @@ This document defines the schema architecture, table relations, query indexes, a
 
 ## 🗄️ Database Overview
 
-The Labriya Chaturmas Portal database stores records for devotee authentication profiles, daily schedules, notices, upcoming events, waitlist notifications, transaction reports, and spiritual vow audits. 
+The Labriya Chaturmas Portal database stores records for devotee profiles, daily schedules, notices, upcoming events, waitlist notifications, transaction reports, and spiritual vow audits. 
 
 ### Database Naming Conventions
-- **Table Names**: Lowercase, plural, snake_case (e.g. `sadhana_activities`).
+- **Table Names**: Lowercase, plural, snake_case (e.g. `user_activities`).
 - **Column Names**: Lowercase, singular, snake_case (e.g. `created_at`, `order_num`).
-- **Foreign Keys**: Suffixed with `_id` (e.g., `user_id`).
-- **Indexes**: Prefixed with `idx_` followed by table and field names (e.g., `idx_sadhana_logs_user_date`).
+- **Foreign Keys**: Suffixed with `_id` (e.g., `user_id`, `profile_id`).
+- **Indexes**: Prefixed with `idx_` followed by table and field names (e.g., `idx_user_activities_profile_date`).
 
 ---
 
 ## 📊 Entity Relationship Diagram (ERD)
 
 ```mermaid
-erDiagram
-    profiles {
+erJiagram
+    users {
         uuid id PK
-        varchar full_name
+        varchar email
         varchar phone
-        varchar city
-        varchar avatar_url
-        integer total_points
-        integer streak
-        varchar_array badges
-        timestamp updated_at
-    }
-    
-    schedules {
-        uuid id PK
-        varchar time
-        varchar activity
-        varchar session
-        integer order_num
     }
 
-    announcements {
+    profiles {
         uuid id PK
-        varchar title
-        text content
-        varchar type
+        uuid user_id FK
+        integer member_number
+        varchar full_name
+        varchar mobile
+        varchar city
+        varchar role
+        integer total_points
+        integer current_streak
+        varchar avatar_url
+        text bio
+        date last_activity_date
+        boolean is_active
+        boolean is_profile_complete
+        timestamp last_login_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    activities {
+        uuid id PK
+        varchar name
+        text description
+        integer points
+        varchar category
+        varchar icon
+        integer display_order
+        varchar difficulty
+        integer estimated_duration_minutes
         boolean active
         timestamp created_at
+        timestamp updated_at
+    }
+
+    user_activities {
+        uuid id PK
+        uuid profile_id FK
+        uuid activity_id FK
+        date activity_date
+        integer points_awarded
+        varchar status
+        text notes
+        uuid approved_by FK
+        timestamp approved_at
+        text admin_note
+        varchar submission_source
+        timestamp created_at
+        timestamp updated_at
     }
 
     events {
         uuid id PK
         varchar title
         text description
-        timestamp date
         varchar location
+        date event_date
+        time event_time
         varchar image_url
-    }
-
-    subscriptions {
-        uuid id PK
-        varchar name
-        varchar phone
-        varchar event_title
+        boolean registration_required
+        integer max_participants
+        timestamp registration_deadline
+        varchar status
+        uuid created_by FK
         timestamp created_at
+        timestamp updated_at
     }
 
-    donations {
+    announcements {
         uuid id PK
-        varchar donor_name
-        varchar phone
-        numeric amount
-        varchar txn_id
-        boolean verified
+        varchar title
+        text message
+        varchar priority
+        boolean published
+        varchar image_url
+        timestamp expires_at
+        boolean pinned
+        uuid created_by FK
         timestamp created_at
+        timestamp updated_at
     }
 
-    sadhana_activities {
-        varchar id PK
-        varchar name
-        integer points
-        varchar category
-    }
-
-    sadhana_logs {
+    settings {
         uuid id PK
-        uuid user_id FK
-        date date_str
-        varchar_array activities
-        integer points
+        boolean singleton_guard
+        varchar temple_name
+        varchar temple_logo
+        varchar hero_banner
+        varchar email
+        text about_text
+        varchar trust_registration_number
+        numeric latitude
+        numeric longitude
+        varchar donation_qr
+        varchar upi_id
+        varchar bank_name
+        varchar account_holder
+        varchar account_number
+        varchar ifsc
+        varchar contact_number
+        text temple_address
+        varchar facebook
+        varchar instagram
+        varchar youtube
+        varchar website
+        timestamp created_at
+        timestamp updated_at
     }
 
-    profiles ||--o{ sadhana_logs : "records"
+    daily_panchang {
+        uuid id PK
+        date date
+        varchar tithi
+        varchar paksha
+        varchar masa
+        varchar samvat
+        varchar sunrise
+        varchar sunset
+        text special_notes
+        uuid created_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    daily_quotes {
+        uuid id PK
+        text quote
+        varchar author
+        varchar language
+        date display_date
+        boolean active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    users ||--o{ profiles : "owns (max 2)"
+    profiles ||--o{ user_activities : "performs"
+    activities ||--o{ user_activities : "logged"
+    profiles ||--o{ events : "creates"
+    profiles ||--o{ announcements : "creates"
+    profiles ||--o{ daily_panchang : "updates"
 ```
 
 ---
@@ -99,70 +174,67 @@ erDiagram
 ## 📋 Table Definitions
 
 ### 1. `profiles`
-Stores profile metrics for registered devotees. Linked directly to Supabase's internal `auth.users`.
-- **Primary Key**: `id` (uuid)
-- **Columns**: `full_name` (varchar), `phone` (varchar), `city` (varchar), `avatar_url` (varchar), `total_points` (integer), `streak` (integer), `badges` (varchar[]), `updated_at` (timestamp)
-- **Security**: Managed by user ownership. Can be queried by everyone (public profile scoreboard), but edits are limited to the profile owner.
+Stores profile metrics for family member devotees. Linked to Supabase's internal `auth.users` via `user_id`. Supports up to 2 profiles per authenticated account.
+- **Primary Key**: `id` (uuid, default: `gen_random_uuid()`)
+- **Foreign Key**: `user_id` (uuid) -> `auth.users(id)` (on delete cascade)
+- **Check Constraints**: `check_member_number` (`member_number IN (1, 2)`)
+- **Unique Constraints**: `unique_user_member` (`UNIQUE (user_id, member_number)`)
+- **Unique Indexes**: `unique_active_mobile` (partial unique index on `mobile` column where `mobile IS NOT NULL AND mobile <> ''` to ensure phone uniqueness across devotee profiles globally)
+- **Columns**: `full_name` (varchar), `mobile` (varchar), `city` (varchar), `role` (user_role), `total_points` (integer), `current_streak` (integer), `avatar_url` (varchar), `is_profile_complete` (boolean), `last_login_at` (timestamp)
 
-### 2. `schedules`
-Stores the daily timeline of temple worship programs.
-- **Primary Key**: `id` (uuid)
-- **Columns**: `time` (varchar), `activity` (varchar), `session` (varchar, e.g. 'morning', 'evening'), `order_num` (integer)
-- **Security**: Public read access. Updates/Inserts are restricted to administrative accounts.
+### 2. `activities`
+Defines available spiritual tasks and their points values.
+- **Primary Key**: `id` (uuid, default: `gen_random_uuid()`)
+- **Columns**: `name` (varchar), `points` (integer), `category` (activity_category), `active` (boolean)
 
-### 3. `announcements`
-Stores public updates, programs, and notices issued by the temple administration.
+### 3. `user_activities`
+Tracks devotee daily logs of spiritual task check-ins.
 - **Primary Key**: `id` (uuid)
-- **Columns**: `title` (varchar), `content` (text), `type` (varchar, e.g., 'program', 'update', 'notice'), `active` (boolean), `created_at` (timestamp)
-- **Security**: Public read access. Edits/Deletions are restricted to administrative accounts.
+- **Foreign Key**: `profile_id` -> `profiles.id` (on delete cascade)
+- **Columns**: `activity_date` (date), `points_awarded` (integer), `status` (submission_status)
 
 ### 4. `events`
 Stores information on major upcoming Chaturmas events.
 - **Primary Key**: `id` (uuid)
-- **Columns**: `title` (varchar), `description` (text), `date` (timestamp), `location` (varchar), `image_url` (varchar)
-- **Security**: Public read access. Management is limited to administrators.
+- **Columns**: `title` (varchar), `description` (text), `event_date` (date), `event_time` (time), `location` (varchar)
 
-### 5. `subscriptions`
-Stores waitlist registrations for events.
+### 5. `announcements`
+Stores notices issued by the temple administration.
 - **Primary Key**: `id` (uuid)
-- **Columns**: `name` (varchar), `phone` (varchar), `event_title` (varchar), `created_at` (timestamp)
-- **Security**: Public insert access (to register). Administrative query access only (no public reading).
-
-### 6. `donations`
-Tracks devotee transaction reports for Section 80G tax receipts.
-- **Primary Key**: `id` (uuid)
-- **Columns**: `donor_name` (varchar), `phone` (varchar), `amount` (numeric), `txn_id` (varchar, unique), `verified` (boolean), `created_at` (timestamp)
-- **Security**: Devotees can write their own reports and query their matching transactions (linked via phone number). Administrative audit desk has full write verification privileges.
-
-### 7. `sadhana_activities`
-Defines available spiritual tasks and their points values.
-- **Primary Key**: `id` (varchar)
-- **Columns**: `name` (varchar), `points` (integer), `category` (varchar, e.g., 'Tapas', 'Chant', 'Medotion')
-- **Security**: Public read access. Modifications are restricted to administrative config parameters.
-
-### 8. `sadhana_logs`
-Tracks the daily spiritual tasks completed by each devotee.
-- **Primary Key**: `id` (uuid)
-- **Foreign Key**: `user_id` -> `profiles.id` (on delete cascade)
-- **Columns**: `date_str` (date), `activities` (varchar[]), `points` (integer)
-- **Security**: Row-level policies ensure that users can only read and write their own daily log sheets.
+- **Columns**: `title` (varchar), `message` (text), `published` (boolean)
 
 ---
 
 ## 🔒 Row-Level Security (RLS) Strategy
 
-Row-Level Security is enabled globally on all tables containing devotee information to prevent cross-account data leaks.
+Row-Level Security is enabled globally on all tables. Because a user account now owns multiple profiles, policies verify ownership by checking if the matching profile belongs to the authenticated user ID (`auth.uid() = user_id`).
+
+### Helper Function: `public.is_admin(user_uuid UUID)`
+To streamline RLS checks, a security definer helper function resolves if the user owns any profile carrying the admin role:
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin(user_uuid UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = user_uuid AND role = 'admin'::public.user_role
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### Security Policies Matrix
 
 | Table Name | SELECT Policy | INSERT Policy | UPDATE Policy | DELETE Policy |
 |---|---|---|---|---|
-| `profiles` | Public | Auth users | Owner Only (`auth.uid() = id`) | None |
-| `schedules` | Public | Admin Only | Admin Only | Admin Only |
-| `announcements` | Public | Admin Only | Admin Only | Admin Only |
+| `profiles` | Public | Auth Users | Owner (`auth.uid() = user_id`) OR Admin | None |
+| `activities` | Public | Admin Only | Admin Only | Admin Only |
+| `user_activities` | Owner (`profile.user_id = auth.uid()`) OR Admin | Owner (`profile.user_id = auth.uid()`) | Owner (Pending logs only) OR Admin | None |
 | `events` | Public | Admin Only | Admin Only | Admin Only |
-| `subscriptions` | Admin Only | Public | None | None |
-| `donations` | Owner (match phone) | Public | None | None |
-| `sadhana_activities` | Public | Admin Only | Admin Only | Admin Only |
-| `sadhana_logs` | Owner (`user_id = auth.uid()`) | Owner (`user_id = auth.uid()`) | Owner (`user_id = auth.uid()`) | None |
+| `announcements` | Public | Admin Only | Admin Only | Admin Only |
+| `settings` | Public | Admin Only | Admin Only | Admin Only |
+| `daily_panchang` | Public | Admin Only | Admin Only | Admin Only |
+| `daily_quotes` | Public | Admin Only | Admin Only | Admin Only |
 
 ---
 
@@ -170,15 +242,7 @@ Row-Level Security is enabled globally on all tables containing devotee informat
 
 To maintain sub-millisecond query performance under high load, the following database indexes are applied:
 
-1. **`idx_sadhana_logs_user_date`**: Compound index on `sadhana_logs(user_id, date_str)` for fetching a devotee's logging history.
-2. **`idx_profiles_total_points`**: Index on `profiles(total_points DESC)` for generating leaderboard lists.
-3. **`idx_donations_phone`**: Index on `donations(phone)` for querying a devotee's donation history.
-4. **`idx_announcements_created`**: Index on `announcements(created_at DESC)` for retrieving latest news updates.
-
----
-
-## 🔄 Migration Strategy
-
-1. **Supabase CLI Integration**: Schema changes are managed via local migration files.
-2. **Local Schema Verification**: Test migration rollbacks against local containers before running migrations in production.
-3. **CI/CD Deployment**: Apply database migrations automatically during GitHub Actions deployment steps.
+1. **`idx_user_activities_profile_date`**: Compound index on `user_activities(profile_id, activity_date)` for fetching active devotee logs.
+2. **`idx_profiles_role`**: Index on `profiles(role)` for sorting admin permissions.
+3. **`idx_profiles_total_points`**: Index on `profiles(total_points DESC)` for leaderboard lookups.
+4. **`idx_announcements_created`**: Index on `announcements(created_at DESC)` for retrieving news notices.
