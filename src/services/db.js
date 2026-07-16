@@ -406,7 +406,7 @@ export const db = {
         .from("panchang")
         .select("*")
         .eq("date_str", dateStr)
-        .single();
+        .maybeSingle();
       if (!error && data) {
         return {
           dateStr: data.date_str,
@@ -668,16 +668,52 @@ export const db = {
     if (isSupabaseConfigured && supabase) {
       // Admin update for activities configuration
       for (const a of list) {
-        await supabase
-          .from("activities")
-          .update({
-            name: a.name,
-            points: a.points,
-            category: a.category,
-            description: a.description,
-            active: a.active !== false
-          })
-          .eq("id", a.id);
+        let dbCategory = a.category;
+        if (dbCategory === "Tapas") dbCategory = "Fasting";
+        else if (dbCategory === "Chant" || dbCategory === "Repentance") dbCategory = "Prayer";
+        else if (dbCategory === "Devotion") dbCategory = "Temple";
+        else if (dbCategory === "Service" || dbCategory === "Charity") dbCategory = "Seva";
+
+        const validCategories = ['Fasting', 'Prayer', 'Meditation', 'Learning', 'Temple', 'Seva'];
+        if (!validCategories.includes(dbCategory)) {
+          dbCategory = 'Fasting';
+        }
+
+        let actId = a.id;
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actId);
+        if (!isUUID) {
+          try {
+            const { data: match } = await supabase
+              .from("activities")
+              .select("id")
+              .ilike("name", a.name)
+              .limit(1)
+              .maybeSingle();
+            if (match) {
+              actId = match.id;
+            }
+          } catch (err) {
+            console.error("Error looking up activity UUID:", err);
+          }
+        }
+
+        const isFinalUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actId);
+        if (isFinalUUID) {
+          const { error } = await supabase
+            .from("activities")
+            .update({
+              name: a.name,
+              points: Number(a.points) || 0,
+              category: dbCategory,
+              description: a.description,
+              active: a.active !== false
+            })
+            .eq("id", actId);
+          if (error) {
+            console.error("Error updating activity " + a.name + ":", error);
+            throw error;
+          }
+        }
       }
     }
     setLocalItem("temp_sadhana_activities", list);
@@ -1295,7 +1331,6 @@ export const db = {
     const merged = { ...DEFAULT_CMS, ...local };
 
     if (dbData) {
-      const cms = dbData.cms_data || {};
       const mappedDb = {
         id: dbData.id,
         templeName: dbData.temple_name,
@@ -1324,11 +1359,6 @@ export const db = {
           merged[k] = mappedDb[k];
         }
       });
-      Object.keys(cms).forEach(k => {
-        if (cms[k] !== undefined && cms[k] !== null) {
-          merged[k] = cms[k];
-        }
-      });
     }
     return merged;
   },
@@ -1339,24 +1369,19 @@ export const db = {
     setLocalItem("temp_temple_settings", updated);
 
     if (isSupabaseConfigured && supabase) {
-      let currentCms = {};
+      let rowId = null;
       try {
         const { data } = await supabase
           .from("settings")
-          .select("cms_data")
-          .eq("id", "00000000-0000-0000-0000-000000000000")
+          .select("id")
+          .limit(1)
           .maybeSingle();
-        if (data && data.cms_data) {
-          currentCms = data.cms_data;
+        if (data) {
+          rowId = data.id;
         }
       } catch (err) {
-        console.error("Error getting settings for update:", err);
+        console.error("Error fetching settings ID:", err);
       }
-
-      const newCms = { ...currentCms };
-      Object.keys(updates).forEach(k => {
-        newCms[k] = updates[k];
-      });
 
       const dbUpdates = {
         temple_name: updates.templeName !== undefined ? updates.templeName : undefined,
@@ -1379,7 +1404,6 @@ export const db = {
         instagram: updates.instagram !== undefined ? updates.instagram : undefined,
         youtube: updates.youtube !== undefined ? updates.youtube : undefined,
         website: updates.website !== undefined ? updates.website : undefined,
-        cms_data: newCms,
         updated_at: new Date().toISOString()
       };
 
@@ -1387,14 +1411,19 @@ export const db = {
         if (dbUpdates[k] === undefined) delete dbUpdates[k];
       });
 
-      const { data, error } = await supabase
-        .from("settings")
-        .update(dbUpdates)
-        .eq("id", "00000000-0000-0000-0000-000000000000")
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      if (rowId) {
+        const { data, error } = await supabase
+          .from("settings")
+          .update(dbUpdates)
+          .eq("id", rowId)
+          .select()
+          .single();
+        if (error) {
+          console.error("Error updating settings:", error);
+          throw error;
+        }
+        return data;
+      }
     }
     return updated;
   },
@@ -1659,27 +1688,11 @@ export const db = {
 
   // ── Notification Center API ────────────────────────────────────────────────
   async getNotifications(profileId) {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .or(`profile_id.eq.${profileId},profile_id.is.null`)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (!error && data) return data;
-    }
     const local = getLocalItem("temp_notifications", []);
     return local.filter(n => !n.profileId || n.profileId === profileId);
   },
 
   async markNotificationRead(id) {
-    if (isSupabaseConfigured && supabase) {
-      await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("id", id);
-      return true;
-    }
     const local = getLocalItem("temp_notifications", []);
     const idx = local.findIndex(n => n.id === id);
     if (idx !== -1) {
@@ -1690,19 +1703,6 @@ export const db = {
   },
 
   async createNotification(profileId, title, message, type) {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("notifications")
-        .insert({
-          profile_id: profileId,
-          title,
-          message,
-          type
-        })
-        .select()
-        .single();
-      if (!error && data) return data;
-    }
     const local = getLocalItem("temp_notifications", []);
     const newNotif = {
       id: "notif_" + Math.random().toString(36).substr(2, 9),
@@ -1720,30 +1720,10 @@ export const db = {
 
   // ── Audit Logs API ──────────────────────────────────────────────────────────
   async getAuditLogs() {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("audit_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (!error && data) return data;
-    }
     return getLocalItem("temp_audit_logs", []);
   },
 
   async createAuditLog(adminId, adminName, action, affectedRecordId, details) {
-    if (isSupabaseConfigured && supabase) {
-      await supabase
-        .from("audit_logs")
-        .insert({
-          admin_id: adminId,
-          admin_name: adminName,
-          action,
-          affected_record_id: affectedRecordId,
-          details
-        });
-      return true;
-    }
     const local = getLocalItem("temp_audit_logs", []);
     local.unshift({
       id: "audit_" + Math.random().toString(36).substr(2, 9),
