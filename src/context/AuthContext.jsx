@@ -66,6 +66,7 @@ export function AuthProvider({ children }) {
       avatar: data.avatar_url,
       totalPoints: data.total_points,
       streak: data.current_streak,
+      longestStreak: data.longest_streak,
     };
   }, []);
 

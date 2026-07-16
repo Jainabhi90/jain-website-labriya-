@@ -1,70 +1,71 @@
 # Feature Specifications - Labriya Chaturmas Portal
 
-This document lists the currently implemented features and outlines the specifications for future feature expansions of the **Labriya Chaturmas Portal**.
+This document catalogs the screens, components, user flows, and business rules implemented in the **Labriya Chaturmas Portal**.
 
 ---
 
-## 📱 Current Features
+## 🎛️ Active Feature Catalog
 
-### 1. Home (`/`)
-- **Spiritual Hero Image**: A high-resolution golden lotus and temple layout designed to establish a sacred tone.
-- **Schedules Timeline**: Grouped morning and evening schedules (worship timelines, pravachans, aarti) updated dynamically. Includes styled empty states.
-- **Countdown Clock**: Dynamic timer displaying days, hours, minutes, and seconds until the Chaturmas begins, built with client-side hydration protections.
-- **Quick Links**: Visual grid navigation pointing to Panchang, Events, Donate, About, and the Devotee portal.
+### 1. Unified Authentication System
+- **Provider**: Google OAuth Sign-In.
+- **Rules**:
+  - Automatically provisions a primary devotee profile (`member_number = 1`) on first signup.
+  - Limits each Google account to a maximum of 2 devotee profiles.
+  - Automatically routes single-profile accounts to `/dashboard` and multi-profile accounts to `/profile-select`.
 
-### 2. About (`/about`)
-- **Temple Scrolls**: Detailed historical records of the Shree Labriya Jain Shwetambar Mandir.
-- **Guru Lineage**: Sections highlighting Gurudev's history, publications, and mission statements.
-- **Location Pin**: Directions, contact phone lines, and email coordinates.
+### 2. Devotee Profile Selection & Management
+- **Profile Selector Screen**:
+  - Displays the primary member and a secondary slot.
+  - Dashed card slot turns into an inline animated registration form to add a family member, avoiding routing flashes or parameter dependencies.
+  - Supports loading registration forms directly when routed via `?add=true`.
+  - Supports deleting secondary members (`member_number = 2`) via trash indicators and confirmation dialogs.
+  - Supports switching devotee profiles securely.
+- **Devotee Settings Panel**:
+  - Allows editing Name, Residence City, and Avatar presets.
+  - Supports adding/modifying Mobile Numbers with 10-digit format validators and database phone conflicts detection.
 
-### 3. Events (`/events`)
-- **Event Catalog**: Visual listings of upcoming festivals, paryushans, and major pujas with date badges and location markers.
-- **Direct Calendar Export**: One-click download of `.ics` files and pre-filled Google Calendar event generation.
-- **Waitlist Notification Form**: A text form allowing devotees to register for alerts when seat reservations and accommodation bookings open.
+### 3. Sadhana Daily Check-in & Logs Tracker
+- **Target Date Checklist**:
+  - Devotees pick a calendar date (defaulting to today's local date) and select check boxes representing completed spiritual vows.
+  - Submitting saves rows directly into the database.
+  - Existing check-ins are loaded automatically upon date changes.
+  - Devotees can edit their logged activities at any time while the logs are in `'Pending'` status.
+  - If any logged activity is Approved by administrators, the form lock checks trigger and prevent modifications.
+- **Devotee Statistics Grid**:
+  - Displays a visual layout of metrics:
+    - **Current Streak**: Consecutively checked days starting from today/yesterday.
+    - **Longest Streak**: Devotee's absolute longest streak on record.
+    - **Total Points**: Sum of points from approved routines.
+    - **Submissions**: Total days devotee logged vows.
+    - **Completion Rate**: Rate calculated out of the 120-day Chaturmas period.
+    - **Today's Status**: Highlights whether today's vows check-in is complete.
 
-### 4. Panchang (`/panchang`)
-- **Dynamic Date Picker**: Defaults directly to the user's actual calendar date on load.
-- **Auspicious Coordinates**: Daily sunrise, sunset, Paksha, month, and specific calendar events (e.g. Kalyanak dates).
-- **Choghadiya Calculations**: Dynamically computes day Choghadiya intervals based on sunrise/sunset timings. Translates to Hindi.
+### 4. Automated Badges Achievements
+- **Badges Tab**:
+  - Unlocked milestones are highlighted using dynamic badges synced from the server.
+  - Locked milestones appear translucent.
+  - **Milestones**:
+    - **First Check-in**: Awarded on the devotee's first daily log submission.
+    - **7 Day Streak**: Awarded when devotee achieves a consecutive streak of 7 days.
+    - **30 Day Streak**: Awarded when devotee achieves a consecutive streak of 30 days.
+    - **100 Points Milestone**: Awarded when devotee's approved points total reaches 100.
+    - **Volunteer Seva**: Awarded when devotee completes at least one Approved activity under the `'Seva'` category.
 
-### 5. Donate (`/donate`)
-- **UPI QR Code Card**: Display of a realistic scan-to-pay QR graphic.
-- **Bank Transfers**: Formatted lists of Bank Account Names, Account Numbers, and IFSC Codes.
-- **Trust credentials**: Verified displays of PAN details, Trust Registration numbers, and Section 80G tax-exemption codes.
-- **Donation Logging & Receipts**: A submission form to report transaction reference IDs and instantly download printable Section 80G tax vouchers.
+### 5. Historic Sadhana Timeline
+- **Summary Cards**: Displays Days Active, Most Performed activity, and total monthly points.
+- **Log Table**: Chronological table showing completed activities on each date and points earned.
 
-### 6. Login (`/login`)
-- **Sign-in Benefits Panel**: Desktop split-pane layout outlining Sadhana tracking, streak rewards, and tax receipt records.
-- **OTP verification**: Simulated SMS code generation with master bypass credentials (`123456`) for demonstration.
+### 6. Noticeboards & Announcements
+- **Feed**: Located on homepage and dashboard sidebar showing priority cards (General Notice vs Program Updates).
 
-### 7. User Dashboard (`/dashboard`)
-- **Spiritual Progress Board**: Displays devotee profile statistics (current points, streaks, profile details).
-- **Daily Sadhana Logging**: Interface to log daily fasts (Upvas, Ekasana), chanting, study, and volunteer work.
+### 7. Chaturmas Event Registry
+- **Schedule**: Displays upcoming assemblies and dates.
+- **ICS Calendar export**: Allows downloading event coordinates directly to Apple, Google, or Outlook calendars.
 
-### 8. Admin Dashboard (`/admin`)
-- **Operational Console**: Tabbed workspace for managing daily updates:
-  - Edit daily morning/evening schedules.
-  - Write and delete public announcements.
-  - Update Panchang parameters for selected dates.
-  - Review, verify, and approve transaction receipts.
-  - Configure active Sadhana activities and export audits as CSV spreadsheets.
+### 8. Direct Tax-Exempt Donations Desk
+- **Filing Form**: Collects amount, transaction ID, and phone number.
+- **Verification Desk**: Devotees enter their registered phone number to pull up verified receipts.
+- **Voucher Printer**: Outputs 80G tax receipt PDFs.
 
----
-
-## 🔮 Future Features
-
-### 1. Spiritual Badges
-- **Goal**: Automatically reward devotees for spiritual accomplishments.
-- **Criteria**: Grant badges like "First Upvas" (first logged fast), "Streak Vow" (10 consecutive logs), or "Dharma Seva" (20 hours of volunteer service).
-
-### 2. Daily Streak Systems
-- **Goal**: Encourage consistency in spiritual practices.
-- **Criteria**: Automatically increment a devotee's active logging streak for consecutive daily updates, resetting to zero if a log is missed.
-
-### 3. CSV Audits & Reports
-- **Goal**: Allow temple administrators to audit spiritual logs.
-- **Criteria**: Generate monthly reports showing averages, totals, and logs grouped by city for Guruji's review.
-
-### 4. Push Notifications
-- **Goal**: Send reminders for daily tasks.
-- **Criteria**: Implement service worker notifications reminding devotees to submit their sadhana logs before sunset.
+### 9. Temple Administrative Console
+- **Dashboard Desk**: Administrative desk to manage schedules, notices, panchang coordinates, and verify donations.

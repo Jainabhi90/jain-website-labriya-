@@ -4,6 +4,22 @@ All notable changes to the **Labriya Chaturmas Portal** project will be document
 
 ---
 
+## [1.2.0] - 2026-07-16
+
+### Added
+- **Database-Driven Activities**: Replaced the local mock arrays with live queries to the `activities` table on Supabase, ordering them by display weight.
+- **Transactional Log Submissions**: Connected daily vow check-ins to perform bulk writes to the `user_activities` table.
+- **Approved Status Check Lockout**: Added lockout checks on check-ins editing. If any entry for a date is Approved by the admin, the devotee is blocked from modifying that date.
+- **Server-Side Streak Calculations**: Added the migration script `004_sadhana_tracker.sql` containing a gaps-and-islands algorithm in PL/pgSQL to compute consecutive active devotee streaks on row mutations.
+- **Server-Side Points Accumulation**: Configured database trigger to aggregate `total_points` on profiles from approved check-ins only.
+- **Automated Milestone Badge Awards**: Created `profile_badges` table and configured PostgreSQL trigger evaluating devotee points/streaks updates to automatically unlock milestone achievements.
+- **Statistics Overview Grid**: Rendered a detailed statistics grid in the check-in panel displaying current streaks, longest streaks, total submissions, Chaturmas completion percentage, and today's completion status.
+
+### Fixed
+- **Unused Variable Warnings**: Removed `insertedCount` variable from the db controller layer to achieve a clean compilation build.
+
+---
+
 ## [1.1.0] - 2026-07-16
 
 ### Added

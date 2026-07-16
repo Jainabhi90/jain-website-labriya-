@@ -10,9 +10,9 @@ This document outlines the milestones, objectives, checklists, and estimated tim
 |---|---|---|---|
 | Phase 1 | Google Auth & Family Accounts | Implement single authentication provider and two-profile family limits | Completed |
 | Phase 2 | Family Account Management | Support deletion, editing, mobile validation, and query-parameter-based entry modes | Completed |
-| Phase 3 | Database Design | Schema updates, constraints, triggers, and migrations | Completed |
-| Phase 4 | Profiles & Selection | Profile select screen, onboarding logic, active state context | Completed |
-| Phase 5 | Sadhana Tracker | Daily vow log sheet & tally tables | Completed |
+| Phase 3 | Sadhana Tracker | Daily vow log sheet, streak triggers, and automatic badge unlocks | Completed |
+| Phase 4 | Database Design | Schema updates, constraints, triggers, and migrations | Completed |
+| Phase 5 | Profiles & Selection | Profile select screen, onboarding logic, active state context | Completed |
 | Phase 6 | Events Waitlist | Upcoming event waitlist query connections | Completed |
 | Phase 7 | Announcements | Notice board updates & tag management | Completed |
 | Phase 8 | Donations Audit | Transaction logging & 80G PDF receipt outputs | Completed |
@@ -42,7 +42,19 @@ This document outlines the milestones, objectives, checklists, and estimated tim
   - [x] Support deleting secondary profiles only (member_number = 2), protected by confirmation dialogs.
   - [x] Automatically switch context active profiles to primary devotee profile upon secondary member deletion.
 
-### Phase 3: Database Design (Completed)
+### Phase 3: Sadhana Tracker (Completed)
+- **Objectives**: Implement a completely database-driven devotee daily activity vow log system, with PL/pgSQL database trigger functions for points summation, consecutive check-in streaks calculation, and automated milestone badges unlocks.
+- **Deliverables**: Updated [db.js](file:///src/services/db.js), [dashboard/page.jsx](file:///src/app/dashboard/page.jsx), and migration [004_sadhana_tracker.sql](file:///supabase/migrations/004_sadhana_tracker.sql).
+- **Checklist**:
+  - [x] Fetch active spiritual activities dynamically from `activities` table.
+  - [x] Batch insert daily check-in routines into `user_activities` (storing profile_id, activity_id, and date).
+  - [x] Prevent editing of logs that have already been Approved.
+  - [x] Calculate devotee total points dynamically on the server from approved check-ins only.
+  - [x] Recalculate devotee streaks (current, longest, last activity date) automatically via a Gaps & Islands server algorithm.
+  - [x] Automatically unlock digital milestone badges inside `profile_badges` through PostgreSQL triggers.
+  - [x] Add a detailed statistics dashboard grid displaying streaks, submissions, rates, and today's status.
+
+### Phase 4: Database Design (Completed)
 - **Objectives**: Set up SQL schemas, table keys, security policies, and indexes on Supabase.
 - **Deliverables**: [001_initial_schema.sql](file:///supabase/migrations/001_initial_schema.sql), [002_add_profile_complete_fields.sql](file:///supabase/migrations/002_add_profile_complete_fields.sql), and [003_family_accounts.sql](file:///supabase/migrations/003_family_accounts.sql).
 - **Checklist**:
@@ -51,21 +63,13 @@ This document outlines the milestones, objectives, checklists, and estimated tim
   - [x] Implement partial unique index `unique_active_mobile` for phone number validations across devotees.
   - [x] Create helper `public.is_admin()` function and enable RLS policies.
 
-### Phase 4: Profiles & Selection (Completed)
+### Phase 5: Profiles & Selection (Completed)
 - **Objectives**: Support choosing family member profiles on login and adding secondary members dynamically.
 - **Deliverables**: [profile-select/page.jsx](file:///src/app/profile-select/page.jsx), [complete-profile/page.jsx](file:///src/app/complete-profile/page.jsx), and [profileService.js](file:///src/services/profileService.js).
 - **Checklist**:
   - [x] Automatically direct users to dashboard if only 1 profile exists.
   - [x] Show selection screen if two profiles exist, allowing profile switching.
   - [x] Expose "Add Family Member" buttons on the dashboard when a user only has one profile.
-
-### Phase 5: Sadhana Tracker (Completed)
-- **Objectives**: Build daily logging tables and tally points for completed vows.
-- **Deliverables**: Dashboard daily checks adapter updated to use profile IDs instead of user IDs.
-- **Checklist**:
-  - [x] Submit vows utilizing profile UUID as the principal identifier.
-  - [x] Read check-ins and streaks metrics from specific profile objects.
-  - [x] Update devotee points and badges per member.
 
 ### Phase 6: Events Waitlist (Completed)
 - **Objectives**: Populate upcoming events list from database tables and manage subscriber waitlists.

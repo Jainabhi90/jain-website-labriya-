@@ -42,6 +42,7 @@ graph TD
     subgraph Database [PostgreSQL Database Engine]
         tables[(Relational Tables)]
         rls[Row-Level Security Policies]
+        triggers[PL/pgSQL Trigger Engine]
     end
 
     %% Connections
@@ -67,6 +68,7 @@ graph TD
     postgrest --> rls
     rls --> tables
     storage --> tables
+    tables --> triggers
 ```
 
 ---
@@ -90,7 +92,7 @@ The backend is serverless, relying on the **Supabase platform** to expose CRUD d
 The database is a managed **PostgreSQL** instance:
 - **Relational Integrity**: Foreign key constraints enforce data consistency between tables. Vow logs, events, and announcements reference profile UUIDs in the `profiles` table.
 - **Security Control**: Row-Level Security (RLS) is enabled globally. Policies restrict users from accessing or modifying profiles owned by other user accounts.
-- **Query Optimizations**: Indexes are applied to foreign key constraints and date coordinates to maintain fast queries as dataset sizes grow.
+- **Triggers & Functions**: Server-side calculations run on database triggers for automatic points tallying, gaps-and-islands streak counters, and profile badge allocations.
 
 ---
 
@@ -146,13 +148,18 @@ sequenceDiagram
     participant DS as DB Service Layer
     participant S as Supabase DB API
     participant DB as PostgreSQL Table
+    participant Trig as Trigger Engine
 
     D->>DS: submitDailySadhana(profileId, dateStr, activityIds)
-    DS->>S: Upsert record to `sadhana_logs`
+    DS->>S: Upsert record to `user_activities`
     S->>DB: Apply RLS Policy Check (auth.uid() = profiles.user_id)
-    DB->>S: Write allowed, update devotee profile points
-    S->>DS: Return updated log & profile objects
-    DS->>D: Dispatch success, trigger confetti & update streak stats
+    DB->>Trig: Fire trg_user_activity_change
+    Trig->>Trig: calculate_streak() & SUM(points_awarded) where status = Approved
+    Trig->>DB: UPDATE profiles SET total_points, current_streak, longest_streak
+    Trig->>Trig: Fire trg_profiles_stats_change
+    Trig->>DB: INSERT INTO profile_badges on criteria matches
+    S->>DS: Return success response
+    DS->>D: Dispatch success, reload logs & badges, update stats grid
 ```
 
 ---

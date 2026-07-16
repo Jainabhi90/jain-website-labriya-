@@ -62,7 +62,13 @@ export default function Dashboard() {
   const [activities, setActivities] = useState([]);
   const [logs, setLogs] = useState([]);
   const [checkedActivities, setCheckedActivities] = useState([]);
-  const [checkInDate, setCheckInDate] = useState("2026-07-11"); // defaults to July 11, 2026
+  const [checkInDate, setCheckInDate] = useState(() => {
+    if (typeof window !== "undefined") {
+      const local = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+      return local.toISOString().split("T")[0];
+    }
+    return "2026-07-16";
+  });
   const [leaderboard, setLeaderboard] = useState([]);
   const [leaderboardEnabled, setLeaderboardEnabled] = useState(false);
   const [quote, setQuote] = useState("");
@@ -78,6 +84,7 @@ export default function Dashboard() {
   const [editCity, setEditCity] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [unlockedBadges, setUnlockedBadges] = useState([]);
 
   // Setup quote once on mount
   useEffect(() => {
@@ -119,10 +126,26 @@ export default function Dashboard() {
         setLogs(sadhanaLogs);
 
         // Precheck activities if user has already checked in for today
-        const todaysLog = sadhanaLogs.find(l => l.dateStr === "2026-07-11");
+        const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0];
+        const todaysLog = sadhanaLogs.find(l => l.dateStr === todayStr);
         if (todaysLog) {
           setCheckedActivities(todaysLog.activities);
         }
+
+        // Load Unlocked Badges from DB
+        let badgesList = [];
+        if (db.isSupabaseConfigured && db.supabase) {
+          const { data: dbBadges, error: badgeErr } = await db.supabase
+            .from("profile_badges")
+            .select("badge_id")
+            .eq("profile_id", profile.id);
+          if (!badgeErr && dbBadges) {
+            badgesList = dbBadges.map(b => b.badge_id);
+          }
+        } else {
+          badgesList = profile.badges || [];
+        }
+        setUnlockedBadges(badgesList);
 
         // Leaderboard check
         const lbEnabled = await db.isLeaderboardEnabled();
@@ -192,11 +215,13 @@ export default function Dashboard() {
     try {
       const result = await db.submitDailySadhana(profile.id, checkInDate, checkedActivities);
 
-      // Keep points and streaks synced in the Supabase database profiles table
-      await profileService.updateProfile(profile.id, {
-        totalPoints: result.profile.totalPoints,
-        streak: result.profile.streak
-      });
+      // Keep points and streaks synced in the Supabase database profiles table (only if localStorage mock is running)
+      if (!db.isSupabaseConfigured) {
+        await profileService.updateProfile(profile.id, {
+          totalPoints: result.profile.totalPoints,
+          streak: result.profile.streak
+        });
+      }
 
       // Refresh AuthContext profile details
       await refreshProfile(profile.id);
@@ -205,13 +230,28 @@ export default function Dashboard() {
       const updatedLogs = await db.getSadhanaLogs(profile.id);
       setLogs(updatedLogs);
 
+      // Reload badges list
+      let badgesList = [];
+      if (db.isSupabaseConfigured && db.supabase) {
+        const { data: dbBadges } = await db.supabase
+          .from("profile_badges")
+          .select("badge_id")
+          .eq("profile_id", profile.id);
+        if (dbBadges) {
+          badgesList = dbBadges.map(b => b.badge_id);
+        }
+      } else {
+        badgesList = result.profile.badges || [];
+      }
+      setUnlockedBadges(badgesList);
+
       // Reload leaderboard if active
       if (leaderboardEnabled) {
         const lbData = await db.getLeaderboard();
         setLeaderboard(lbData);
       }
 
-      // Calculate points earned
+      // Calculate points earned for success toast message display
       let pointsCalculated = 0;
       checkedActivities.forEach(id => {
         const act = activities.find(a => a.id === id);
@@ -222,7 +262,8 @@ export default function Dashboard() {
       setTimeout(() => setStatusMessage(""), 5000);
     } catch (err) {
       console.error(err);
-      setStatusMessage("❌ Failed to save activities.");
+      setStatusMessage(`❌ Failed to save activities: ${err.message}`);
+      setTimeout(() => setStatusMessage(""), 5000);
     }
   };
 
@@ -569,6 +610,67 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Devotee Statistics Grid */}
+              {(() => {
+                const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0];
+                const hasCheckedInToday = logs.some(l => l.dateStr === todayStr);
+                const totalSubmissions = logs.length;
+                const completionPercentage = Math.min(100, Math.round((totalSubmissions / 120) * 100));
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-2">
+                    <div className="p-4 rounded-custom-md bg-white border border-border-custom flex items-center gap-3">
+                      <span className="text-xl select-none">🔥</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Current Streak</span>
+                        <span className="text-sm font-bold text-text-primary">{profile.streak || 0} Days</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-custom-md bg-white border border-border-custom flex items-center gap-3">
+                      <span className="text-xl select-none">🏆</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Longest Streak</span>
+                        <span className="text-sm font-bold text-text-primary">{profile.longestStreak || 0} Days</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-custom-md bg-white border border-border-custom flex items-center gap-3">
+                      <span className="text-xl select-none">🪷</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Total Points</span>
+                        <span className="text-sm font-bold text-text-primary">{profile.totalPoints || 0} Points</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-custom-md bg-white border border-border-custom flex items-center gap-3">
+                      <span className="text-xl select-none">📝</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Submissions</span>
+                        <span className="text-sm font-bold text-text-primary">{totalSubmissions} Days</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-custom-md bg-white border border-border-custom flex items-center gap-3">
+                      <span className="text-xl select-none">⚡</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Completion Rate</span>
+                        <span className="text-sm font-bold text-text-primary">{completionPercentage}%</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-custom-md bg-white border border-border-custom flex items-center gap-3">
+                      <span className="text-xl select-none">📅</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Today's Check-In</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border inline-block ${
+                          hasCheckedInToday 
+                            ? "bg-green-50 text-green-700 border-green-500/10" 
+                            : "bg-orange-50 text-orange-700 border-orange-500/10"
+                        }`}>
+                          {hasCheckedInToday ? "✓ Completed" : "⏰ Pending"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Point Calculator Preview */}
               <div className="p-4 rounded bg-secondary/50 border border-primary/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                 <div>
@@ -638,7 +740,7 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mt-2">
                 {Object.entries(BADGES_DEFINITIONS).map(([badgeId, val]) => {
-                  const isUnlocked = profile.badges?.includes(badgeId);
+                  const isUnlocked = unlockedBadges.includes(badgeId);
                   return (
                     <div
                       key={badgeId}

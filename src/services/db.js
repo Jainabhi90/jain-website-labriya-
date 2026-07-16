@@ -644,10 +644,43 @@ export const db = {
 
   // --- Sadhana Tracker ---
   async getSadhanaActivities() {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("active", true)
+        .order("display_order", { ascending: true });
+      if (!error && data) {
+        return data.map(a => ({
+          id: a.id,
+          name: a.name,
+          points: a.points,
+          category: a.category,
+          description: a.description,
+          difficulty: a.difficulty,
+          icon: a.icon
+        }));
+      }
+    }
     return getLocalItem("temp_sadhana_activities", DEFAULT_SADHANA_ACTIVITIES);
   },
 
   async updateSadhanaActivities(list) {
+    if (isSupabaseConfigured && supabase) {
+      // Admin update for activities configuration
+      for (const a of list) {
+        await supabase
+          .from("activities")
+          .update({
+            name: a.name,
+            points: a.points,
+            category: a.category,
+            description: a.description,
+            active: a.active !== false
+          })
+          .eq("id", a.id);
+      }
+    }
     setLocalItem("temp_sadhana_activities", list);
     return list;
   },
@@ -662,6 +695,27 @@ export const db = {
   },
 
   async getDevoteeProfile(userId) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+      if (!error && data) {
+        return {
+          id: data.id,
+          fullName: data.full_name,
+          phone: data.mobile,
+          city: data.city,
+          avatar: data.avatar_url,
+          totalPoints: data.total_points,
+          streak: data.current_streak,
+          longestStreak: data.longest_streak,
+          lastActivityDate: data.last_activity_date
+        };
+      }
+    }
+
     const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
     if (!profiles[userId]) {
       profiles[userId] = {
@@ -672,6 +726,7 @@ export const db = {
         avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
         totalPoints: 0,
         streak: 0,
+        longestStreak: 0,
         badges: [],
         totalTaps: 0
       };
@@ -681,6 +736,34 @@ export const db = {
   },
 
   async updateDevoteeProfile(userId, updates) {
+    if (isSupabaseConfigured && supabase) {
+      const dbUpdates = {};
+      if (updates.fullName !== undefined) dbUpdates.full_name = updates.fullName;
+      if (updates.city !== undefined) dbUpdates.city = updates.city;
+      if (updates.avatar !== undefined) dbUpdates.avatar_url = updates.avatar;
+      if (updates.phone !== undefined) dbUpdates.mobile = updates.phone;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(dbUpdates)
+        .eq("id", userId)
+        .select()
+        .single();
+      
+      if (!error && data) {
+        return {
+          id: data.id,
+          fullName: data.full_name,
+          phone: data.mobile,
+          city: data.city,
+          avatar: data.avatar_url,
+          totalPoints: data.total_points,
+          streak: data.current_streak,
+          longestStreak: data.longest_streak
+        };
+      }
+    }
+
     const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
     if (!profiles[userId]) {
       await this.getDevoteeProfile(userId);
@@ -691,11 +774,137 @@ export const db = {
   },
 
   async getSadhanaLogs(userId) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("user_activities")
+        .select(`
+          id,
+          activity_date,
+          points_awarded,
+          status,
+          notes,
+          activities (
+            id,
+            name,
+            category,
+            points
+          )
+        `)
+        .eq("profile_id", userId)
+        .order("activity_date", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching getSadhanaLogs from Supabase:", error.message);
+      }
+
+      if (!error && data) {
+        const logsByDate = {};
+        data.forEach(ua => {
+          const dateStr = ua.activity_date;
+          if (!logsByDate[dateStr]) {
+            logsByDate[dateStr] = {
+              id: dateStr,
+              profileId: userId,
+              dateStr,
+              activities: [],
+              points: 0,
+              status: ua.status
+            };
+          }
+          if (ua.activities) {
+            logsByDate[dateStr].activities.push(ua.activities.id);
+            logsByDate[dateStr].points += ua.points_awarded;
+          }
+        });
+        return Object.values(logsByDate);
+      }
+    }
+
     const logs = getLocalItem("temp_sadhana_logs", DEFAULT_SADHANA_LOGS);
     return logs.filter(l => l.userId === userId).sort((a, b) => b.dateStr.localeCompare(a.dateStr));
   },
 
   async submitDailySadhana(userId, dateStr, activityIds) {
+    if (isSupabaseConfigured && supabase) {
+      // 1. Fetch existing entries for that date
+      const { data: existing, error: fetchErr } = await supabase
+        .from("user_activities")
+        .select("id, status")
+        .eq("profile_id", userId)
+        .eq("activity_date", dateStr);
+
+      if (fetchErr) throw fetchErr;
+
+      // 2. Prevent edit if any activity was already Approved
+      const hasApproved = existing?.some(e => e.status === "Approved");
+      if (hasApproved) {
+        throw new Error("This entry has already been approved by administration and cannot be modified.");
+      }
+
+      // 3. Clear existing entries for this date
+      if (existing && existing.length > 0) {
+        const { error: deleteErr } = await supabase
+          .from("user_activities")
+          .delete()
+          .eq("profile_id", userId)
+          .eq("activity_date", dateStr);
+        if (deleteErr) throw deleteErr;
+      }
+
+      // 4. Batch insert new entries
+      if (activityIds.length > 0) {
+        const { data: acts, error: actErr } = await supabase
+          .from("activities")
+          .select("id, points")
+          .in("id", activityIds);
+
+        if (actErr) throw actErr;
+
+        const insertData = activityIds.map(actId => {
+          const pointsVal = acts?.find(a => a.id === actId)?.points || 0;
+          return {
+            profile_id: userId,
+            activity_id: actId,
+            activity_date: dateStr,
+            points_awarded: pointsVal,
+            status: "Pending",
+            submission_source: "Website"
+          };
+        });
+
+        const { error: insertErr } = await supabase
+          .from("user_activities")
+          .insert(insertData);
+
+        if (insertErr) throw insertErr;
+      }
+
+      // 5. Fetch updated profile stats from DB (calculated by DB triggers)
+      const { data: updatedProfile, error: profErr } = await supabase
+        .from("profiles")
+        .select("total_points, current_streak, longest_streak")
+        .eq("id", userId)
+        .single();
+
+      if (profErr) throw profErr;
+
+      return {
+        log: {
+          id: dateStr,
+          profileId: userId,
+          dateStr,
+          activities: activityIds,
+          points: 0, // points sum is resolved dynamically, set placeholder
+          status: "Pending"
+        },
+        profile: {
+          totalPoints: updatedProfile.total_points,
+          streak: updatedProfile.current_streak,
+          longestStreak: updatedProfile.longest_streak
+        }
+      };
+    }
+
     const activities = await this.getSadhanaActivities();
     const logs = getLocalItem("temp_sadhana_logs", DEFAULT_SADHANA_LOGS);
     
@@ -733,9 +942,9 @@ export const db = {
 
     const profile = await this.getDevoteeProfile(userId);
     const pointDifference = pointsEarned - previousPoints;
-    const newTotalPoints = Math.max(0, profile.totalPoints + pointDifference);
+    const newTotalPoints = Math.max(0, (profile.totalPoints || 0) + pointDifference);
 
-    let newStreak = profile.streak;
+    let newStreak = profile.streak || 0;
     if (existingIdx === -1) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -791,6 +1000,28 @@ export const db = {
   },
 
   async getLeaderboard() {
+    if (isSupabaseConfigured && supabase) {
+      const isEnabled = await this.isLeaderboardEnabled();
+      if (!isEnabled) return [];
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, city, total_points, current_streak, avatar_url")
+        .order("total_points", { ascending: false })
+        .limit(10);
+      
+      if (!error && data) {
+        return data.map(p => ({
+          id: p.id,
+          fullName: p.full_name,
+          city: p.city,
+          totalPoints: p.total_points,
+          streak: p.current_streak,
+          avatar: p.avatar_url
+        }));
+      }
+    }
+
     const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
     const isEnabled = await this.isLeaderboardEnabled();
     if (!isEnabled) return [];
@@ -801,6 +1032,24 @@ export const db = {
   },
 
   async getAdminSadhanaReports() {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, city, total_points, current_streak, avatar_url")
+        .order("total_points", { ascending: false });
+      
+      if (!error && data) {
+        return data.map(p => ({
+          id: p.id,
+          fullName: p.full_name,
+          city: p.city,
+          totalPoints: p.total_points,
+          streak: p.current_streak,
+          avatar: p.avatar_url
+        }));
+      }
+    }
+
     const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
     return Object.values(profiles).sort((a, b) => b.totalPoints - a.totalPoints);
   },

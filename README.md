@@ -10,7 +10,7 @@ Welcome to the official repository of the **Labriya Chaturmas Portal**, a modern
 - **Programming Language**: JavaScript (ES6+, JSX)
 - **Styling Engine**: Tailwind CSS (v4)
 - **Backend-as-a-Service**: Supabase (Database, Auth, Row Level Security)
-- **Database**: PostgreSQL (relational storage, schema constraints)
+- **Database**: PostgreSQL (relational storage, schema constraints, triggers, and procedures)
 - **Hosting & Deployment**: Vercel
 
 ---
@@ -29,6 +29,12 @@ jain-website-labriya/
 │   ├── CONTRIBUTING.md        # Contribution & Code Quality Guidelines
 │   └── CHANGELOG.md           # Version Releases
 ├── public/                    # Static Assets (Images, Icons, Media)
+├── supabase/
+│   └── migrations/            # PostgreSQL Schema Migrations
+│       ├── 001_initial_schema.sql
+│       ├── 002_add_profile_complete_fields.sql
+│       ├── 003_family_accounts.sql
+│       └── 004_sadhana_tracker.sql  # Streaks, Points, and Badges Triggers
 ├── src/
 │   ├── app/                   # App Router Pages & Global Layouts
 │   │   ├── admin/             # Temple Admin Console
