@@ -24,7 +24,7 @@ This document catalogs the screens, components, user flows, and business rules i
   - Allows editing Name, Residence City, and Avatar presets.
   - Supports adding/modifying Mobile Numbers with 10-digit format validators and database phone conflicts detection.
 
-### 3. Sadhana Daily Check-in & Logs Tracker
+### 3. Sadhana Daily Check-in & Vows Tracker
 - **Target Date Checklist**:
   - Devotees pick a calendar date (defaulting to today's local date) and select check boxes representing completed spiritual vows.
   - Submitting saves rows directly into the database.

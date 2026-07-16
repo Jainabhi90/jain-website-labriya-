@@ -11,19 +11,14 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        console.log("[DEBUG] Admin redirect: to /login");
         router.replace("/login");
       } else if (profilesList.length === 2 && !profile) {
-        console.log("[DEBUG] Admin redirect: to /profile-select");
         router.replace("/profile-select");
       } else if (!profile) {
-        console.log("[DEBUG] Admin redirect: to /profile-select");
         router.replace("/profile-select");
       } else if (!profile.is_profile_complete) {
-        console.log("[DEBUG] Admin redirect: to /complete-profile");
         router.replace("/complete-profile");
       } else if (!isAdmin) {
-        console.log("[DEBUG] Admin redirect: to /dashboard");
         router.replace("/dashboard");
       }
     }

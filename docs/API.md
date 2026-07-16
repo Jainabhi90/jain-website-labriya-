@@ -102,7 +102,7 @@ This document defines the REST API layer maps representing CRUD database actions
 
 ---
 
-## 📝 User Activities (Daily Logs)
+## 📝 User Activities (Daily Vow Logs)
 
 ### Query Logs for Admin Approvals
 - **Endpoint**: `/rest/v1/user_activities?select=id,activity_date,points_awarded,status,created_at,profiles(id,full_name,mobile),activities(id,name,category)&order=created_at.desc`

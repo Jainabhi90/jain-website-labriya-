@@ -35,10 +35,11 @@ jain-website-labriya/
 │       ├── 002_add_profile_complete_fields.sql
 │       ├── 003_family_accounts.sql
 │       ├── 004_sadhana_tracker.sql  # Streaks, Points, and Badges Triggers
-│       └── 005_admin_controls.sql   # Schedules RLS & secure admin rules
+│       ├── 005_admin_controls.sql   # Schedules RLS & secure admin rules
+│       └── 006_database_sync.sql    # Corrective database sync & RLS fixes
 ├── src/
 │   ├── app/                   # App Router Pages & Global Layouts
-│   │   ├── admin/             # Temple Admin Console
+│   │   ├── admin/             # Temple Admin Console (Dynamically Localized)
 │   │   ├── complete-profile/  # Profile Onboarding Form
 │   │   ├── dashboard/         # Devotee Vow Tracker & Portal
 │   │   ├── donate/            # Donation & 80G Verification Desk
@@ -91,3 +92,6 @@ jain-website-labriya/
    npm run dev
    ```
 3. Open `http://localhost:3000` in your web browser.
+
+### Schema Migration
+To apply database migrations to your remote Supabase instance, execute the SQL files in chronological order (from `001` to `006`) within the **SQL Editor** on your Supabase dashboard. Specifically, `006_database_sync.sql` synchronizes all missing tables and fixes devotee profiles RLS policy checks.

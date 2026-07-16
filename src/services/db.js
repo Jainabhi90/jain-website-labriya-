@@ -279,7 +279,6 @@ export const db = {
           orderNum: item.order_num
         }));
       }
-      console.warn("Supabase schedules error, falling back to local storage:", error);
     }
     return getLocalItem("temp_schedules", DEFAULT_SCHEDULE)
       .sort((a, b) => a.orderNum - b.orderNum);
@@ -783,6 +782,8 @@ export const db = {
           points_awarded,
           status,
           notes,
+          admin_note,
+          created_at,
           activities (
             id,
             name,
@@ -804,11 +805,14 @@ export const db = {
           if (!logsByDate[dateStr]) {
             logsByDate[dateStr] = {
               id: dateStr,
+              submissionId: ua.id,
               profileId: userId,
               dateStr,
               activities: [],
               points: 0,
-              status: ua.status
+              status: ua.status,
+              createdAt: ua.created_at,
+              adminNote: ua.admin_note
             };
           }
           if (ua.activities) {
@@ -1348,6 +1352,344 @@ export const db = {
       totalDonations: 125000,
       verifiedDonations: 95000
     };
-  }
+  },
 
+  async getAdminAnalyticsEnhanced() {
+    const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0];
+
+    if (isSupabaseConfigured && supabase) {
+      const { count: devoteesCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      const { count: familiesCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("member_number", 1);
+
+      const { data: pointsSumData } = await supabase
+        .from("profiles")
+        .select("total_points");
+      const totalPoints = pointsSumData?.reduce((sum, p) => sum + (p.total_points || 0), 0) || 0;
+
+      const { count: logsCount } = await supabase
+        .from("user_activities")
+        .select("*", { count: "exact", head: true });
+
+      const { count: approvedCount } = await supabase
+        .from("user_activities")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "Approved");
+
+      const { count: pendingCount } = await supabase
+        .from("user_activities")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "Pending");
+
+      const { count: todayCheckinsCount } = await supabase
+        .from("user_activities")
+        .select("*", { count: "exact", head: true })
+        .eq("activity_date", todayStr);
+
+      const { data: donationsData } = await supabase
+        .from("donations")
+        .select("amount, verified");
+      const totalDonations = donationsData?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0;
+      const verifiedDonations = donationsData?.filter(d => d.verified).reduce((sum, d) => sum + (d.amount || 0), 0) || 0;
+
+      const { data: todayDonations } = await supabase
+        .from("donations")
+        .select("amount")
+        .gte("created_at", `${todayStr}T00:00:00`)
+        .lte("created_at", `${todayStr}T23:59:59`);
+      const todayDonationsAmount = todayDonations?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0;
+
+      const { count: newRegistrationsToday } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", `${todayStr}T00:00:00`)
+        .lte("created_at", `${todayStr}T23:59:59`);
+
+      const { data: topDevoteesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, city, total_points, current_streak, avatar_url, member_number")
+        .order("total_points", { ascending: false })
+        .limit(5);
+
+      const topDevotees = topDevoteesData?.map(p => ({
+        id: p.id,
+        fullName: p.full_name,
+        city: p.city,
+        totalPoints: p.total_points,
+        streak: p.current_streak,
+        avatar: p.avatar_url,
+        memberNumber: p.member_number
+      })) || [];
+
+      const { data: recentLogsData } = await supabase
+        .from("user_activities")
+        .select(`
+          id,
+          activity_date,
+          points_awarded,
+          status,
+          created_at,
+          profiles (full_name),
+          activities (name)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const recentActivity = recentLogsData?.map(log => ({
+        id: log.id,
+        devoteeName: log.profiles?.full_name || "Unknown",
+        activityName: log.activities?.name || "Unknown",
+        dateStr: log.activity_date,
+        points: log.points_awarded,
+        status: log.status,
+        createdAt: log.created_at
+      })) || [];
+
+      return {
+        devoteesCount: devoteesCount || 0,
+        familiesCount: familiesCount || 0,
+        totalPoints,
+        logsCount: logsCount || 0,
+        approvedLogsCount: approvedCount || 0,
+        pendingCount: pendingCount || 0,
+        todayCheckinsCount: todayCheckinsCount || 0,
+        totalDonations,
+        verifiedDonations,
+        todayDonationsAmount,
+        newRegistrationsToday: newRegistrationsToday || 0,
+        topDevotees,
+        recentActivity
+      };
+    }
+
+    return {
+      devoteesCount: 15,
+      familiesCount: 9,
+      totalPoints: 850,
+      logsCount: 42,
+      approvedLogsCount: 30,
+      pendingCount: 12,
+      todayCheckinsCount: 7,
+      totalDonations: 125000,
+      verifiedDonations: 95000,
+      todayDonationsAmount: 5000,
+      newRegistrationsToday: 2,
+      topDevotees: [],
+      recentActivity: []
+    };
+  },
+
+  async updateLogWithRemarks(id, updates) {
+    if (isSupabaseConfigured && supabase) {
+      const dbUpdates = {};
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.remarks !== undefined) dbUpdates.admin_note = updates.remarks;
+      if (updates.points !== undefined) dbUpdates.points_awarded = updates.points;
+
+      // Fetch the log first to know the profile_id and activity_date
+      const { data: logData } = await supabase
+        .from("user_activities")
+        .select("profile_id, activity_date, activities(name)")
+        .eq("id", id)
+        .single();
+
+      const { data, error } = await supabase
+        .from("user_activities")
+        .update(dbUpdates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Register devotee notification
+      if (logData && updates.status) {
+        const title = updates.status === "Approved" ? "Sadhana Log Approved 🪷" : "Sadhana Log Rejected ⚠️";
+        const message = updates.status === "Approved"
+          ? `Your check-in on ${logData.activity_date} for ${logData.activities?.name || "activity"} was approved (+${updates.points || 0} pts).${updates.remarks ? ` Note: "${updates.remarks}"` : ""}`
+          : `Your check-in on ${logData.activity_date} for ${logData.activities?.name || "activity"} was rejected. Reason: "${updates.remarks || "No reason specified"}"`;
+        await this.createNotification(logData.profile_id, title, message, updates.status.toLowerCase());
+      }
+
+      return data;
+    }
+    return null;
+  },
+
+  // ── Notification Center API ────────────────────────────────────────────────
+  async getNotifications(profileId) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .or(`profile_id.eq.${profileId},profile_id.is.null`)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (!error && data) return data;
+    }
+    const local = getLocalItem("temp_notifications", []);
+    return local.filter(n => !n.profileId || n.profileId === profileId);
+  },
+
+  async markNotificationRead(id) {
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", id);
+      return true;
+    }
+    const local = getLocalItem("temp_notifications", []);
+    const idx = local.findIndex(n => n.id === id);
+    if (idx !== -1) {
+      local[idx].read = true;
+      setLocalItem("temp_notifications", local);
+    }
+    return true;
+  },
+
+  async createNotification(profileId, title, message, type) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("notifications")
+        .insert({
+          profile_id: profileId,
+          title,
+          message,
+          type
+        })
+        .select()
+        .single();
+      if (!error && data) return data;
+    }
+    const local = getLocalItem("temp_notifications", []);
+    const newNotif = {
+      id: "notif_" + Math.random().toString(36).substr(2, 9),
+      profileId,
+      title,
+      message,
+      type,
+      read: false,
+      created_at: new Date().toISOString()
+    };
+    local.unshift(newNotif);
+    setLocalItem("temp_notifications", local);
+    return newNotif;
+  },
+
+  // ── Audit Logs API ──────────────────────────────────────────────────────────
+  async getAuditLogs() {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (!error && data) return data;
+    }
+    return getLocalItem("temp_audit_logs", []);
+  },
+
+  async createAuditLog(adminId, adminName, action, affectedRecordId, details) {
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from("audit_logs")
+        .insert({
+          admin_id: adminId,
+          admin_name: adminName,
+          action,
+          affected_record_id: affectedRecordId,
+          details
+        });
+      return true;
+    }
+    const local = getLocalItem("temp_audit_logs", []);
+    local.unshift({
+      id: "audit_" + Math.random().toString(36).substr(2, 9),
+      admin_id: adminId,
+      admin_name: adminName,
+      action,
+      affected_record_id: affectedRecordId,
+      details,
+      created_at: new Date().toISOString()
+    });
+    setLocalItem("temp_audit_logs", local);
+    return true;
+  },
+
+  // ── Devotee Profile Admin Notes ────────────────────────────────────────────
+  async updateProfileNotes(profileId, adminNotes) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({ admin_notes: adminNotes })
+        .eq("id", profileId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    const profiles = getLocalItem("temp_sadhana_profiles", {});
+    if (profiles[profileId]) {
+      profiles[profileId].adminNotes = adminNotes;
+      setLocalItem("temp_sadhana_profiles", profiles);
+    }
+    return true;
+  },
+
+  // ── System Database Backup Utility ─────────────────────────────────────────
+  async downloadSystemBackup() {
+    if (isSupabaseConfigured && supabase) {
+      const tables = ["profiles", "user_activities", "donations", "schedules", "settings", "announcements", "events", "audit_logs"];
+      const backupData = {};
+      for (const t of tables) {
+        const { data } = await supabase.from(t).select("*");
+        backupData[t] = data || [];
+      }
+      return backupData;
+    }
+    return {
+      profiles: Object.values(getLocalItem("temp_sadhana_profiles", {})),
+      user_activities: getLocalItem("temp_sadhana_logs", []),
+      donations: getLocalItem("temp_donations", []),
+      schedules: getLocalItem("temp_schedules", []),
+      settings: getLocalItem("temp_temple_settings", {}),
+      announcements: getLocalItem("temp_announcements", []),
+      events: getLocalItem("temp_events", []),
+      audit_logs: getLocalItem("temp_audit_logs", [])
+    };
+  },
+
+  async restoreSystemBackup(backupData) {
+    if (!backupData) return false;
+    if (isSupabaseConfigured && supabase) {
+      // Restore settings table singleton safely
+      if (backupData.settings && backupData.settings.length > 0) {
+        const setRow = backupData.settings[0];
+        await supabase
+          .from("settings")
+          .update({
+            temple_name: setRow.temple_name,
+            contact_number: setRow.contact_number,
+            temple_address: setRow.temple_address,
+            upi_id: setRow.upi_id,
+            bank_name: setRow.bank_name,
+            account_holder: setRow.account_holder,
+            account_number: setRow.account_number,
+            ifsc: setRow.ifsc,
+            maintenance_mode: setRow.maintenance_mode || false,
+            google_maps_url: setRow.google_maps_url
+          })
+          .eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+      return true;
+    }
+    if (backupData.settings) setLocalItem("temp_temple_settings", backupData.settings);
+    return true;
+  }
 };
+

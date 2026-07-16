@@ -18,7 +18,7 @@ Represents individual devotees registered under a Google Account.
   - `role` (ENUM `public.user_role`, Default: `'user'`)
   - `total_points` (INTEGER, Default: `0`)
   - `current_streak` (INTEGER, Default: `0`)
-  - `longest_streak` (INTEGER, Default: `0`)
+  - `longest_streak` (INTEGER, Default: `0` NOT NULL)
   - `last_activity_date` (DATE, Nullable)
   - `avatar_url` (TEXT, Nullable)
   - `is_active` (BOOLEAN, Default: `true`)
@@ -66,9 +66,6 @@ Transactional log sheets of devotee check-ins.
   - `submission_source` (ENUM `public.submission_source`, Default: `'Website'`)
   - `created_at` (TIMESTAMPTZ, Default: `now()`)
   - `updated_at` (TIMESTAMPTZ, Default: `now()`)
-- **Indexes**:
-  - `idx_user_activities_profile`: Index on `profile_id`.
-  - `idx_user_activities_date`: Index on `activity_date`.
 
 ---
 
@@ -79,8 +76,6 @@ Devotional milestones unlocked by devotees.
   - `profile_id` (UUID, Foreign Key -> `profiles(id)` ON DELETE CASCADE)
   - `badge_id` (VARCHAR, Not Null)
   - `unlocked_at` (TIMESTAMPTZ, Default: `now()`)
-- **Constraints**:
-  - `unique_profile_badge`: Unique constraint on `(profile_id, badge_id)`.
 
 ---
 
@@ -95,12 +90,56 @@ Morning/Evening daily worship timetable templates.
 
 ---
 
-## 🔐 Security (Row-Level Security)
+### 6. `public.donations`
+UPI donation records submitted by devotees for administrative approval.
+- **Columns**:
+  - `id` (UUID, Primary Key, Default: `gen_random_uuid()`)
+  - `donor_name` (VARCHAR, Not Null)
+  - `phone` (VARCHAR, Not Null)
+  - `amount` (NUMERIC, Not Null)
+  - `txn_id` (VARCHAR, Unique, Not Null)
+  - `verified` (BOOLEAN, Default: `false`)
+  - `created_at` (TIMESTAMPTZ, Default: `now()`)
+  - `updated_at` (TIMESTAMPTZ, Default: `now()`)
+
+---
+
+### 7. `public.subscriptions`
+Event waitlist subscription registers.
+- **Columns**:
+  - `id` (UUID, Primary Key, Default: `gen_random_uuid()`)
+  - `name` (VARCHAR, Not Null)
+  - `phone` (VARCHAR, Not Null)
+  - `event_title` (VARCHAR, Not Null)
+  - `created_at` (TIMESTAMPTZ, Default: `now()`)
+  - `updated_at` (TIMESTAMPTZ, Default: `now()`)
+
+---
+
+### 8. `public.panchang`
+Centralized Lunar calendar coordinates.
+- **Columns**:
+  - `id` (UUID, Primary Key, Default: `gen_random_uuid()`)
+  - `date_str` (VARCHAR, Unique, Not Null)
+  - `tithi` (VARCHAR, Not Null)
+  - `sunrise` (VARCHAR, Nullable)
+  - `sunset` (VARCHAR, Nullable)
+  - `paksha` (VARCHAR, Nullable)
+  - `month` (VARCHAR, Nullable)
+  - `festival` (VARCHAR, Nullable)
+  - `shubh_din` (VARCHAR, Nullable)
+  - `samayik` (VARCHAR, Nullable)
+  - `event` (VARCHAR, Nullable)
+
+---
+
+## 🔐 Security (Row-Level Security) & Verification
 
 ### Profiles Table Policies
-- **Select**: Viewable by authenticated users.
-- **Insert**: Allowed only if `user_id = auth.uid()`.
-- **Update**: Allowed only if `user_id = auth.uid()`.
+- **Select**: Viewable by everyone (`USING (true)`).
+- **Insert**: Allowed only for authenticated owners (`WITH CHECK (auth.uid() = user_id)`). This enables both primary and secondary profile creations.
+- **Update**: Allowed only for authenticated owners (`USING (auth.uid() = user_id)`) or Admins (`USING (public.is_admin(auth.uid()))`).
+- **Delete**: Allowed only for secondary profiles (`member_number = 2`) owned by the authenticated user or by Admins.
 
 ### User Activities (Logs) Table Policies
 - **Select**: Viewable if devotee is the owner of the profile (`profiles.user_id = auth.uid()`) OR if requester is an Admin.
@@ -114,7 +153,16 @@ Morning/Evening daily worship timetable templates.
 
 ### Timetable Schedules Table Policies
 - **Select**: Viewable by everyone (`USING (true)`).
-- **Insert/Update/Delete**: Restructured via [005_admin_controls.sql](file:///supabase/migrations/005_admin_controls.sql) to check admin authorization (`public.is_admin(auth.uid())`).
+- **Insert/Update/Delete**: Restrained strictly to verified system administrators (`public.is_admin(auth.uid())`).
+
+### Donations Policies
+- **Select**: Allowed for matching phone numbers or admin.
+- **Insert**: Allowed for everyone (`WITH CHECK (true)`).
+- **Update**: Admin only.
+
+### Subscriptions Policies
+- **Select**: Admin only.
+- **Insert**: Allowed for everyone (`WITH CHECK (true)`).
 
 ---
 
@@ -129,7 +177,7 @@ Fires `AFTER INSERT OR UPDATE OR DELETE` on `public.user_activities`.
 ### 2. Automated Badges Unlocks (`trg_profiles_stats_change`)
 Fires `AFTER UPDATE OF total_points, current_streak` on `public.profiles`.
 Evaluates rules and awards badges into `public.profile_badges`:
--   **`badge_first_checkin`**: Unlocks on the first check-in log submission.
+-   **`badge_first_checkin`**: Unlocks on the devotee's first daily log submission.
 -   **`badge_7_streak`**: Unlocks when current streak is 7 or more days.
 -   **`badge_30_streak`**: Unlocks when current streak is 30 or more days.
 -   **`badge_100_points`**: Unlocks when total points sum reaches 100.

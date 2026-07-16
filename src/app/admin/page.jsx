@@ -24,11 +24,18 @@ import {
   Settings as SettingsIcon,
   ShieldAlert,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bell
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/services/db";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
+const toReadableId = (uuid = "", prefix = "ID", padLen = 4) => {
+  if (!uuid) return `${prefix}-0000`;
+  const num = parseInt(uuid.replace(/-/g, "").slice(-6), 16) % 10000;
+  return `${prefix}-${String(num).padStart(padLen, "0")}`;
+};
 
 export default function Admin() {
   const router = useRouter();
@@ -77,6 +84,27 @@ export default function Admin() {
   const [profileSearch, setProfileSearch] = useState("");
   const [logStatusFilter, setLogStatusFilter] = useState("Pending");
   const [donationSearch, setDonationSearch] = useState("");
+
+  // Expanded operational stats & popovers states
+  const [unreadAdminNotifsCount, setUnreadAdminNotifsCount] = useState(0);
+  const [adminNotifications, setAdminNotifications] = useState([]);
+  const [showAdminNotifMenu, setShowAdminNotifMenu] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  // Expanded Approvals Detail states
+  const [expandedLogId, setExpandedLogId] = useState(null);
+  const [logRemarks, setLogRemarks] = useState({});
+  const [logPoints, setLogPoints] = useState({});
+
+  // Devotee details timeline subview states
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
+  const [selectedProfileDetail, setSelectedProfileDetail] = useState(null);
+  const [adminNotesText, setAdminNotesText] = useState("");
+  const [profileLogs, setProfileLogs] = useState([]);
+  const [profileDonations, setProfileDonations] = useState([]);
+
+  // Devotees sorting advanced filter state
+  const [devoteeFilters, setDevoteeFilters] = useState({ sortBy: "points_desc" });
 
   // Create Form states
   const [newSched, setNewSched] = useState({ time: "", activity: "", session: "Morning", orderNum: 10 });
@@ -151,8 +179,8 @@ export default function Admin() {
   const refreshData = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch Analytics
-      const stats = await db.getAdminAnalytics();
+      // 1. Fetch Enhanced Analytics
+      const stats = await db.getAdminAnalyticsEnhanced();
       setAnalytics(stats);
 
       // 2. Fetch Schedules
@@ -194,6 +222,24 @@ export default function Admin() {
       // 11. Fetch Settings
       const settingsData = await db.getSettings();
       setTempleSettings(settingsData);
+
+      // 12. Fetch Admin Notifications & Audit Logs
+      const notifs = await db.getNotifications(profile.id);
+      setAdminNotifications(notifs);
+      setUnreadAdminNotifsCount(notifs.filter(n => !n.read).length);
+
+      const audits = await db.getAuditLogs();
+      setAuditLogs(audits);
+
+      // 13. If devotee details sub-view is selected, reload their info
+      if (selectedProfileId) {
+        const detail = await db.getDevoteeProfile(selectedProfileId);
+        setSelectedProfileDetail(detail);
+        setAdminNotesText(detail.adminNotes || detail.admin_notes || "");
+        const pLogs = await db.getSadhanaLogs(selectedProfileId);
+        setProfileLogs(pLogs);
+        setProfileDonations(donationsData.filter(d => d.profileId === selectedProfileId || d.phone === detail.phone));
+      }
     } catch (e) {
       console.error(e);
       showNotification("Failed to reload data.", "error");
@@ -401,6 +447,127 @@ export default function Admin() {
     document.body.removeChild(link);
   };
 
+  const exportFamiliesCSV = () => {
+    const map = {};
+    allProfiles.forEach(p => {
+      if (!map[p.userId]) {
+        map[p.userId] = { userId: p.userId, members: [] };
+      }
+      map[p.userId].members.push(p);
+    });
+    
+    let csvContent = "data:text/csv;charset=utf-8,Family ID,Member ID,Name,Phone,City,Points,Streak,Registration Date\n";
+    Object.values(map).forEach(fam => {
+      const familyReadableId = toReadableId(fam.userId, "F");
+      fam.members.forEach(m => {
+        const memberReadableId = toReadableId(m.id, "M");
+        const regDate = m.createdAt || m.created_at ? new Date(m.createdAt || m.created_at).toLocaleDateString() : "";
+        csvContent += `"${familyReadableId}","${memberReadableId}","${m.fullName}","${m.phone || ""}","${m.city}",${m.totalPoints || 0},${m.streak || 0},"${regDate}"\n`;
+      });
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.href = encodedUri;
+    link.download = `Devotee_Families_Report_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showNotification("Devotee families report CSV exported!");
+  };
+
+  const handleSelectDevoteeProfile = async (profileId) => {
+    setSelectedProfileId(profileId);
+    try {
+      const detail = await db.getDevoteeProfile(profileId);
+      setSelectedProfileDetail(detail);
+      setAdminNotesText(detail.adminNotes || detail.admin_notes || "");
+      const pLogs = await db.getSadhanaLogs(profileId);
+      setProfileLogs(pLogs);
+      const allDons = await db.getDonations();
+      setProfileDonations(allDons.filter(d => d.profileId === profileId || d.phone === detail.phone));
+    } catch (e) {
+      console.error(e);
+      showNotification("Failed to load devotee detailed timeline profile.", "error");
+    }
+  };
+
+  const handleSaveAdminNotes = async () => {
+    if (!selectedProfileId) return;
+    try {
+      await db.updateProfileNotes(selectedProfileId, adminNotesText);
+      await db.createAuditLog(
+        profile.id,
+        profile.fullName,
+        "UPDATE_DEVOTEE_NOTES",
+        selectedProfileId,
+        `Updated devotee admin notes remarks: "${adminNotesText.substring(0, 45)}..."`
+      );
+      showNotification("Devotee profile notes remarks updated successfully.");
+      refreshData();
+    } catch (e) {
+      console.error(e);
+      showNotification("Failed to update devotee admin remarks.", "error");
+    }
+  };
+
+  const handleMarkAdminNotifRead = async (notifId) => {
+    try {
+      await db.markNotificationRead(notifId);
+      setAdminNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+      setUnreadAdminNotifsCount(prev => Math.max(0, prev - 1));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleBackupRestoreUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const payload = JSON.parse(event.target.result);
+        const ok = await db.restoreSystemBackup(payload);
+        if (ok) {
+          await db.createAuditLog(
+            profile.id,
+            profile.fullName,
+            "DATABASE_RESTORE",
+            "system",
+            "Restored database backup JSON file"
+          );
+          showNotification("Database backups restored successfully.");
+          refreshData();
+        } else {
+          showNotification("Database restoration failed. Verify file schema.", "error");
+        }
+      } catch (err) {
+        console.error(err);
+        showNotification("Failed to parse JSON file structure.", "error");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadBackup = async () => {
+    try {
+      const backupObj = await db.downloadSystemBackup();
+      const str = JSON.stringify(backupObj, null, 2);
+      const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(str);
+      const link = document.createElement("a");
+      link.href = dataUri;
+      link.download = `Labriya_Chaturmas_Database_Backup_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNotification("Database JSON backup downloaded!");
+    } catch (e) {
+      console.error(e);
+      showNotification("Failed to download database backup.", "error");
+    }
+  };
+
   // --- CRUD: Devotee Profiles Admin ---
   const handleDeleteProfileConfirm = async () => {
     if (!profileToDelete) return;
@@ -487,13 +654,82 @@ export default function Admin() {
           </p>
         </div>
 
-        <button 
-          onClick={handleLogout}
-          className="px-4 py-2 rounded-custom-md bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer w-fit"
-        >
-          <LogOut size={14} />
-          <span>Exit Panel</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Bell Icon / Notification Center Popover */}
+          <div className="relative">
+            <button
+              onClick={() => setShowAdminNotifMenu(!showAdminNotifMenu)}
+              className="p-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary transition-all cursor-pointer border border-border-custom relative flex items-center justify-center shrink-0"
+              title="Admin Notifications"
+            >
+              <Bell size={14} />
+              {unreadAdminNotifsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center animate-pulse">
+                  {unreadAdminNotifsCount}
+                </span>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {showAdminNotifMenu && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowAdminNotifMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 mt-2 w-64 bg-white border border-border-custom rounded-custom-md shadow-premium z-40 p-3 flex flex-col gap-2 max-h-80 overflow-y-auto"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                      <span className="text-[10px] font-bold uppercase text-text-primary">Notifications</span>
+                      {unreadAdminNotifsCount > 0 && (
+                        <button
+                          onClick={async () => {
+                            for (const n of adminNotifications) {
+                              if (!n.read) await handleMarkAdminNotifRead(n.id);
+                            }
+                          }}
+                          className="text-[8px] font-extrabold uppercase text-primary cursor-pointer hover:underline"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    {adminNotifications.length === 0 ? (
+                      <p className="text-[10px] text-text-secondary italic text-center py-4">No notifications yet</p>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        {adminNotifications.map(n => (
+                          <div
+                            key={n.id}
+                            onClick={() => handleMarkAdminNotifRead(n.id)}
+                            className={`p-2 rounded text-[10px] cursor-pointer transition-colors border ${
+                              n.read ? "bg-neutral-50/50 text-text-secondary border-transparent" : "bg-amber-50/20 text-text-primary border-amber-200 border-l-2 border-l-amber-500"
+                            }`}
+                          >
+                            <p className="font-bold">{n.title}</p>
+                            <p className="mt-0.5 leading-normal">{n.message}</p>
+                            <span className="text-[8px] text-text-secondary block mt-1">
+                              {new Date(n.created_at || n.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button 
+            onClick={handleLogout}
+            className="px-4 py-2 rounded-custom-md bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer w-fit"
+          >
+            <LogOut size={14} />
+            <span>Exit Panel</span>
+          </button>
+        </div>
       </div>
 
       {/* Message Notifications Banner */}
@@ -523,6 +759,8 @@ export default function Admin() {
             { id: "events", label: "Event Organizer", icon: CalendarDays },
             { id: "donations", label: "Donation Audit Desk", icon: Heart },
             { id: "sadhana", label: "Sadhana Vows Config", icon: Award },
+            { id: "reports", label: "Reports & Exporter", icon: Download },
+            { id: "audit", label: "System Audit Logs", icon: ShieldAlert },
             { id: "settings", label: "Temple Settings", icon: SettingsIcon },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -554,239 +792,523 @@ export default function Admin() {
             </div>
           ) : (
             <>
-              {/* TAB 0: ANALYTICS DASHBOARD */}
+              {/* TAB 0: ANALYTICS CONTROL CENTER (STREAM 4) */}
               {activeTab === "analytics" && (
                 <div className="flex flex-col gap-6">
                   <div>
-                    <h3 className="font-display font-semibold text-text-primary text-base">Temple Analytics Summary</h3>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Real-time system parameters</p>
+                    <h3 className="font-display font-semibold text-text-primary text-base">Control Command Center</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Real-time overview of temple chaturmas operations</p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50">
-                      <span className="text-xl">👥</span>
-                      <h4 className="text-2xl font-bold font-display text-text-primary mt-3">{analytics.devoteesCount}</h4>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">Devotees Registered</p>
+                  {/* SNAPSHOT SLOTS */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-custom-lg border border-primary/15 bg-secondary/25">
+                    {[
+                      { icon: "📝", label: "Today's Logs", value: analytics.todayCheckinsCount || 0, color: "text-primary" },
+                      { icon: "⏳", label: "Pending Reviews", value: analytics.pendingCount || 0, color: "text-amber-600", action: () => setActiveTab("approvals") },
+                      { icon: "💰", label: "Today's Donation", value: `₹ ${(analytics.todayDonationsAmount || 0).toLocaleString("en-IN")}`, color: "text-emerald-600" },
+                      { icon: "👤", label: "New Devotees", value: analytics.newRegistrationsToday || 0, color: "text-blue-600" }
+                    ].map((item, i) => (
+                      <div
+                        key={i}
+                        onClick={item.action}
+                        className={`p-3 rounded-custom-md bg-white border border-border-custom flex flex-col gap-1 ${item.action ? "cursor-pointer hover:shadow-premium hover:border-primary/20 transition-all" : ""}`}
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <span className={`text-lg font-extrabold ${item.color}`}>{item.value}</span>
+                        <span className="text-[9px] uppercase font-bold text-text-secondary tracking-wide">{item.label}</span>
+                        {item.action && <span className="text-[8px] text-primary font-bold">→ Review Queue</span>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* COUNTER CARDS */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                    {[
+                      { icon: "👥", label: "Devotees Registered", value: analytics.devoteesCount },
+                      { icon: "🏡", label: "Total Family Units", value: analytics.familiesCount || 0 },
+                      { icon: "🪷", label: "Total Points Accumulated", value: analytics.totalPoints },
+                      { icon: "📝", label: "Total Submissions", value: analytics.logsCount },
+                      { icon: "✓", label: "Approved Checkins", value: analytics.approvedLogsCount },
+                      { icon: "🎖️", label: "Verified Donations (80G)", value: `₹ ${(analytics.verifiedDonations || 0).toLocaleString("en-IN")}` }
+                    ].map((card, i) => (
+                      <div key={i} className="p-4 rounded-custom-lg border border-border-custom bg-neutral-50/50 hover:bg-white hover:shadow-premium transition-all">
+                        <span className="text-xl">{card.icon}</span>
+                        <h4 className="text-2xl font-bold font-display text-text-primary mt-2">{card.value}</h4>
+                        <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">{card.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* QUICK ACCESS ACTIONS */}
+                  <div>
+                    <p className="text-[9px] uppercase font-bold text-text-secondary tracking-wider mb-2">Operational Tasks</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => setActiveTab("approvals")} className="px-3 py-2 rounded-custom-md bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-100 transition-all cursor-pointer flex items-center gap-1.5">
+                        <CheckCircle2 size={12} /> Review Approvals Queue ({analytics.pendingCount || 0})
+                      </button>
+                      <button onClick={() => setActiveTab("announcements")} className="px-3 py-2 rounded-custom-md bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold uppercase tracking-wider hover:bg-blue-100 transition-all cursor-pointer flex items-center gap-1.5">
+                        <Megaphone size={12} /> Post Notices Bulletins
+                      </button>
+                      <button onClick={() => setActiveTab("profiles")} className="px-3 py-2 rounded-custom-md bg-secondary/50 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-secondary transition-all cursor-pointer flex items-center gap-1.5">
+                        <User size={12} /> Devotees Registry Directory
+                      </button>
+                      <button onClick={() => setActiveTab("donations")} className="px-3 py-2 rounded-custom-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-100 transition-all cursor-pointer flex items-center gap-1.5">
+                        <Heart size={12} /> Audit UPI Donations
+                      </button>
                     </div>
-                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50">
-                      <span className="text-xl">🪷</span>
-                      <h4 className="text-2xl font-bold font-display text-text-primary mt-3">{analytics.totalPoints}</h4>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">Total Points Accumulated</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* AUDIT LOG TIMELINE */}
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-text-secondary tracking-wider mb-3">Recent Administrative Actions</p>
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                        {auditLogs.length === 0 ? (
+                          <p className="text-xs text-text-secondary italic p-4 border border-dashed border-border-custom rounded-custom-md text-center">No actions recorded yet</p>
+                        ) : (
+                          auditLogs.map(log => (
+                            <div key={log.id} className="p-3 rounded bg-neutral-50/50 border border-border-custom text-[10px]">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-text-primary">{log.admin_name}</span>
+                                <span className="text-text-secondary text-[8px]">{new Date(log.created_at).toLocaleDateString()}</span>
+                              </div>
+                              <p className="text-primary font-semibold uppercase text-[8px] tracking-wider mt-1">{log.action}</p>
+                              <p className="text-text-secondary mt-1 leading-normal">{log.details}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
-                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50">
-                      <span className="text-xl">📝</span>
-                      <h4 className="text-2xl font-bold font-display text-text-primary mt-3">{analytics.logsCount}</h4>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">Total Submissions</p>
-                    </div>
-                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50">
-                      <span className="text-xl">✓</span>
-                      <h4 className="text-2xl font-bold font-display text-text-primary mt-3">{analytics.approvedLogsCount}</h4>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">Approved Check-ins</p>
-                    </div>
-                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50">
-                      <span className="text-xl">💰</span>
-                      <h4 className="text-2xl font-bold font-display text-text-primary mt-3">₹ {analytics.totalDonations.toLocaleString("en-IN")}</h4>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">Total Donations Filed</p>
-                    </div>
-                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50">
-                      <span className="text-xl">🎖️</span>
-                      <h4 className="text-2xl font-bold font-display text-text-primary mt-3">₹ {analytics.verifiedDonations.toLocaleString("en-IN")}</h4>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mt-1">Verified Donations (80G)</p>
+
+                    {/* TOP LEADERS LIST */}
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-text-secondary tracking-wider mb-3">Top Performing Devotees</p>
+                      <div className="flex flex-col gap-2">
+                        {(analytics.topDevotees || []).length === 0 ? (
+                          <p className="text-xs text-text-secondary italic p-4 border border-dashed border-border-custom rounded-custom-md text-center">No scores computed yet</p>
+                        ) : (
+                          (analytics.topDevotees || []).map((d, i) => (
+                            <div
+                              key={d.id}
+                              onClick={() => handleSelectDevoteeProfile(d.id)}
+                              className="flex items-center gap-3 p-3 rounded-custom-md border border-border-custom bg-white cursor-pointer hover:border-primary/20 hover:shadow-sm transition-all"
+                            >
+                              <span className="text-xs font-bold text-text-secondary w-4 shrink-0">{i + 1}</span>
+                              <div className="w-7 h-7 rounded-full bg-secondary overflow-hidden shrink-0 border border-primary/10 flex items-center justify-center text-xs">
+                                {d.avatar ? <img src={d.avatar} alt="avatar" className="w-full h-full object-cover" /> : "🪷"}
+                              </div>
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="text-xs font-semibold text-text-primary truncate">{d.fullName}</span>
+                                <span className="text-[9px] text-text-secondary">{d.city} • 🔥 {d.streak || 0}d</span>
+                              </div>
+                              <span className="text-[10px] font-bold text-primary bg-secondary px-2.5 py-0.5 rounded-full shrink-0">
+                                {d.totalPoints} pts
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* TAB 1: APPROVALS */}
+              {/* TAB 1: EXPANDED APPROVAL WORKFLOW (STREAM 3) */}
               {activeTab === "approvals" && (
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="font-display font-semibold text-text-primary text-base">Check-in Approvals Sheet</h3>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Approve devotee daily vow logs</p>
+                      <h3 className="font-display font-semibold text-text-primary text-base">Check-In Approvals Workflow</h3>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Audit and approve daily spiritual vow logs</p>
                     </div>
-
                     <div className="flex items-center gap-2">
-                      <select 
-                        value={logStatusFilter} 
+                      <select
+                        value={logStatusFilter}
                         onChange={(e) => { setLogStatusFilter(e.target.value); reloadLogsOnly(e.target.value); }}
-                        className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary font-semibold focus:outline-none"
+                        className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary font-semibold focus:outline-none bg-white"
                       >
                         <option value="Pending">Pending Approvals</option>
                         <option value="Approved">Approved Logs</option>
                         <option value="Rejected">Rejected Logs</option>
                       </select>
-                      
                       {logStatusFilter === "Pending" && adminLogs.length > 0 && (
-                        <button
-                          onClick={handleApproveAllPending}
-                          className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                        >
-                          Approve All
-                        </button>
+                        <button onClick={handleApproveAllPending} className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer">Approve All</button>
                       )}
                     </div>
                   </div>
 
-                  <div className="border border-border-custom rounded-custom-lg overflow-hidden w-full">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-bg-custom text-[9px] uppercase font-bold text-text-secondary tracking-wider border-b border-border-custom">
-                            <th className="p-3">Devotee</th>
-                            <th className="p-3">Log Date</th>
-                            <th className="p-3">Activity</th>
-                            <th className="p-3 text-right">Points</th>
-                            <th className="p-3 text-center">Status</th>
-                            <th className="p-3 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {adminLogs.length > 0 ? (
-                            adminLogs.map(log => (
-                              <tr key={log.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
-                                <td className="p-3">
-                                  <div className="font-semibold text-text-primary">{log.devoteeName}</div>
-                                  <div className="text-[9px] text-text-secondary mt-0.5">{log.devoteePhone}</div>
-                                </td>
-                                <td className="p-3 text-text-secondary font-medium">{log.dateStr}</td>
-                                <td className="p-3">
-                                  <span className="font-semibold text-text-primary">{log.activityName}</span>
-                                  <span className="text-[9px] text-text-secondary ml-1.5 uppercase font-medium">{log.activityCategory}</span>
-                                </td>
-                                <td className="p-3 text-right font-bold text-primary">+{log.points}</td>
-                                <td className="p-3 text-center">
-                                  <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block ${
-                                    log.status === "Approved" 
-                                      ? "bg-green-50 text-green-700 border-green-500/10" 
-                                      : log.status === "Rejected" 
-                                      ? "bg-red-50 text-red-700 border-red-500/10" 
-                                      : "bg-orange-50 text-orange-700 border-orange-500/10"
-                                  }`}>
-                                    {log.status}
-                                  </span>
-                                </td>
-                                <td className="p-3 text-right">
-                                  {log.status === "Pending" ? (
-                                    <div className="flex justify-end gap-1">
-                                      <button 
-                                        onClick={() => handleUpdateLogStatus(log.id, "Approved")}
-                                        className="p-1 rounded bg-green-50 hover:bg-green-100 text-green-600 cursor-pointer"
-                                        title="Approve"
-                                      >
-                                        <Check size={12} strokeWidth={2.5} />
-                                      </button>
-                                      <button 
-                                        onClick={() => handleUpdateLogStatus(log.id, "Rejected")}
-                                        className="p-1 rounded bg-red-50 hover:bg-red-100 text-red-600 cursor-pointer"
-                                        title="Reject"
-                                      >
-                                        <XCircle size={12} />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-[9px] text-text-secondary font-medium">Locked</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={6} className="p-8 text-center text-text-secondary italic">
-                                No check-in log records found for this status.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                  <div className="flex flex-col gap-3">
+                    {adminLogs.length === 0 ? (
+                      <div className="p-8 text-center border border-dashed border-border-custom rounded-custom-md">
+                        <span className="text-3xl block mb-2">✅</span>
+                        <p className="text-xs font-semibold text-text-secondary">No check-in logs require verification</p>
+                      </div>
+                    ) : (
+                      adminLogs.map(log => {
+                        const isExpanded = expandedLogId === log.id;
+                        return (
+                          <div key={log.id} className="border border-border-custom rounded-custom-md bg-white overflow-hidden">
+                            {/* Summary row */}
+                            <div
+                              onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-neutral-50/50 transition-colors"
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-xs text-text-primary">{log.devoteeName}</span>
+                                  <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                    log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
+                                      : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}>{log.status}</span>
+                                </div>
+                                <span className="text-[9px] text-text-secondary">{log.dateStr} • {log.activityName} • +{log.points} claimed pts</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {log.status === "Pending" && (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleUpdateLogStatus(log.id, "Approved"); }}
+                                      className="p-1.5 rounded bg-green-50 hover:bg-green-100 text-green-600 cursor-pointer"
+                                      title="Approve"
+                                    >
+                                      <Check size={12} strokeWidth={2.5} />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleUpdateLogStatus(log.id, "Rejected"); }}
+                                      className="p-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 cursor-pointer"
+                                      title="Reject"
+                                    >
+                                      <XCircle size={12} />
+                                    </button>
+                                  </>
+                                )}
+                                <span className="text-[10px] text-text-secondary font-medium pl-2">{isExpanded ? "▲" : "▼"}</span>
+                              </div>
+                            </div>
+
+                            {/* Detail remarks panel */}
+                            {isExpanded && (
+                              <div className="p-4 bg-neutral-50/50 border-t border-border-custom flex flex-col gap-4">
+                                <p className="text-[9px] uppercase font-bold text-text-secondary">Verify Devotee Sadhana Logs & Override Points</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                  <div className="sm:col-span-2 flex flex-col gap-1">
+                                    <label className="text-[9px] uppercase font-bold text-text-secondary">Admin Remarks / Notes</label>
+                                    <input
+                                      type="text"
+                                      value={logRemarks[log.id] || ""}
+                                      onChange={(e) => setLogRemarks(prev => ({ ...prev, [log.id]: e.target.value }))}
+                                      placeholder="Write remarks or rejection reasons here..."
+                                      className="px-3 py-1.5 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none"
+                                    />
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] uppercase font-bold text-text-secondary">Override Points</label>
+                                    <input
+                                      type="number"
+                                      value={logPoints[log.id] !== undefined ? logPoints[log.id] : log.points}
+                                      onChange={(e) => setLogPoints(prev => ({ ...prev, [log.id]: e.target.value }))}
+                                      className="px-3 py-1.5 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none font-bold text-primary"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleUpdateLogStatus(log.id, "Approved")}
+                                    className="flex-1 py-2 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                                  >
+                                    Approve & Save Vows
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateLogStatus(log.id, "Rejected")}
+                                    className="flex-1 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                                  >
+                                    Reject Check-In
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* TAB 2: DEVOTEE ACCOUNTS */}
+              {/* TAB 2: DEVOTEE ACCOUNTS - FAMILY CARDS GRID (STREAM 5 & 6) */}
               {activeTab === "profiles" && (
                 <div className="flex flex-col gap-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-display font-semibold text-text-primary text-base">Registered Devotee Profiles</h3>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Manage family account devotees</p>
-                    </div>
+                  {selectedProfileId ? (
+                    /* Devotee Profile details panel subview */
+                    <div className="flex flex-col gap-6 border border-border-custom rounded-custom-lg p-6 bg-white shadow-premium">
+                      <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
+                        <button
+                          onClick={() => { setSelectedProfileId(null); setSelectedProfileDetail(null); }}
+                          className="px-3 py-1.5 rounded border border-border-custom text-[10px] font-bold uppercase tracking-wider hover:border-primary/20 text-text-secondary hover:text-primary transition-all cursor-pointer bg-white"
+                        >
+                          ← Back to Devotees List
+                        </button>
+                        <span className="text-[10px] font-extrabold text-primary bg-secondary px-2.5 py-0.5 rounded border border-primary/20">
+                          {toReadableId(selectedProfileDetail?.id, "M")}
+                        </span>
+                      </div>
 
-                    <div className="relative max-w-xs w-full">
-                      <input 
-                        type="text"
-                        placeholder="Search by name or phone..."
-                        value={profileSearch}
-                        onChange={(e) => setProfileSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-border-custom text-text-primary focus:outline-none"
-                      />
-                      <Search size={12} className="text-text-secondary absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
+                      {/* Header profile info */}
+                      <div className="flex flex-col sm:flex-row items-center gap-5">
+                        <div className="w-16 h-16 rounded-full bg-secondary overflow-hidden shrink-0 border-2 border-primary/20 flex items-center justify-center text-2xl font-bold">
+                          {selectedProfileDetail?.avatar ? <img src={selectedProfileDetail.avatar} alt="avatar" className="w-full h-full object-cover" /> : "🪷"}
+                        </div>
+                        <div className="text-center sm:text-left">
+                          <h4 className="font-display font-semibold text-text-primary text-lg leading-snug">{selectedProfileDetail?.fullName}</h4>
+                          <p className="text-xs text-text-secondary mt-0.5">📍 {selectedProfileDetail?.city} • +91 {selectedProfileDetail?.phone || "No phone number"}</p>
+                        </div>
+                      </div>
 
-                  <div className="border border-border-custom rounded-custom-lg overflow-hidden w-full">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-bg-custom text-[9px] uppercase font-bold text-text-secondary tracking-wider border-b border-border-custom">
-                            <th className="p-3">Name</th>
-                            <th className="p-3">Member No</th>
-                            <th className="p-3">Phone</th>
-                            <th className="p-3">Residence</th>
-                            <th className="p-3 text-right">Points</th>
-                            <th className="p-3 text-right">Streak</th>
-                            <th className="p-3 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(() => {
-                            const filtered = allProfiles.filter(p => 
-                              p.fullName.toLowerCase().includes(profileSearch.toLowerCase()) ||
-                              (p.phone && p.phone.includes(profileSearch))
-                            );
-                            
-                            return filtered.length > 0 ? (
-                              filtered.map(p => (
-                                <tr key={p.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
-                                  <td className="p-3 font-semibold text-text-primary flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs border border-primary/10 overflow-hidden">
-                                      {p.avatar ? <img src={p.avatar} alt="avatar" className="w-full h-full object-cover" /> : "🪷"}
+                      {/* Counters grid */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-3 bg-neutral-50 border border-border-custom rounded-custom-md text-center">
+                          <span className="text-sm font-extrabold text-primary block">{selectedProfileDetail?.totalPoints || 0} pts</span>
+                          <span className="text-[9px] uppercase tracking-wider text-text-secondary font-bold block mt-0.5">Total Points</span>
+                        </div>
+                        <div className="p-3 bg-neutral-50 border border-border-custom rounded-custom-md text-center">
+                          <span className="text-sm font-extrabold text-orange-600 block">🔥 {selectedProfileDetail?.streak || 0} days</span>
+                          <span className="text-[9px] uppercase tracking-wider text-text-secondary font-bold block mt-0.5">Current Streak</span>
+                        </div>
+                        <div className="p-3 bg-neutral-50 border border-border-custom rounded-custom-md text-center">
+                          <span className="text-sm font-extrabold text-amber-600 block">🔥 {selectedProfileDetail?.longest_streak || selectedProfileDetail?.longestStreak || 0} days</span>
+                          <span className="text-[9px] uppercase tracking-wider text-text-secondary font-bold block mt-0.5">Longest Streak</span>
+                        </div>
+                      </div>
+
+                      {/* Edit Admin Notes */}
+                      <div className="flex flex-col gap-2 p-4 bg-secondary/15 border border-primary/10 rounded-custom-md">
+                        <label className="text-[9px] uppercase font-bold text-primary">Permanent Devotee Admin Remarks</label>
+                        <textarea
+                          rows={3}
+                          value={adminNotesText}
+                          onChange={(e) => setAdminNotesText(e.target.value)}
+                          placeholder="Write private administrative notes about this devotee here..."
+                          className="w-full p-2.5 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none"
+                        />
+                        <button
+                          onClick={handleSaveAdminNotes}
+                          className="px-4 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-wider rounded shadow hover:bg-primary/95 transition-all w-fit self-end cursor-pointer"
+                        >
+                          Save Admin Notes
+                        </button>
+                      </div>
+
+                      {/* History check-in logs list */}
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-text-secondary mb-3">Sadhana Check-in History</p>
+                        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1 text-xs">
+                          {profileLogs.length === 0 ? (
+                            <p className="text-xs text-text-secondary italic py-4 text-center">No logs recorded yet</p>
+                          ) : (
+                            profileLogs.map(log => (
+                              <div key={log.id} className="flex justify-between items-center p-3 border border-border-custom rounded hover:bg-neutral-50/50">
+                                <div>
+                                  <span className="font-bold text-text-primary">{log.dateStr}</span>
+                                  <span className="text-[10px] text-text-secondary ml-3">{log.points} pts</span>
+                                </div>
+                                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                  log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
+                                    : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}>{log.status}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Linked donations lists */}
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-text-secondary mb-3">Verified Donations</p>
+                        <div className="flex flex-col gap-2 text-xs">
+                          {profileDonations.length === 0 ? (
+                            <p className="text-xs text-text-secondary italic py-4 text-center">No donation transfers audited</p>
+                          ) : (
+                            profileDonations.map(d => (
+                              <div key={d.id} className="flex justify-between items-center p-3 border border-border-custom rounded hover:bg-neutral-50/50">
+                                <div>
+                                  <span className="font-bold text-text-primary">₹ {d.amount.toLocaleString("en-IN")}</span>
+                                  <span className="font-mono text-[9px] text-text-secondary ml-3">{d.txnId}</span>
+                                </div>
+                                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                  d.verified ? "bg-green-50 text-green-700 border-green-200" : "bg-orange-50 text-orange-700 border-orange-200"
+                                }`}>{d.verified ? "Verified" : "Pending"}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Devotee Family directory cards grid list view */
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="font-display font-semibold text-text-primary text-base">Registered Devotee Profiles</h3>
+                          <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Manage family account devotees</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="Search devotee name..."
+                              value={profileSearch}
+                              onChange={(e) => setProfileSearch(e.target.value)}
+                              className="pl-8 pr-3 py-1.5 text-xs rounded border border-border-custom text-text-primary focus:outline-none w-48 bg-white"
+                            />
+                            <Search size={12} className="text-text-secondary absolute left-2.5 top-1/2 -translate-y-1/2" />
+                          </div>
+                          
+                          {/* Devotee advanced sort selector */}
+                          <select
+                            value={devoteeFilters.sortBy}
+                            onChange={(e) => setDevoteeFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                            className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary font-semibold focus:outline-none bg-white"
+                          >
+                            <option value="points_desc">Highest Points</option>
+                            <option value="points_asc">Lowest Points</option>
+                            <option value="streak_desc">Highest Streak</option>
+                            <option value="newest">Newest Devotee</option>
+                          </select>
+
+                          <button
+                            onClick={exportFamiliesCSV}
+                            className="px-3 py-1.5 rounded border border-border-custom bg-white text-[10px] font-bold uppercase tracking-wider text-text-secondary hover:text-primary hover:border-primary/20 transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Download size={12} />
+                            <span>Export CSV</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const searchLower = profileSearch.toLowerCase();
+                        let filtered = allProfiles.filter(p =>
+                          p.fullName.toLowerCase().includes(searchLower) ||
+                          (p.phone && p.phone.includes(profileSearch)) ||
+                          (p.city && p.city.toLowerCase().includes(searchLower))
+                        );
+
+                        // Sorting algorithms
+                        if (devoteeFilters.sortBy === "points_desc") {
+                          filtered.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+                        } else if (devoteeFilters.sortBy === "points_asc") {
+                          filtered.sort((a, b) => (a.totalPoints || 0) - (b.totalPoints || 0));
+                        } else if (devoteeFilters.sortBy === "streak_desc") {
+                          filtered.sort((a, b) => (b.streak || 0) - (a.streak || 0));
+                        } else if (devoteeFilters.sortBy === "newest") {
+                          filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                        }
+
+                        // Group profiles helper local definition to ensure zero dependencies
+                        const groupByFamily = (list) => {
+                          const map = {};
+                          list.forEach(p => {
+                            if (!map[p.userId]) {
+                              map[p.userId] = { userId: p.userId, members: [], totalPoints: 0 };
+                            }
+                            map[p.userId].members.push(p);
+                            map[p.userId].totalPoints += (p.totalPoints || 0);
+                          });
+                          return Object.values(map).sort((a, b) => b.totalPoints - a.totalPoints);
+                        };
+
+                        const families = groupByFamily(filtered);
+
+                        if (families.length === 0) {
+                          return (
+                            <div className="py-10 flex flex-col items-center gap-3 border border-dashed border-border-custom rounded-custom-md">
+                              <span className="text-3xl">👥</span>
+                              <p className="text-sm font-semibold text-text-secondary">No profiles matched your search parameters</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="flex flex-col gap-4">
+                            {families.map(family => {
+                              const primary = family.members.find(m => m.memberNumber === 1);
+                              const familyReadableId = toReadableId(family.userId, "F");
+
+                              return (
+                                <div key={family.userId} className="border border-border-custom rounded-custom-lg overflow-hidden bg-white hover:shadow-premium transition-all">
+                                  {/* Family Card Header */}
+                                  <div className="flex items-center justify-between px-4 py-3 bg-secondary/30 border-b border-border-custom select-none">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[10px] font-extrabold text-primary uppercase tracking-wider bg-white border border-primary/20 px-2 py-0.5 rounded">{familyReadableId}</span>
+                                      <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">{family.members.length} Members</span>
                                     </div>
-                                    <span>{p.fullName}</span>
-                                  </td>
-                                  <td className="p-3 text-text-secondary font-medium">Member {p.memberNumber}</td>
-                                  <td className="p-3 text-text-secondary font-semibold">{p.phone || "None"}</td>
-                                  <td className="p-3 text-text-secondary font-medium">{p.city}</td>
-                                  <td className="p-3 text-right font-bold text-primary">{p.totalPoints || 0}</td>
-                                  <td className="p-3 text-right font-semibold text-text-primary">🔥 {p.streak || 0}</td>
-                                  <td className="p-3 text-right">
-                                    {p.memberNumber === 2 ? (
-                                      <button 
-                                        onClick={() => setProfileToDelete(p)}
-                                        className="p-1 text-text-secondary hover:text-red-600 transition-colors cursor-pointer"
-                                        title="Delete Devotee Account"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
-                                    ) : (
-                                      <span className="text-[9px] text-text-secondary font-semibold">Primary</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan={7} className="p-8 text-center text-text-secondary italic">
-                                  No profiles matched your search parameters.
-                                </td>
-                              </tr>
-                            );
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[9px] text-text-secondary font-semibold">Combined: <strong className="text-primary">{family.totalPoints} pts</strong></span>
+                                      {primary && <span className="text-[9px] text-text-secondary">{primary.createdAt ? new Date(primary.createdAt).toLocaleDateString() : ""}</span>}
+                                    </div>
+                                  </div>
+
+                                  {/* Family member rows list */}
+                                  <div className="divide-y divide-border-custom">
+                                    {family.members.map(member => (
+                                      <div key={member.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                          <div className="relative shrink-0">
+                                            <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden border border-primary/10 flex items-center justify-center text-xs">
+                                              {member.avatar
+                                                ? <img src={member.avatar} alt={member.fullName} className="w-full h-full object-cover" />
+                                                : <span className="flex items-center justify-center w-full h-full text-xs">🪷</span>
+                                              }
+                                            </div>
+                                          </div>
+                                          <div className="flex flex-col min-w-0">
+                                            <div className="flex items-center gap-2">
+                                              {/* Click devotee name opens profile detail sheet */}
+                                              <span
+                                                onClick={() => handleSelectDevoteeProfile(member.id)}
+                                                className="text-xs font-semibold text-text-primary hover:text-primary cursor-pointer hover:underline truncate"
+                                              >
+                                                {member.fullName}
+                                              </span>
+                                              <span className={`text-[7px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
+                                                member.memberNumber === 1
+                                                  ? "bg-primary/10 text-primary border border-primary/20"
+                                                  : "bg-neutral-100 text-text-secondary border border-neutral-200"
+                                              }`}>
+                                                {member.memberNumber === 1 ? "Primary" : "Secondary"}
+                                              </span>
+                                            </div>
+                                            <span className="text-[9px] text-text-secondary">{toReadableId(member.id, "M")} • {member.phone || "No phone"} • {member.city}</span>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-4 shrink-0">
+                                          <div className="hidden sm:flex flex-col items-end">
+                                            <span className="text-xs font-bold text-primary">{member.totalPoints || 0} pts</span>
+                                            <span className="text-[9px] text-text-secondary">🔥 {member.streak || 0}d streak</span>
+                                          </div>
+                                          {member.memberNumber === 2 && (
+                                            <button
+                                              onClick={() => setProfileToDelete(member)}
+                                              className="p-1.5 text-text-secondary hover:text-red-600 transition-colors cursor-pointer"
+                                              title="Delete Secondary Profile"
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1471,6 +1993,25 @@ export default function Admin() {
                           className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
                         />
                       </div>
+
+                      {/* Maintenance Mode switch toggle */}
+                      <div className="sm:col-span-2 border-t border-neutral-200 mt-2 pt-3 flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold text-red-600">Maintenance Lockout Mode</h4>
+                          <p className="text-[9px] text-text-secondary mt-0.5">Toggle site offline lock to restrict normal devotee logins and check-in portals.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setTempleSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }))}
+                          className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
+                            templeSettings.maintenanceMode ? "bg-red-600" : "bg-neutral-200"
+                          }`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${
+                            templeSettings.maintenanceMode ? "left-7" : "left-1"
+                          }`} />
+                        </button>
+                      </div>
                     </div>
 
                     <button
@@ -1481,6 +2022,161 @@ export default function Admin() {
                       <span>Save Settings</span>
                     </button>
                   </form>
+
+                  {/* Database Backup & JSON file recovery center */}
+                  <div className="flex flex-col gap-4 bg-red-50/15 border border-red-500/10 p-5 rounded-custom-lg mt-4">
+                    <div>
+                      <h4 className="text-xs font-bold text-text-primary">System Database Backup & Disaster Recovery Desk</h4>
+                      <p className="text-[10px] text-text-secondary mt-0.5">Download full JSON schemas copies or import saved files to overwrite database states.</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-center gap-4 mt-2">
+                      <button
+                        onClick={handleDownloadBackup}
+                        className="px-4 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-wider rounded shadow hover:bg-primary/90 transition-all cursor-pointer flex items-center gap-1 w-full sm:w-fit"
+                      >
+                        <Download size={12} /> Download DB JSON Backup
+                      </button>
+                      
+                      <div className="relative overflow-hidden w-full sm:w-fit">
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleBackupRestoreUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          title="Restore Backup JSON file"
+                        />
+                        <button className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-text-primary text-[10px] font-bold uppercase tracking-wider rounded transition-all cursor-pointer w-full text-center">
+                          📥 Upload JSON Restore File
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 10: REPORTS EXPORTER CENTRE (STREAM 8) */}
+              {activeTab === "reports" && (
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h3 className="font-display font-semibold text-text-primary text-base">System Reports Exporter Desk</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Export live temple registry entries & submission aggregates</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {[
+                      {
+                        title: "Devotees Registry CSV",
+                        desc: "Export registrations details containing Streaks, Family groups, City and Phone numbers details.",
+                        action: exportFamiliesCSV
+                      },
+                      {
+                        title: "Vow Submissions CSV",
+                        desc: "Download daily/monthly check-in logs history containing devotee claims and admin status notes.",
+                        action: () => {
+                          let csvContent = "data:text/csv;charset=utf-8,Devotee Name,Phone,Date,Activity,Claimed Points,Status,Remarks\n";
+                          adminLogs.forEach(l => {
+                            csvContent += `"${l.devoteeName}","${l.devoteePhone || ""}","${l.dateStr}","${l.activityName}",${l.points},"${l.status}","${l.remarks || ""}"\n`;
+                          });
+                          const encodedUri = encodeURI(csvContent);
+                          const link = document.createElement("a");
+                          link.href = encodedUri;
+                          link.download = `Sadhana_Vow_Submissions_Report_${new Date().toISOString().split("T")[0]}.csv`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          showNotification("Vow submissions report CSV exported!");
+                        }
+                      },
+                      {
+                        title: "UPI Donations Registry CSV",
+                        desc: "Export donation receipts registers containing Transaction reference strings, timestamps and audit statuses.",
+                        action: () => {
+                          let csvContent = "data:text/csv;charset=utf-8,Donor Name,Phone,Amount,Txn ID,Verified,Submitted At\n";
+                          donations.forEach(d => {
+                            csvContent += `"${d.donorName}","${d.phone}",${d.amount},"${d.txnId}","${d.verified ? "YES" : "NO"}","${d.createdAt || d.created_at || ""}"\n`;
+                          });
+                          const encodedUri = encodeURI(csvContent);
+                          const link = document.createElement("a");
+                          link.href = encodedUri;
+                          link.download = `UPI_Donations_Registry_Report_${new Date().toISOString().split("T")[0]}.csv`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          showNotification("UPI donations report CSV exported!");
+                        }
+                      }
+                    ].map((item, i) => (
+                      <div key={i} className="p-4 bg-neutral-50/50 border border-border-custom rounded-custom-lg flex flex-col justify-between gap-4">
+                        <div>
+                          <h4 className="font-semibold text-text-primary text-xs">{item.title}</h4>
+                          <p className="text-[10px] text-text-secondary mt-1 leading-relaxed">{item.desc}</p>
+                        </div>
+                        <button
+                          onClick={item.action}
+                          className="px-3 py-1.5 bg-primary text-white hover:bg-primary/95 font-bold uppercase text-[9px] tracking-wider rounded transition-all cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <Download size={11} /> Download Report
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 11: SYSTEM AUDIT LOGS TIMELINE FEED (STREAM 12) */}
+              {activeTab === "audit" && (
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h3 className="font-display font-semibold text-text-primary text-base">System Audit Desk</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Permanent immutable timeline of administrative configuration changes</p>
+                  </div>
+
+                  <div className="border border-border-custom rounded-custom-lg overflow-hidden w-full bg-white">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-bg-custom text-[9px] uppercase font-bold text-text-secondary tracking-wider border-b border-border-custom">
+                            <th className="p-3">Timestamp</th>
+                            <th className="p-3">Administrator</th>
+                            <th className="p-3">Action Type</th>
+                            <th className="p-3">Target ID</th>
+                            <th className="p-3">Action Details</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditLogs.length > 0 ? (
+                            auditLogs.map(log => (
+                              <tr key={log.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors text-[11px]">
+                                <td className="p-3 text-text-secondary font-mono text-[9px]">
+                                  {new Date(log.created_at || log.createdAt).toLocaleString()}
+                                </td>
+                                <td className="p-3 font-semibold text-text-primary">
+                                  {log.admin_name || log.adminName}
+                                </td>
+                                <td className="p-3">
+                                  <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-text-secondary text-[8px] font-bold uppercase border tracking-wider">
+                                    {log.action}
+                                  </span>
+                                </td>
+                                <td className="p-3 font-mono text-text-secondary text-[9px]">
+                                  {log.target_id || log.targetId || "system"}
+                                </td>
+                                <td className="p-3 text-text-primary leading-normal font-medium">
+                                  {log.details}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-text-secondary italic">
+                                No actions have been logged yet.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
             </>

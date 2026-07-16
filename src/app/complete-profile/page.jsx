@@ -13,12 +13,7 @@ export default function CompleteProfile() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const { profile, loading: profileLoading, complete, isProfileComplete } = useProfile();
 
-  console.log({
-    authLoading,
-    profileLoading,
-    profile,
-    isAuthenticated,
-  });
+
 
   const [lang, setLang] = useState("en");
   const [fullName, setFullName] = useState("");

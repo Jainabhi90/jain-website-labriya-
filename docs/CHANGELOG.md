@@ -4,6 +4,48 @@ All notable changes to the **Labriya Chaturmas Portal** project will be document
 
 ---
 
+## [1.5.0] - 2026-07-16
+
+### Added
+- **Enhanced SaaS Command Center**: Upgraded the admin control analytics view to feature snapshots (Pending reviews count, New devotees, Today's donations, and Today's logs), quick access action tasks, top performing leaderboards, and a live Administrative actions timeline feed.
+- **Detailed Audit & Overrides Approvals**: Expanded check-in reviews to display inline verified vow details, point values editing overrides, and admin comments/remarks field inputs.
+- **Family Accounts Registry directory**: Upgraded devotee lists to support family unit card groupings, advanced sorting criteria (Streak counts, points desc/asc, newest devotee), global criteria filters, and paging.
+- **Devotee Details Summary Tab**: Created detailed inline history profiles sheets rendering total points, current streak charts, permanent admin comments settings, verified donations tracking lists, and check-in timeline records.
+- **Reports Exporter center**: Integrated exports for Devotees Registry CSV, Vow Submissions logs history CSV, and UPI Donation logs records CSV.
+- **Administrative audit logging**: Enabled automatic logging for deleting devotee profiles, approving check-in logs, and updating temple configurations, displaying records in the audit tab.
+- **Google Maps Link & Maintenance Switch**: Integrated console configurations options to update the temple location maps embed and toggle maintenance mode lockout.
+- **Disaster Recovery Backup Restore**: Integrated JSON data download backup packages and files uploader restore inputs.
+
+---
+
+## [1.4.0] - 2026-07-16
+
+### Added
+- **Corrective Migration 006_database_sync.sql**: Introduced a comprehensive, corrective database schema synchronization migration to align the remote PostgreSQL instance with React PostgREST queries.
+- **Timetable Schedules Table**: Added the `schedules` schema containing proper validation constraints and sorting columns.
+- **Donation Audit Table**: Defined the table structure for devotee UPI donations to handle records auditing.
+- **Subscriptions Table**: Defined the event waitlist subscriptions table schema.
+- **Panchang Table Correction**: Dropped `daily_panchang` and defined `panchang` containing matching client attributes (`date_str`, `month`, `festival`, `samayik`, etc.) to prevent query errors.
+
+### Fixed
+- **Secondary Member RLS Violations**: Rewrote Row-Level Security policies on `profiles` to support authenticated devotees inserting secondary family members and deleting secondary profiles without experiencing policy violations.
+- **Database Streaks Triggers Redundancies**: Fully integrated streak calculations triggers, badge unlocks checking rules, and admin role checkers inside the SQL sync script.
+
+---
+
+## [1.3.1] - 2026-07-16
+
+### Hardened
+- **Removed Debug Statements**: Purged all console debug statements (`console.log`, `console.warn`) from state contexts, routing layouts, and configurations.
+- **Dynamic Localization**: Extended translation capabilities to translate all modules, tables, forms, dashboards, and dialogues in the Admin Console.
+- **Double Routing Security**: Verified front-end redirection logic checks align with database RLS policies.
+- **Responsive Layout Design**: Audited spacing variables on 320px to 1440px viewports to eliminate clipping, text overflows, or vertical layout blocks overlap.
+
+### Fixed
+- **Next.js Prerendering Syntax**: Corrected brackets syntax within schedules database services.
+
+---
+
 ## [1.3.0] - 2026-07-16
 
 ### Added

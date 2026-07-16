@@ -260,21 +260,18 @@ export function AuthProvider({ children }) {
 
   // Initialize Auth state listener and recover session
   useEffect(() => {
-    console.log("[DEBUG] Provider mounted");
     if (!supabase) {
       setLoading(false);
       return;
     }
 
     if (!hasRegisteredListener.current) {
-      console.log("[DEBUG] Listener registered");
       hasRegisteredListener.current = true;
     }
 
     setLoading(true);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`[DEBUG] onAuthStateChange event: ${event}`);
       setSession(currentSession);
       const currentUser = currentSession?.user || null;
       setUser(currentUser);
@@ -288,7 +285,6 @@ export function AuthProvider({ children }) {
             if (list.length > 0) {
               break;
             }
-            console.log(`[DEBUG] Profiles empty on attempt ${attempt}/3. Retrying...`);
             if (attempt < 3) {
               await new Promise((resolve) => setTimeout(resolve, 1000));
             }
@@ -296,7 +292,6 @@ export function AuthProvider({ children }) {
 
           // Trigger fallback primary profile insertion if database trigger did not complete
           if (list.length === 0) {
-            console.log("[DEBUG] Creating primary profile fallback.");
             const { data, error } = await supabase
               .from("profiles")
               .insert({
