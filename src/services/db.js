@@ -1176,75 +1176,216 @@ export const db = {
   },
 
   async getSettings() {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      if (!error && data) {
-        return {
-          id: data.id,
-          templeName: data.temple_name,
-          templeLogo: data.temple_logo,
-          heroBanner: data.hero_banner,
-          email: data.email,
-          aboutText: data.about_text,
-          trustRegistrationNumber: data.trust_registration_number,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          donationQr: data.donation_qr,
-          upiId: data.upi_id,
-          bankName: data.bank_name,
-          accountHolder: data.account_holder,
-          accountNumber: data.account_number,
-          ifsc: data.ifsc,
-          contactNumber: data.contact_number,
-          templeAddress: data.temple_address,
-          facebook: data.facebook,
-          instagram: data.instagram,
-          youtube: data.youtube,
-          website: data.website
-        };
-      }
-    }
-    return getLocalItem("temp_temple_settings", {
+    const DEFAULT_CMS = {
+      // 1. General Information
       templeName: "Shree Labriya Jain Shwetambar Mandir",
+      subtitle: "Chaturmas Festival 2026",
+      templeLogo: "/logo.png",
+      favicon: "/favicon.ico",
+      chaturmasYear: "2026",
+      websiteTitle: "Shree Labriya Jain Shwetambar Mandir | Chaturmas 2026",
+      seoTitle: "Shree Labriya Jain Shwetambar Mandir | Chaturmas Festival 2026",
+      seoDescription: "Welcome to the official portal of Shree Labriya Jain Shwetambar Mandir for Chaturmas 2026. Explore daily pravachans, Panchang timings, community announcements, donation channels, and spiritual events.",
+      primaryThemeColor: "#EA580C",
+      secondaryThemeColor: "#FFF7ED",
+
+      // 2. Contact Information
+      templeAddress: "Mandir Marg, Labriya, Dhar District, Madhya Pradesh - 454111, India",
+      contactNumber: "+91 98765 43210",
+      alternatePhone: "+91 98765 43211",
+      whatsappNumber: "+91 98765 43210",
+      email: "contact@labriyajainmandir.org",
+      website: "https://labriyajainmandir.org",
+      googleMapsEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3680.123456789!2d75.1235!3d22.4508!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjLCbDI3JzAyLjkiTiA3NcKwMDcnMjQuNiJF!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin",
+      latitude: 22.450800,
+      longitude: 75.123500,
+
+      // 3. Donation Information
       upiId: "shreelabriyatrust@okaxis",
-      bankName: "State Bank of India",
+      donationQr: "/upi_qr_code.png",
       accountHolder: "Shree Labriya Jain Mandir Trust",
+      bankName: "State Bank of India",
+      branch: "Dhar Branch, Madhya Pradesh",
       accountNumber: "38472948194",
       ifsc: "SBIN0030129",
-      contactNumber: "+91 98765 43210",
-      templeAddress: "Mandir Marg, Labriya, Dhar District, Madhya Pradesh - 454111"
-    });
+      donationInstructions: "Please submit your Transaction Reference ID after transfer to generate the 80G receipt.",
+      eightyGInfo: "TRN-38472948-MP",
+      taxDisclaimer: "All contributions are exempt under Section 80G of the Income Tax Act.",
+
+      // 4. Homepage Content
+      heroTitle: "Sacred Chaturmas Festival 2026",
+      heroSubtitle: "Welcome the season of reflection, purification, and spiritual discourse.",
+      heroDescription: "Connect with the daily pravachans, holy chants, and auspicious timings from wherever you are.",
+      heroBanner: "/jain_hero_spiritual.png",
+      welcomeMessage: "Jai Jinendra! Welcome to Chaturmas 2026",
+      aboutTempleSummary: "Established over a century ago in Labriya, Madhya Pradesh, the temple features intricate marble carvings and a peaceful environment.",
+      featuredQuote: "Live and let live. Love all, serve all. - Lord Mahavira",
+      latestAnnouncementBanner: "Paryushan Mahotsav starts on August 20th, 2026.",
+
+      // 5. Footer Content
+      footerDescription: "Shree Labriya Jain Shwetambar Mandir is a sanctified monument of peace, dedicated to the propagation of Jain values.",
+      copyrightText: "© 2026 Shree Labriya Jain Mandir Trust. All Rights Reserved.",
+      designedByText: "Designed with devotion by Jain Community Volunteers",
+      quickContactText: "Need Help? Reach our volunteer coordinator at +91 98765 43210",
+      footerLogo: "/logo.png",
+
+      // 6. Social Media
+      instagram: "https://instagram.com",
+      facebook: "https://facebook.com",
+      youtube: "https://youtube.com",
+      whatsapp: "https://wa.me/919876543210",
+      telegram: "https://t.me/labriyajainmandir",
+      xTwitter: "https://twitter.com",
+
+      // 7. Temple Information
+      aboutText: "Welcome to the historical Shree Labriya Jain Shwetambar Mandir. This portal connects devotees during Chaturmas 2026.",
+      templeHistory: "Established over a century ago, the temple has been a destination for pilgrims looking for spiritual purification.",
+      trustInformation: "The trust functions purely as a non-profit volunteer body managing accommodation, bhandara, and events.",
+      mission: "To spread the teachings of Lord Mahavira and preserve the ancient heritage.",
+      vision: "To inspire the youth and cultivate a mindful community.",
+      dailyTimings: "06:00 AM - 09:00 PM",
+      aartiTiming: "07:00 PM Daily",
+      pujaTiming: "07:30 AM Daily",
+      officeTiming: "09:00 AM - 06:00 PM",
+
+      // 8. Event Configuration
+      registrationOpen: true,
+      registrationClosed: false,
+      maxParticipants: 500,
+      defaultEventBanner: "/jain_hero_spiritual.png",
+
+      // 9. Portal Configuration
+      allowNewRegistration: true,
+      allowDailyCheckIn: true,
+      allowDonations: true,
+      allowFamilyProfiles: true,
+      enableNotifications: true,
+      maintenanceMode: false,
+
+      // 10. Branding
+      portalLogo: "/logo.png",
+      adminLogo: "/logo.png",
+      loadingLogo: "/logo.png",
+      loginBackground: "/jain_hero_spiritual.png",
+      dashboardBanner: "/jain_hero_spiritual.png",
+
+      // 11. Advanced
+      googleAnalyticsId: "UA-123456-1",
+      metaPixelId: "FB-123456",
+      customFooterHtml: "",
+      customHeadScripts: ""
+    };
+
+    let dbData = null;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("settings")
+          .select("*")
+          .limit(1)
+          .maybeSingle();
+        if (!error && data) {
+          dbData = data;
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    }
+    const local = getLocalItem("temp_temple_settings", {});
+    const merged = { ...DEFAULT_CMS, ...local };
+
+    if (dbData) {
+      const cms = dbData.cms_data || {};
+      const mappedDb = {
+        id: dbData.id,
+        templeName: dbData.temple_name,
+        templeLogo: dbData.temple_logo,
+        heroBanner: dbData.hero_banner,
+        email: dbData.email,
+        aboutText: dbData.about_text,
+        trustRegistrationNumber: dbData.trust_registration_number,
+        latitude: dbData.latitude,
+        longitude: dbData.longitude,
+        donationQr: dbData.donation_qr,
+        upiId: dbData.upi_id,
+        bankName: dbData.bank_name,
+        accountHolder: dbData.account_holder,
+        accountNumber: dbData.account_number,
+        ifsc: dbData.ifsc,
+        contactNumber: dbData.contact_number,
+        templeAddress: dbData.temple_address,
+        facebook: dbData.facebook,
+        instagram: dbData.instagram,
+        youtube: dbData.youtube,
+        website: dbData.website
+      };
+      Object.keys(mappedDb).forEach(k => {
+        if (mappedDb[k] !== undefined && mappedDb[k] !== null) {
+          merged[k] = mappedDb[k];
+        }
+      });
+      Object.keys(cms).forEach(k => {
+        if (cms[k] !== undefined && cms[k] !== null) {
+          merged[k] = cms[k];
+        }
+      });
+    }
+    return merged;
   },
 
   async updateSettings(updates) {
+    const local = getLocalItem("temp_temple_settings", {});
+    const updated = { ...local, ...updates };
+    setLocalItem("temp_temple_settings", updated);
+
     if (isSupabaseConfigured && supabase) {
+      let currentCms = {};
+      try {
+        const { data } = await supabase
+          .from("settings")
+          .select("cms_data")
+          .eq("id", "00000000-0000-0000-0000-000000000000")
+          .maybeSingle();
+        if (data && data.cms_data) {
+          currentCms = data.cms_data;
+        }
+      } catch (err) {
+        console.error("Error getting settings for update:", err);
+      }
+
+      const newCms = { ...currentCms };
+      Object.keys(updates).forEach(k => {
+        newCms[k] = updates[k];
+      });
+
       const dbUpdates = {
-        temple_name: updates.templeName,
-        temple_logo: updates.templeLogo,
-        hero_banner: updates.heroBanner,
-        email: updates.email,
-        about_text: updates.aboutText,
-        trust_registration_number: updates.trustRegistrationNumber,
-        latitude: updates.latitude,
-        longitude: updates.longitude,
-        donation_qr: updates.donationQr,
-        upi_id: updates.upiId,
-        bank_name: updates.bankName,
-        account_holder: updates.accountHolder,
-        account_number: updates.accountNumber,
-        ifsc: updates.ifsc,
-        contact_number: updates.contactNumber,
-        temple_address: updates.templeAddress,
-        facebook: updates.facebook,
-        instagram: updates.instagram,
-        youtube: updates.youtube,
-        website: updates.website,
+        temple_name: updates.templeName !== undefined ? updates.templeName : undefined,
+        temple_logo: updates.templeLogo !== undefined ? updates.templeLogo : undefined,
+        hero_banner: updates.heroBanner !== undefined ? updates.heroBanner : undefined,
+        email: updates.email !== undefined ? updates.email : undefined,
+        about_text: updates.aboutText !== undefined ? updates.aboutText : undefined,
+        trust_registration_number: updates.trustRegistrationNumber !== undefined ? updates.trustRegistrationNumber : undefined,
+        latitude: updates.latitude !== undefined ? (Number(updates.latitude) || null) : undefined,
+        longitude: updates.longitude !== undefined ? (Number(updates.longitude) || null) : undefined,
+        donation_qr: updates.donationQr !== undefined ? updates.donationQr : undefined,
+        upi_id: updates.upiId !== undefined ? updates.upiId : undefined,
+        bank_name: updates.bankName !== undefined ? updates.bankName : undefined,
+        account_holder: updates.accountHolder !== undefined ? updates.accountHolder : undefined,
+        account_number: updates.accountNumber !== undefined ? updates.accountNumber : undefined,
+        ifsc: updates.ifsc !== undefined ? updates.ifsc : undefined,
+        contact_number: updates.contactNumber !== undefined ? updates.contactNumber : undefined,
+        temple_address: updates.templeAddress !== undefined ? updates.templeAddress : undefined,
+        facebook: updates.facebook !== undefined ? updates.facebook : undefined,
+        instagram: updates.instagram !== undefined ? updates.instagram : undefined,
+        youtube: updates.youtube !== undefined ? updates.youtube : undefined,
+        website: updates.website !== undefined ? updates.website : undefined,
+        cms_data: newCms,
         updated_at: new Date().toISOString()
       };
+
+      Object.keys(dbUpdates).forEach(k => {
+        if (dbUpdates[k] === undefined) delete dbUpdates[k];
+      });
 
       const { data, error } = await supabase
         .from("settings")
@@ -1255,10 +1396,6 @@ export const db = {
       if (error) throw error;
       return data;
     }
-    
-    const local = getLocalItem("temp_temple_settings", {});
-    const updated = { ...local, ...updates };
-    setLocalItem("temp_temple_settings", updated);
     return updated;
   },
 

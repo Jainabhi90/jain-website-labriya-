@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import { db } from "@/services/db";
 import { translations } from "@/services/translations";
+import { useCMS } from "@/context/CMSContext";
 
 export default function Events() {
+  const { cms } = useCMS();
   const [events, setEvents] = useState([]);
   const [subName, setSubName] = useState("");
   const [subPhone, setSubPhone] = useState("");
@@ -281,60 +283,68 @@ export default function Events() {
 
             {selectedEvent ? (
               <div className="flex flex-col gap-4">
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  {lang === "en" ? (
-                    <>
-                      Join the VIP notification circle for <strong className="text-text-primary">{translateEventTitle(selectedEvent.title)}</strong>. We will alert you via SMS/WhatsApp as soon as seating registrations, passes, and dharamshala allocations open.
-                    </>
-                  ) : (
-                    <>
-                      <strong className="text-text-primary">{translateEventTitle(selectedEvent.title)}</strong> के लिए विशेष सूचना समूह में शामिल हों। सीट बुकिंग, दर्शन पास, और धर्मशाला आवंटन शुरू होते ही हम आपको व्हाट्सएप/एसएमएस पर सूचित करेंगे।
-                    </>
-                  )}
-                </p>
-
-                <form onSubmit={handleSubscribe} className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="sub-name" className="text-xs text-text-secondary font-semibold">{t.yourName}</label>
-                    <input 
-                      id="sub-name"
-                      type="text" 
-                      placeholder={lang === "en" ? "e.g. Rahul Shah" : "जैसे: राहुल शाह"}
-                      value={subName}
-                      onChange={(e) => setSubName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
-                    />
+                {(cms.registrationClosed || cms.registrationOpen === false) ? (
+                  <div className="p-4 rounded-custom-md bg-red-50 border border-red-200 text-red-700 text-xs font-semibold text-center mt-2">
+                    ⚠️ {lang === "en" ? "Registration is currently closed by temple administration." : "पंजीकरण वर्तमान में मंदिर प्रशासन द्वारा बंद है।"}
                   </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      {lang === "en" ? (
+                        <>
+                          Join the VIP notification circle for <strong className="text-text-primary">{translateEventTitle(selectedEvent.title)}</strong>. We will alert you via SMS/WhatsApp as soon as seating registrations, passes, and dharamshala allocations open.
+                        </>
+                      ) : (
+                        <>
+                          <strong className="text-text-primary">{translateEventTitle(selectedEvent.title)}</strong> के लिए विशेष सूचना समूह में शामिल हों। सीट बुकिंग, दर्शन पास, और धर्मशाला आवंटन शुरू होते ही हम आपको व्हाट्सएप/एसएमएस पर सूचित करेंगे।
+                        </>
+                      )}
+                    </p>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="sub-phone" className="text-xs text-text-secondary font-semibold">{t.phoneLabel}</label>
-                    <input 
-                      id="sub-phone"
-                      type="tel" 
-                      maxLength={10}
-                      placeholder={lang === "en" ? "e.g. 9876543210" : "जैसे: 9876543210"}
-                      value={subPhone}
-                      onChange={(e) => setSubPhone(e.target.value.replace(/\D/g, ""))}
-                      className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
-                    />
-                  </div>
+                    <form onSubmit={handleSubscribe} className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="sub-name" className="text-xs text-text-secondary font-semibold">{t.yourName}</label>
+                        <input 
+                          id="sub-name"
+                          type="text" 
+                          placeholder={lang === "en" ? "e.g. Rahul Shah" : "जैसे: राहुल शाह"}
+                          value={subName}
+                          onChange={(e) => setSubName(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
+                        />
+                      </div>
 
-                  {validationError && (
-                    <div className="flex items-center gap-1.5 text-xs text-red-600 mt-1">
-                      <AlertCircle size={14} />
-                      <span>{validationError}</span>
-                    </div>
-                  )}
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="sub-phone" className="text-xs text-text-secondary font-semibold">{t.phoneLabel}</label>
+                        <input 
+                          id="sub-phone"
+                          type="tel" 
+                          maxLength={10}
+                          placeholder={lang === "en" ? "e.g. 9876543210" : "जैसे: 9876543210"}
+                          value={subPhone}
+                          onChange={(e) => setSubPhone(e.target.value.replace(/\D/g, ""))}
+                          className="w-full px-4 py-2.5 rounded-custom-md bg-bg-custom border border-border-custom focus:border-primary/50 focus:outline-none text-sm transition-all text-text-primary"
+                        />
+                      </div>
 
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3 rounded-custom-md bg-primary hover:bg-primary/95 text-white font-bold text-xs uppercase tracking-wider shadow-premium hover:shadow-premium-hover transition-all mt-2 cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? t.submittingSub : t.notifyMe}
-                  </motion.button>
-                </form>
+                      {validationError && (
+                        <div className="flex items-center gap-1.5 text-xs text-red-600 mt-1">
+                          <AlertCircle size={14} />
+                          <span>{validationError}</span>
+                        </div>
+                      )}
+
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-3 rounded-custom-md bg-primary hover:bg-primary/95 text-white font-bold text-xs uppercase tracking-wider shadow-premium hover:shadow-premium-hover transition-all mt-2 cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {isSubmitting ? t.submittingSub : t.notifyMe}
+                      </motion.button>
+                    </form>
+                  </>
+                )}
 
                 <AnimatePresence>
                   {submitSuccess && (

@@ -15,6 +15,7 @@ import {
 import Countdown from "@/components/Countdown";
 import { db } from "@/services/db";
 import { translations } from "@/services/translations";
+import { useCMS } from "@/context/CMSContext";
 
 // Framer Motion staggered transition variants
 const containerVariants = {
@@ -41,6 +42,7 @@ export default function Home() {
   const [schedules, setSchedules] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [lang, setLang] = useState("en");
+  const { cms } = useCMS();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -131,7 +133,7 @@ export default function Home() {
             variants={itemVariants}
             className="font-display font-medium text-text-secondary text-xs sm:text-sm tracking-widest uppercase mt-1"
           >
-            {t.shreeLabriyaMandir}
+            {cms.templeName || t.shreeLabriyaMandir}
           </motion.h2>
 
           {/* Main Title */}
@@ -139,25 +141,25 @@ export default function Home() {
             variants={itemVariants}
             className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight leading-tight max-w-3xl"
           >
-            {lang === "en" ? (
-              <>
-                Sacred Chaturmas <br />
-                <span className="text-primary font-extrabold">Festival 2026</span>
-              </>
-            ) : (
-              <>
-                पावन चातुर्मास <br />
-                <span className="text-primary font-extrabold">महोत्सव २०२६</span>
-              </>
-            )}
+            {cms.heroTitle || (lang === "en" ? "Sacred Chaturmas Festival 2026" : "पावन चातुर्मास महोत्सव २०२६")}
           </motion.h1>
+
+          {/* Hero Subtitle */}
+          {cms.heroSubtitle && (
+            <motion.p
+              variants={itemVariants}
+              className="text-primary text-sm sm:text-base font-semibold tracking-wide uppercase"
+            >
+              {cms.heroSubtitle}
+            </motion.p>
+          )}
 
           {/* Description */}
           <motion.p 
             variants={itemVariants}
             className="text-text-secondary text-xs sm:text-sm md:text-base max-w-2xl leading-relaxed"
           >
-            {t.welcomeDescription}
+            {cms.heroDescription || t.welcomeDescription}
           </motion.p>
 
           {/* Spiritual Hero Image Frame */}
@@ -167,8 +169,8 @@ export default function Home() {
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent z-10" />
             <img 
-              src="/jain_hero_spiritual.png" 
-              alt="Shree Labriya Jain Shwetambar Mandir Chaturmas 2026" 
+              src={cms.heroBanner || "/jain_hero_spiritual.png"} 
+              alt={cms.templeName || "Shree Labriya Jain Shwetambar Mandir Chaturmas 2026"} 
               className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-700" 
             />
           </motion.div>

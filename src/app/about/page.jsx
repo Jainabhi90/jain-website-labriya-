@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { useCMS } from "@/context/CMSContext";
 import { 
   History, 
   BookOpen, 
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 export default function About() {
+  const { cms } = useCMS();
   const committee = [
     { name: "Sureshchandra S. Shah", role: "Trust President", term: "Since 2018" },
     { name: "Dr. Kirit Kumar Jain", role: "General Secretary", term: "Since 2020" },
@@ -44,10 +46,10 @@ export default function About() {
           Know the Heritage
         </span>
         <h1 className="font-display font-semibold text-text-primary text-3xl sm:text-4xl mt-3">
-          About Shree Labriya Mandir
+          About {cms.templeName || "Shree Labriya Mandir"}
         </h1>
         <p className="text-sm text-text-secondary mt-2">
-          Discover the history, spiritual mission, committee trustees, and holy ascetics guiding the Chaturmas 2026 festival.
+          {cms.aboutTempleSummary || "Discover the history, spiritual mission, committee trustees, and holy ascetics guiding the Chaturmas 2026 festival."}
         </p>
       </div>
 
@@ -64,50 +66,77 @@ export default function About() {
               </h2>
             </div>
             <p className="text-sm text-text-secondary leading-relaxed">
-              Established over a century ago in the quiet, scenic landscapes of Labriya, Madhya Pradesh, Shree Labriya Jain Shwetambar Mandir is a sanctified monument of peace. Dedicated to the Tirthankaras, the temple features intricate marble carvings, domes, and a peaceful environment that naturally invites quietude.
+              {cms.templeHistory || "Established over a century ago in the quiet, scenic landscapes of Labriya, Madhya Pradesh, Shree Labriya Jain Shwetambar Mandir is a sanctified monument of peace. Dedicated to the Tirthankaras, the temple features intricate marble carvings, domes, and a peaceful environment that naturally invites quietude."}
             </p>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              For generations, the temple has been a destination for pilgrims looking for spiritual purification. The main deity (Moolnayak) is worshipped daily with traditional rites (Pakshal and Puja) that have remained unchanged since the temple&apos;s consecration.
-            </p>
+            {cms.aboutText && (
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {cms.aboutText}
+              </p>
+            )}
           </div>
 
           <div className="md:col-span-5 aspect-[4/3] rounded-custom-lg overflow-hidden border border-border-custom shadow-premium relative bg-secondary">
             <img 
-              src="https://images.unsplash.com/photo-1609137144814-0e31189c445a?q=80&w=800&auto=format&fit=crop" 
-              alt="Temple Dome" 
+              src={cms.heroBanner || "https://images.unsplash.com/photo-1609137144814-0e31189c445a?q=80&w=800&auto=format&fit=crop"} 
+              alt="Temple Banner" 
               className="w-full h-full object-cover"
             />
           </div>
 
         </div>
 
-        {/* 2. CHATURMAS SIGNIFICANCE */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-          
-          <div className="md:col-span-5 order-last md:order-first aspect-[4/3] rounded-custom-lg overflow-hidden border border-border-custom shadow-premium relative bg-secondary">
-            <img 
-              src="https://images.unsplash.com/photo-1507608869274-d3177c8bb4c7?q=80&w=800&auto=format&fit=crop" 
-              alt="Chaturmas Diya" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          <div className="md:col-span-7 flex flex-col gap-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-border-custom w-fit">
-              <Compass className="text-primary w-5 h-5" />
-              <h2 className="font-display font-semibold text-text-primary text-xl">
-                The Chaturmas Vow
-              </h2>
+        {/* 2. MISSION AND VISION */}
+        {(cms.mission || cms.vision || cms.trustInformation) && (
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+            
+            <div className="md:col-span-6 flex flex-col gap-4">
+              {cms.mission && (
+                <>
+                  <div className="flex items-center gap-2 pb-2 border-b border-border-custom w-fit">
+                    <Compass className="text-primary w-5 h-5" />
+                    <h2 className="font-display font-semibold text-text-primary text-xl">
+                      Our Mission
+                    </h2>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    {cms.mission}
+                  </p>
+                </>
+              )}
             </div>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              Chaturmas, meaning &quot;Four Months,&quot; is a holy period from July to October corresponding to the monsoon season in India. During this time, Jain monks (Sadhus) and nuns (Sadhvis) suspend their constant walking travels (Vihar) and reside in a single temple to avoid harming tiny organisms and insects that thrive in the rains.
-            </p>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              For lay devotees, Chaturmas represents a golden opportunity to fast, learn from regular morning discourses, practice detachment, and engage in daily swadhyay under the direct guidance of learned gurus.
-            </p>
-          </div>
 
-        </div>
+            <div className="md:col-span-6 flex flex-col gap-4">
+              {cms.vision && (
+                <>
+                  <div className="flex items-center gap-2 pb-2 border-b border-border-custom w-fit">
+                    <Sparkles className="text-primary w-5 h-5" />
+                    <h2 className="font-display font-semibold text-text-primary text-xl">
+                      Our Vision
+                    </h2>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    {cms.vision}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {cms.trustInformation && (
+              <div className="md:col-span-12 flex flex-col gap-4 mt-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-border-custom w-fit">
+                  <Users className="text-primary w-5 h-5" />
+                  <h2 className="font-display font-semibold text-text-primary text-xl">
+                    Trust Information
+                  </h2>
+                </div>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  {cms.trustInformation}
+                </p>
+              </div>
+            )}
+
+          </div>
+        )}
 
         {/* 3. GURU BIO AND TEACHINGS */}
         <div className="p-6 sm:p-8 rounded-custom-lg bg-white border border-border-custom shadow-premium grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

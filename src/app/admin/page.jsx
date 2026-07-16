@@ -31,6 +31,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/services/db";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
+import { useCMS } from "@/context/CMSContext";
 const toReadableId = (uuid = "", prefix = "ID", padLen = 4) => {
   if (!uuid) return `${prefix}-0000`;
   const num = parseInt(uuid.replace(/-/g, "").slice(-6), 16) % 10000;
@@ -40,6 +41,7 @@ const toReadableId = (uuid = "", prefix = "ID", padLen = 4) => {
 export default function Admin() {
   const router = useRouter();
   const { user, profile, loading, isAdmin, logout } = useAuth();
+  const { refreshCMS } = useCMS();
   
   const [lang, setLang] = useState("en");
   const [activeTab, setActiveTab] = useState("analytics");
@@ -613,11 +615,21 @@ export default function Admin() {
     e.preventDefault();
     try {
       await db.updateSettings(templeSettings);
+      await refreshCMS();
       showNotification("Temple console settings updated successfully.");
     } catch (e) {
       console.error(e);
       showNotification("Failed to update settings.", "error");
     }
+  };
+
+  const handleImageUpload = (key, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setTempleSettings(prev => ({ ...prev, [key]: reader.result }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const t = translations[lang] || translations["en"];
@@ -1904,113 +1916,445 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* TAB 9: SETTINGS CONSOLE */}
+              {/* TAB 9: SETTINGS CONSOLE (CMS - STREAM 9) */}
               {activeTab === "settings" && (
                 <div className="flex flex-col gap-6">
                   <div>
-                    <h3 className="font-display font-semibold text-text-primary text-base">Temple Settings Console</h3>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Edit Temple profiles & configurations</p>
+                    <h3 className="font-display font-semibold text-text-primary text-base">Temple Website CMS Console</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Control every text, setting, and image on the portal in real-time</p>
                   </div>
 
-                  <form onSubmit={handleSaveSettings} className="flex flex-col gap-5 bg-neutral-50/50 p-5 rounded-custom-lg border border-border-custom">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Temple Name</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.templeName}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, templeName: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                          required
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Contact Number</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.contactNumber}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, contactNumber: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1 sm:col-span-2">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Temple Address</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.templeAddress}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, templeAddress: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                          required
-                        />
-                      </div>
-                      
-                      {/* Bank Details */}
-                      <div className="sm:col-span-2 border-t border-neutral-200 mt-2 pt-3">
-                        <h4 className="text-xs font-bold text-primary mb-3">Bank Details (Donation Desk)</h4>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">UPI ID</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.upiId}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, upiId: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Bank Name</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.bankName}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, bankName: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Account Holder Name</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.accountHolder}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, accountHolder: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Account Number</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.accountNumber}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, accountNumber: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">IFSC Code</label>
-                        <input 
-                          type="text" 
-                          value={templeSettings.ifsc}
-                          onChange={(e) => setTempleSettings(prev => ({ ...prev, ifsc: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary font-medium focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Maintenance Mode switch toggle */}
-                      <div className="sm:col-span-2 border-t border-neutral-200 mt-2 pt-3 flex items-center justify-between">
-                        <div>
-                          <h4 className="text-xs font-bold text-red-600">Maintenance Lockout Mode</h4>
-                          <p className="text-[9px] text-text-secondary mt-0.5">Toggle site offline lock to restrict normal devotee logins and check-in portals.</p>
+                  <form onSubmit={handleSaveSettings} className="flex flex-col gap-8 bg-neutral-50/50 p-6 rounded-custom-lg border border-border-custom">
+                    {/* Section 1: General Info */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">1. General Information</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Temple Name</label>
+                          <input type="text" value={templeSettings.templeName || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeName: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" required />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setTempleSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }))}
-                          className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
-                            templeSettings.maintenanceMode ? "bg-red-600" : "bg-neutral-200"
-                          }`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${
-                            templeSettings.maintenanceMode ? "left-7" : "left-1"
-                          }`} />
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Subtitle</label>
+                          <input type="text" value={templeSettings.subtitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, subtitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Temple Logo URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.templeLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("templeLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Favicon URL</label>
+                          <input type="text" value={templeSettings.favicon || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, favicon: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Chaturmas Year</label>
+                          <input type="text" value={templeSettings.chaturmasYear || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, chaturmasYear: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Website Title</label>
+                          <input type="text" value={templeSettings.websiteTitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, websiteTitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">SEO Title</label>
+                          <input type="text" value={templeSettings.seoTitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, seoTitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Primary Theme Color</label>
+                          <input type="text" value={templeSettings.primaryThemeColor || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, primaryThemeColor: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">SEO Description</label>
+                          <textarea rows={2} value={templeSettings.seoDescription || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, seoDescription: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Contact Info */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">2. Contact Information</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Phone Number</label>
+                          <input type="text" value={templeSettings.contactNumber || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, contactNumber: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Alternate Phone</label>
+                          <input type="text" value={templeSettings.alternatePhone || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, alternatePhone: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">WhatsApp Number</label>
+                          <input type="text" value={templeSettings.whatsappNumber || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, whatsappNumber: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Email Address</label>
+                          <input type="email" value={templeSettings.email || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, email: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Website URL</label>
+                          <input type="text" value={templeSettings.website || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, website: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex grid grid-cols-2 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] text-text-secondary uppercase font-bold">Latitude</label>
+                            <input type="number" step="any" value={templeSettings.latitude || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, latitude: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] text-text-secondary uppercase font-bold">Longitude</label>
+                            <input type="number" step="any" value={templeSettings.longitude || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, longitude: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Address</label>
+                          <input type="text" value={templeSettings.templeAddress || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeAddress: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Google Maps Embed URL</label>
+                          <textarea rows={2} value={templeSettings.googleMapsEmbedUrl || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, googleMapsEmbedUrl: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Donation Info */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">3. Donation Information</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">UPI ID</label>
+                          <input type="text" value={templeSettings.upiId || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, upiId: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">UPI QR Image URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.donationQr || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, donationQr: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("donationQr", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Account Holder</label>
+                          <input type="text" value={templeSettings.accountHolder || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, accountHolder: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Bank Name</label>
+                          <input type="text" value={templeSettings.bankName || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, bankName: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Branch</label>
+                          <input type="text" value={templeSettings.branch || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, branch: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Account Number</label>
+                          <input type="text" value={templeSettings.accountNumber || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, accountNumber: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">IFSC</label>
+                          <input type="text" value={templeSettings.ifsc || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, ifsc: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">80G Information</label>
+                          <input type="text" value={templeSettings.eightyGInfo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, eightyGInfo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Donation Instructions</label>
+                          <textarea rows={2} value={templeSettings.donationInstructions || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, donationInstructions: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Tax Disclaimer</label>
+                          <textarea rows={2} value={templeSettings.taxDisclaimer || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, taxDisclaimer: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 4: Homepage Content */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">4. Homepage Content</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Title</label>
+                          <input type="text" value={templeSettings.heroTitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroTitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Subtitle</label>
+                          <input type="text" value={templeSettings.heroSubtitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroSubtitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Welcome Message</label>
+                          <input type="text" value={templeSettings.welcomeMessage || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, welcomeMessage: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Image URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.heroBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("heroBanner", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Latest Announcement Banner Text</label>
+                          <input type="text" value={templeSettings.latestAnnouncementBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, latestAnnouncementBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Description</label>
+                          <textarea rows={2} value={templeSettings.heroDescription || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroDescription: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">About Temple Summary</label>
+                          <textarea rows={2} value={templeSettings.aboutTempleSummary || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, aboutTempleSummary: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Featured Quote</label>
+                          <textarea rows={2} value={templeSettings.featuredQuote || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, featuredQuote: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 5: Footer Content */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">5. Footer Content</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Copyright Text</label>
+                          <input type="text" value={templeSettings.copyrightText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, copyrightText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Designed By Text</label>
+                          <input type="text" value={templeSettings.designedByText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, designedByText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Quick Contact Text</label>
+                          <input type="text" value={templeSettings.quickContactText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, quickContactText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Footer Logo URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.footerLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, footerLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("footerLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Footer Description</label>
+                          <textarea rows={2} value={templeSettings.footerDescription || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, footerDescription: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 6: Social Media */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">6. Social Media Links</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Instagram URL</label>
+                          <input type="text" value={templeSettings.instagram || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, instagram: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Facebook URL</label>
+                          <input type="text" value={templeSettings.facebook || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, facebook: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">YouTube URL</label>
+                          <input type="text" value={templeSettings.youtube || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, youtube: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">WhatsApp Direct URL</label>
+                          <input type="text" value={templeSettings.whatsapp || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, whatsapp: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Telegram Invite Link</label>
+                          <input type="text" value={templeSettings.telegram || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, telegram: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">X (Twitter) URL</label>
+                          <input type="text" value={templeSettings.xTwitter || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, xTwitter: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 7: Temple Information */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">7. Temple Information & Timings</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Daily Open Timings</label>
+                          <input type="text" value={templeSettings.dailyTimings || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, dailyTimings: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Aarti Timing</label>
+                          <input type="text" value={templeSettings.aartiTiming || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, aartiTiming: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Puja Timing</label>
+                          <input type="text" value={templeSettings.pujaTiming || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, pujaTiming: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Office Timings</label>
+                          <input type="text" value={templeSettings.officeTiming || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, officeTiming: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">About Temple Description</label>
+                          <textarea rows={2} value={templeSettings.aboutText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, aboutText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Temple History Scroll</label>
+                          <textarea rows={2} value={templeSettings.templeHistory || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeHistory: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Trust Information</label>
+                          <textarea rows={2} value={templeSettings.trustInformation || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, trustInformation: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Mission Statement</label>
+                          <textarea rows={2} value={templeSettings.mission || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, mission: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Vision Statement</label>
+                          <textarea rows={2} value={templeSettings.vision || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, vision: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 8: Event Configuration */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">8. Event Configurations</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Maximum Event Participants</label>
+                          <input type="number" value={templeSettings.maxParticipants || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, maxParticipants: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Default Event Banner URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.defaultEventBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, defaultEventBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("defaultEventBanner", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Event Registration Open</span>
+                            <p className="text-[9px] text-text-secondary">Allow devotees to book passes and seats for Chaturmas events.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, registrationOpen: !prev.registrationOpen }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.registrationOpen ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.registrationOpen ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Force Registration Closed</span>
+                            <p className="text-[9px] text-text-secondary">Disable event registry across all templates globally.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, registrationClosed: !prev.registrationClosed }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.registrationClosed ? "bg-red-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.registrationClosed ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 9: Portal Configuration */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">9. Devotee Portal Configurations</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Allow New Devotee Registrations</span>
+                            <p className="text-[9px] text-text-secondary">Toggle toggle login onboarding forms for new devotees.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowNewRegistration: !prev.allowNewRegistration }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowNewRegistration ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowNewRegistration ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Allow Daily Sadhana Check-ins</span>
+                            <p className="text-[9px] text-text-secondary">Enable daily vow calendar check-in list submissions.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowDailyCheckIn: !prev.allowDailyCheckIn }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowDailyCheckIn ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowDailyCheckIn ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Allow Donations Forms</span>
+                            <p className="text-[9px] text-text-secondary">Display support desk support contributions forms globally.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowDonations: !prev.allowDonations }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowDonations ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowDonations ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Allow Family Accounts Linkings</span>
+                            <p className="text-[9px] text-text-secondary">Toggle profiles list select panels and family profile onboarding.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowFamilyProfiles: !prev.allowFamilyProfiles }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowFamilyProfiles ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowFamilyProfiles ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Enable Automated Portal Notifications</span>
+                            <p className="text-[9px] text-text-secondary">Alert devotees on submissions approvals and donations verifications.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, enableNotifications: !prev.enableNotifications }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.enableNotifications ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.enableNotifications ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                          <div>
+                            <span className="text-xs font-bold text-red-600">Maintenance Lockout Mode</span>
+                            <p className="text-[9px] text-text-secondary">Restrict standard devotee access to display maintenance screen.</p>
+                          </div>
+                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.maintenanceMode ? "bg-red-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.maintenanceMode ? "left-7" : "left-1"}`} /></button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 10: Branding */}
+                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">10. Portal & System Branding</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Portal Logo URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.portalLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, portalLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("portalLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Admin Logo URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.adminLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, adminLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("adminLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Loading Logo URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.loadingLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, loadingLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("loadingLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Login Background URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.loginBackground || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, loginBackground: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("loginBackground", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Dashboard Banner URL</label>
+                          <div className="flex gap-2">
+                            <input type="text" value={templeSettings.dashboardBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, dashboardBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("dashboardBanner", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 11: Advanced */}
+                    <div className="flex flex-col gap-4">
+                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">11. Advanced Analytics & Custom Tracking</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Google Analytics measurement ID</label>
+                          <input type="text" value={templeSettings.googleAnalyticsId || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, googleAnalyticsId: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Meta Pixel ID</label>
+                          <input type="text" value={templeSettings.metaPixelId || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, metaPixelId: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Custom Head Scripts</label>
+                          <textarea rows={2} value={templeSettings.customHeadScripts || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, customHeadScripts: e.target.value }))} className="px-3 py-2 text-xs font-mono rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" placeholder="<!-- e.g. <script src='...'></script> -->" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold">Custom Footer HTML</label>
+                          <textarea rows={2} value={templeSettings.customFooterHtml || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, customFooterHtml: e.target.value }))} className="px-3 py-2 text-xs font-mono rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" placeholder="<!-- e.g. <div>...</div> -->" />
+                        </div>
                       </div>
                     </div>
 
@@ -2019,7 +2363,7 @@ export default function Admin() {
                       className="px-5 py-2.5 rounded bg-primary hover:bg-primary/95 text-white text-[10px] font-bold uppercase tracking-wider shadow transition-all flex items-center justify-center gap-1.5 w-fit ml-auto cursor-pointer"
                     >
                       <Save size={14} />
-                      <span>Save Settings</span>
+                      <span>Save CMS Configuration</span>
                     </button>
                   </form>
 

@@ -14,9 +14,11 @@ import {
 import { db } from "@/services/db";
 import { translations } from "@/services/translations";
 import confetti from "canvas-confetti";
+import { useCMS } from "@/context/CMSContext";
 
 export default function Donate() {
   const [lang, setLang] = useState("en");
+  const { cms } = useCMS();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,13 +33,13 @@ export default function Donate() {
 
   const t = translations[lang] || translations["en"];
 
-  const upiId = "shreelabriyatrust@okaxis";
+  const upiId = cms.upiId || "shreelabriyatrust@okaxis";
   const bankDetails = {
-    bankName: "State Bank of India",
-    accountName: "Shree Labriya Jain Mandir Trust",
-    accountNumber: "38472948194",
-    ifscCode: "SBIN0030129",
-    branch: "Dhar Branch, Madhya Pradesh",
+    bankName: cms.bankName || "State Bank of India",
+    accountName: cms.accountHolder || "Shree Labriya Jain Mandir Trust",
+    accountNumber: cms.accountNumber || "38472948194",
+    ifscCode: cms.ifsc || "SBIN0030129",
+    branch: cms.branch || "Dhar Branch, Madhya Pradesh",
   };
 
   // Form states
@@ -308,7 +310,7 @@ export default function Donate() {
             <div className="flex flex-col items-center gap-3 shrink-0">
               <div className="w-44 h-44 rounded-custom-lg bg-white border border-border-custom overflow-hidden shadow-sm relative group flex items-center justify-center p-1">
                 <img 
-                  src="/upi_qr_code.png" 
+                  src={cms.donationQr || "/upi_qr_code.png"} 
                   alt="UPI QR Code for Donations" 
                   className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300" 
                 />
@@ -410,20 +412,16 @@ export default function Donate() {
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Registration Number" : "पंजीकरण संख्या"}</span>
-                <span className="font-semibold text-text-primary">{t.trustRegNo}</span>
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Registration / 80G Info" : "पंजीकरण / 80G जानकारी"}</span>
+                <span className="font-semibold text-text-primary">{cms.eightyGInfo || "TRN-38472948-MP"}</span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "80G Tax Exemption Status" : "80G टैक्स छूट प्रमाण पत्र"}</span>
-                <span className="font-semibold text-text-primary">{t.eightyGNo}</span>
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Tax Exemption Status" : "टैक्स छूट स्थिति"}</span>
+                <span className="font-semibold text-text-primary">{cms.taxDisclaimer || "All contributions are exempt under Section 80G of the Income Tax Act."}</span>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "PAN Card Number" : "ट्रस्ट पैन नंबर"}</span>
-                <span className="font-semibold text-text-primary">{t.panNo}</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Trust Address" : "ट्रस्ट पंजीकृत पता"}</span>
-                <span className="font-semibold text-text-primary">{t.trustAddress}</span>
+              <div className="flex flex-col gap-0.5 sm:col-span-2">
+                <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{lang === "en" ? "Trust Registered Address" : "पंजीकृत पता"}</span>
+                <span className="font-semibold text-text-primary">{cms.templeAddress || "Mandir Marg, Labriya, Dhar District, Madhya Pradesh - 454111, India"}</span>
               </div>
             </div>
           </div>

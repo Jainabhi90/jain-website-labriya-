@@ -3,6 +3,8 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
+import { CMSProvider } from "@/context/CMSContext";
+import MaintenanceWrapper from "@/components/MaintenanceWrapper";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -51,13 +53,17 @@ export default function RootLayout({ children }) {
       <body
         className={`${poppins.variable} ${inter.variable} antialiased font-sans bg-bg-custom text-text-primary transition-colors duration-300 min-h-screen flex flex-col`}
       >
-        <AuthProvider>
-          <Navigation />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-        </AuthProvider>
+        <CMSProvider>
+          <AuthProvider>
+            <MaintenanceWrapper>
+              <Navigation />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+            </MaintenanceWrapper>
+          </AuthProvider>
+        </CMSProvider>
       </body>
     </html>
   );

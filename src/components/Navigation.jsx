@@ -16,11 +16,13 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
+import { useCMS } from "@/context/CMSContext";
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile, isAuthenticated, logout } = useAuth();
+  const { cms } = useCMS();
   const [lang, setLang] = useState("en");
   
   useEffect(() => {
@@ -74,15 +76,19 @@ export default function Navigation() {
       {/* MOBILE TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-50 w-full glass-panel border-b border-border-custom px-4 py-3 flex items-center justify-between md:hidden bg-white/80 backdrop-blur-md">
         <Link href="/" className="flex items-center gap-1.5 group">
-          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-primary/20">
-            <span className="text-primary font-display font-bold text-sm">📿</span>
+          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-primary/20 overflow-hidden">
+            {cms.portalLogo ? (
+              <img src={cms.portalLogo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-primary font-display font-bold text-sm">📿</span>
+            )}
           </div>
           <div>
             <h1 className="font-display font-semibold text-text-primary text-[10px] sm:text-xs tracking-wide leading-tight">
-              {t.shreeLabriyaMandir}
+              {cms.templeName || t.shreeLabriyaMandir}
             </h1>
             <p className="text-[7px] text-text-secondary uppercase tracking-widest font-medium">
-              {lang === "en" ? "Chaturmas 2026" : "चातुर्मास २०२६"}
+              {cms.subtitle || (lang === "en" ? "Chaturmas 2026" : "चातुर्मास २०२६")}
             </p>
           </div>
         </Link>
@@ -105,15 +111,19 @@ export default function Navigation() {
           
           {/* Logo Brand */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <span className="text-primary font-display font-bold text-lg">📿</span>
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+              {cms.portalLogo ? (
+                <img src={cms.portalLogo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-primary font-display font-bold text-lg">📿</span>
+              )}
             </div>
             <div>
               <h1 className="font-display font-semibold text-text-primary text-base tracking-wide leading-tight group-hover:text-primary transition-colors duration-300">
-                {t.shreeLabriyaMandir}
+                {cms.templeName || t.shreeLabriyaMandir}
               </h1>
               <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
-                {lang === "en" ? "Chaturmas 2026" : "चातुर्मास २०२६"}
+                {cms.subtitle || (lang === "en" ? "Chaturmas 2026" : "चातुर्मास २०२६")}
               </p>
             </div>
           </Link>
