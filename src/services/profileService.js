@@ -159,7 +159,7 @@ export const profileService = {
       member_number: 2,
       full_name: (details.fullName || details.full_name || "").trim(),
       city: (details.city || "").trim(),
-      mobile: (details.phone || details.phoneNumber || details.mobile || "").trim(),
+      mobile: (details.phone || details.phoneNumber || details.mobile || "").trim() || null,
       is_profile_complete: true,
       role: "user",
       total_points: 0,
@@ -180,6 +180,30 @@ export const profileService = {
     }
 
     return data;
+  },
+
+  /**
+   * Deletes a secondary devotee profile. Only member_number = 2 profiles can be deleted.
+   *
+   * @param {string} profileId - UUID of the devotee profile
+   * @returns {Promise<boolean>} Success status
+   */
+  async deleteSecondaryProfile(profileId) {
+    if (!profileId) throw new Error("Profile ID is required for deletion.");
+    if (!supabase) throw new Error("Supabase is not configured.");
+
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", profileId)
+      .eq("member_number", 2); // safety lock: only allow deleting secondary profile
+
+    if (error) {
+      console.error("Error in deleteSecondaryProfile:", error.message);
+      throw error;
+    }
+
+    return true;
   },
 
   /**

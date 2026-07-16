@@ -122,7 +122,24 @@ sequenceDiagram
     end
 ```
 
-### 2. Devotee Vow Log Flow
+### 2. Secondary Profile Deletion Flow
+```mermaid
+sequenceDiagram
+    participant D as Devotee Client
+    participant Context as AuthContext
+    participant PS as Profile Service Layer
+    participant DB as Profiles Table
+
+    D->>Context: deleteSecondaryProfile(profileId)
+    Context->>PS: deleteSecondaryProfile(profileId)
+    PS->>DB: DELETE FROM profiles WHERE id = profileId AND member_number = 2
+    DB->>PS: Complete deletion (Cascade user_activities entries)
+    PS->>Context: Success callback
+    Context->>Context: Fallback active selection to Primary Profile (member_number = 1)
+    Context->>D: Refresh profilesList state, update UI selector
+```
+
+### 3. Devotee Vow Log Flow
 ```mermaid
 sequenceDiagram
     participant D as Devotee Client

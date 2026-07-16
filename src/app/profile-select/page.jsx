@@ -11,7 +11,8 @@ import {
   ArrowRight, 
   AlertCircle, 
   Check, 
-  LogOut 
+  LogOut,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
@@ -26,6 +27,7 @@ export default function ProfileSelect() {
     isAuthenticated, 
     selectProfile, 
     createSecondaryProfile,
+    deleteSecondaryProfile,
     logout 
   } = useAuth();
 
@@ -37,6 +39,11 @@ export default function ProfileSelect() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Deletion states
+  const [profileToDelete, setProfileToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   // Sync language selection
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -46,6 +53,13 @@ export default function ProfileSelect() {
       };
       window.addEventListener("languageChange", syncLang);
       return () => window.removeEventListener("languageChange", syncLang);
+    }
+  }, []);
+
+  // Handle ?add=true on mount to display form automatically
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("add=true")) {
+      setShowAddForm(true);
     }
   }, []);
 
@@ -132,7 +146,7 @@ export default function ProfileSelect() {
       setErrorMsg(pt.nameLengthError);
       return;
     }
-    if (trimmedPhone.length < 10) {
+    if (trimmedPhone.length > 0 && trimmedPhone.length < 10) {
       setErrorMsg(pt.phoneLengthError);
       return;
     }
@@ -141,12 +155,15 @@ export default function ProfileSelect() {
       return;
     }
 
-    // Client-side duplicate check
-    const formattedPhone = `+91${trimmedPhone}`;
-    const isPhoneDup = profilesList.some(p => p.mobile === formattedPhone || p.mobile === trimmedPhone);
-    if (isPhoneDup) {
-      setErrorMsg(pt.duplicatePhoneError);
-      return;
+    // Client-side duplicate check (only if mobile is provided)
+    let formattedPhone = "";
+    if (trimmedPhone.length === 10) {
+      formattedPhone = `+91${trimmedPhone}`;
+      const isPhoneDup = profilesList.some(p => p.mobile === formattedPhone || p.mobile === trimmedPhone);
+      if (isPhoneDup) {
+        setErrorMsg(pt.duplicatePhoneError);
+        return;
+      }
     }
 
     if (profilesList.length >= 2) {
@@ -158,7 +175,7 @@ export default function ProfileSelect() {
     try {
       const newProf = await createSecondaryProfile({
         fullName: trimmedName,
-        phone: formattedPhone,
+        phone: formattedPhone || null,
         city: trimmedCity
       });
       if (newProf) {
@@ -166,6 +183,9 @@ export default function ProfileSelect() {
         setFullName("");
         setMobile("");
         setCity("");
+        if (typeof window !== "undefined") {
+          window.history.replaceState({}, "", "/profile-select");
+        }
       }
     } catch (err) {
       if (err.message?.includes("unique_active_mobile") || err.code === "23505") {
@@ -175,6 +195,28 @@ export default function ProfileSelect() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!profileToDelete) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteSecondaryProfile(profileToDelete.id);
+      setProfileToDelete(null);
+    } catch (err) {
+      setDeleteError(err.message || "Failed to delete profile.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowAddForm(false);
+    setErrorMsg("");
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, "", "/profile-select");
     }
   };
 
@@ -240,14 +282,29 @@ export default function ProfileSelect() {
                 isCurrent ? "bg-primary" : "bg-neutral-100 group-hover:bg-primary/50"
               }`} />
 
-              {/* Devotee member tag */}
-              <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border mb-4 self-end select-none ${
-                isPrimary 
-                  ? "bg-orange-50 text-primary border-primary/10" 
-                  : "bg-amber-50 text-amber-700 border-amber-500/10"
-              }`}>
-                {isPrimary ? pt.primary : pt.secondary}
-              </span>
+              {/* Tag and Deletion actions */}
+              <div className="w-full flex justify-between items-center mb-4 select-none">
+                <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${
+                  isPrimary 
+                    ? "bg-orange-50 text-primary border-primary/10" 
+                    : "bg-amber-50 text-amber-700 border-amber-500/10"
+                }`}>
+                  {isPrimary ? pt.primary : pt.secondary}
+                </span>
+
+                {!isPrimary && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProfileToDelete(p);
+                    }}
+                    className="p-1.5 rounded-full hover:bg-red-50 text-text-secondary hover:text-red-600 transition-colors"
+                    title="Delete family member"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
 
               {/* Avatar */}
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-amber-600 flex items-center justify-center text-white border-4 border-secondary shadow-md relative">
@@ -358,7 +415,7 @@ export default function ProfileSelect() {
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">
-                        {pt.formPhone} <span className="text-primary">*</span>
+                        {pt.formPhone} <span className="text-text-secondary/80">(Optional)</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-xs font-semibold select-none">
@@ -366,7 +423,6 @@ export default function ProfileSelect() {
                         </span>
                         <input
                           type="tel"
-                          required
                           maxLength={10}
                           placeholder="10-digit mobile"
                           value={mobile}
@@ -405,7 +461,7 @@ export default function ProfileSelect() {
                     <div className="flex gap-2 mt-2 pt-2 border-t border-neutral-100">
                       <button
                         type="button"
-                        onClick={() => { setShowAddForm(false); setErrorMsg(""); }}
+                        onClick={handleCancelForm}
                         disabled={isSubmitting}
                         className="flex-1 py-1.5 rounded border border-border-custom hover:bg-neutral-50 text-text-primary font-semibold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
                       >
@@ -462,6 +518,78 @@ export default function ProfileSelect() {
           <span>{pt.signOut}</span>
         </motion.button>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {profileToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setProfileToDelete(null)}
+              className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+            />
+            {/* Dialog Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-sm bg-white rounded-custom-lg border border-border-custom p-6 shadow-premium z-10 flex flex-col gap-4 text-center overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
+              
+              <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-2">
+                <Trash2 size={22} />
+              </div>
+
+              <div>
+                <h4 className="font-display font-semibold text-text-primary text-base">
+                  {lang === "en" ? "Delete Family Profile?" : "पारिवारिक प्रोफाइल हटाएं?"}
+                </h4>
+                <p className="text-xs text-text-secondary mt-2 leading-relaxed">
+                  {lang === "en" 
+                    ? `Are you sure you want to delete ${profileToDelete.full_name || "this devotee"}'s profile? All daily sadhana history and logs for this profile will be permanently erased.` 
+                    : `क्या आप ${profileToDelete.full_name || "इस भक्त"} की प्रोफाइल हटाना चाहते हैं? इस प्रोफाइल का सभी दैनिक साधना इतिहास और लॉग स्थायी रूप से मिटा दिया जाएगा।`}
+                </p>
+              </div>
+
+              {deleteError && (
+                <div className="p-2 rounded bg-red-50 text-red-600 text-[10px] leading-relaxed text-left border border-red-500/10">
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => { setProfileToDelete(null); setDeleteError(""); }}
+                  disabled={isDeleting}
+                  className="flex-1 py-2 text-[10px] uppercase font-bold tracking-wider rounded border border-border-custom hover:bg-neutral-50 text-text-primary transition-all cursor-pointer"
+                >
+                  {lang === "en" ? "Cancel" : "रद्द करें"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                  className="flex-1 py-2 text-[10px] uppercase font-bold tracking-wider rounded bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <span>{lang === "en" ? "Delete" : "हटाएं"}</span>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

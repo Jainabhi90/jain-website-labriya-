@@ -116,7 +116,9 @@ This document defines the REST API layer maps representing CRUD database actions
   ```json
   {
     "full_name": "Devendra Shah",
-    "city": "Dhar"
+    "city": "Dhar",
+    "mobile": "+919876543210",
+    "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
   }
   ```
 - **Response**:
@@ -125,9 +127,18 @@ This document defines the REST API layer maps representing CRUD database actions
     "id": "profile_uuid",
     "full_name": "Devendra Shah",
     "city": "Dhar",
+    "mobile": "+919876543210",
+    "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
     "updated_at": "2026-07-16T11:15:00Z"
   }
   ```
+
+### Delete Secondary Family Profile
+- **Endpoint**: `/rest/v1/profiles?id=eq.{profile_id}&member_number=eq.2`
+- **Method**: `DELETE`
+- **Authentication Required**: Yes (Bearer JWT)
+- **Response**:
+  `204 No Content` on successful deletion.
 
 ---
 

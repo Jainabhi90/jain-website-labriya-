@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shree Labriya Jain Chaturmas Portal
 
-## Getting Started
+Welcome to the official repository of the **Labriya Chaturmas Portal**, a modern digital platform designed for the Shree Labriya Jain Shwetambar Mandir. This portal connects devotees with daily spiritual schedules, lunar Panchang coordinates, community updates, calendar-exported events, waitlist notifications, direct tax-exempt donation reporting, and a family account system, along with an administrative console to manage temple operations.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ⚡ Tech Stack
+
+- **Frontend Framework**: Next.js 15 (App Router, Turbopack)
+- **Programming Language**: JavaScript (ES6+, JSX)
+- **Styling Engine**: Tailwind CSS (v4)
+- **Backend-as-a-Service**: Supabase (Database, Auth, Row Level Security)
+- **Database**: PostgreSQL (relational storage, schema constraints)
+- **Hosting & Deployment**: Vercel
+
+---
+
+## 📂 Folder Structure
+
+```text
+jain-website-labriya/
+├── docs/                      # Architectural & API Engineering Documentation
+│   ├── README.md              # Project Overview
+│   ├── ARCHITECTURE.md        # Technical System Design
+│   ├── DATABASE.md            # Schema, Relations, & Security Policies
+│   ├── FEATURES.md            # Detailed Feature Specifications
+│   ├── ROADMAP.md             # Project Release Phases
+│   ├── API.md                 # Supabase RPC & Client Endpoint Specs
+│   ├── CONTRIBUTING.md        # Contribution & Code Quality Guidelines
+│   └── CHANGELOG.md           # Version Releases
+├── public/                    # Static Assets (Images, Icons, Media)
+├── src/
+│   ├── app/                   # App Router Pages & Global Layouts
+│   │   ├── admin/             # Temple Admin Console
+│   │   ├── complete-profile/  # Profile Onboarding Form
+│   │   ├── dashboard/         # Devotee Vow Tracker & Portal
+│   │   ├── donate/            # Donation & 80G Verification Desk
+│   │   ├── events/            # Events Registry
+│   │   ├── login/             # Google Sign-In Page
+│   │   ├── profile-select/    # Family Member Selector (Member 1 / 2)
+│   │   ├── panchang/          # Lunar Calendar & Choghadiyas
+│   │   ├── layout.jsx         # Root Layout
+│   │   └── page.jsx           # Main Landing Page
+│   ├── components/            # Reusable Presentational UI Components
+│   ├── context/               # React Context Providers
+│   │   └── AuthContext.jsx    # Auth, Profile, and Active Session Provider
+│   ├── hooks/                 # Custom React Hooks
+│   │   └── useProfile.js      # Active Profile Helper Hook
+│   ├── lib/                   # Config Clients & SDK Initializations
+│   │   ├── supabase.js        # Supabase Client Singleton
+│   │   └── auth-utils.js      # Onboarding Validation Helpers
+│   └── services/              # Business Logic & Database Adapters
+│       ├── db.js              # Database Access Service Layer
+│       ├── profileService.js  # Supabase Profile Database Manager
+│       └── translations.js    # English/Hindi Translation Dictionary
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 How to Run
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
+- Node.js (v18.x or higher)
+- npm (v9.x or higher)
 
-## Learn More
+### Installation
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   cd jain-website-labriya-
+   ```
+2. Install the node dependencies:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Running Locally
+1. Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+   ```
+2. Launch the local development server:
+   ```bash
+   npm run dev
+   ```
+3. Open `http://localhost:3000` in your web browser.

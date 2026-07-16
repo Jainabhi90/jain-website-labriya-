@@ -4,6 +4,22 @@ All notable changes to the **Labriya Chaturmas Portal** project will be document
 
 ---
 
+## [1.1.0] - 2026-07-16
+
+### Added
+- **Profile Deletion Flow**: Implemented profile deletion API (`profileService.deleteSecondaryProfile`) restricted strictly to the secondary profile (member number 2). Added a trash bin button on the card layout that triggers a confirmation modal dialog before confirming deletion.
+- **Switch Profile Fallback**: Configured deletion logic to fallback the context active profile to the primary devotee profile (`member_number = 1`) immediately after secondary member deletion.
+- **Devotee Phone Updating**: Added a Mobile Number input to the edit devotee settings panel, mapping values cleanly between camelCase properties and snake_case PostgreSQL schema columns.
+- **Direct Add Navigation Checks**: Added mount parameters verification inside `/profile-select` checking for `?add=true` to automatically pop up the devotee creation form on direct navigation from the dashboard.
+
+### Removed
+- **Query Parameter Redundant Checks**: Deleted duplicate layout redirects, routing devotee selects cleanly.
+
+### Fixed
+- **Mobile Prefix Norms**: Patched state sets to strip the country code (`+91`) during form fields hydration, ensuring that the 10-digit format validators parse length cleanly without leaking prefix offsets.
+
+---
+
 ## [1.0.0] - 2026-07-16
 
 ### Added
@@ -18,7 +34,18 @@ All notable changes to the **Labriya Chaturmas Portal** project will be document
 ### Removed
 - **Phone OTP SMS authentication**: Deleted SMS forms, timers, inputs, context triggers, and configuration variables completely.
 
-### Fixed & Refactored (UX Redesign)
-- **Inline Card Transformation UX**: Replaced the URL parameter-based `?add=true` workflow with a high-fidelity inline card transformation. When selected, the "Add Family Member" card smoothly morphs into the registration form via spring animations without moving the primary card or performing route/page changes.
-- **Client Duplicate Phone Guard**: Added local checks to immediately alert if the user attempts to reuse a phone number already registered to their family account.
-- **Simplified Selection Routing**: Deleted URL `searchParams` parsing, state handlers (`isAddMode`), and redundant dashboard redirects from the selection layout, making the component lightweight.
+---
+
+## [0.1.0] - 2026-07-12
+
+### Added
+- **Project Initialized**: Set up the Next.js 15 template using the App Router.
+- **Supabase Connected**: Created the SDK initialization module in [src/lib/supabase.js](file:///src/lib/supabase.js) using environment variables.
+- **Engineering Documentation**: Created the standard repository manuals:
+  - `README.md` for project introduction and instructions.
+  - `ARCHITECTURE.md` detailing high-level diagrams, layout choices, and standards.
+  - `DATABASE.md` mapping schema configurations, foreign keys, and RLS tables.
+  - `FEATURES.md` outlining functional blocks.
+  - `ROADMAP.md` setting up 12 development milestones.
+  - `API.md` defining HTTP REST queries.
+  - `CONTRIBUTING.md` setting branch, coding, and pull request guidelines.

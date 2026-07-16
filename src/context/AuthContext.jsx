@@ -16,6 +16,7 @@ const AuthContext = createContext({
   logout: async () => {},
   selectProfile: async () => {},
   createSecondaryProfile: async () => {},
+  deleteSecondaryProfile: async () => {},
   refreshProfile: async () => {},
   refreshSession: async () => {}
 });
@@ -103,6 +104,29 @@ export function AuthProvider({ children }) {
 
     return normalized;
   }, [user, profilesList, normalizeProfile, updateProfileState]);
+
+  // Delete secondary family profile (member_number = 2)
+  const deleteSecondaryProfile = useCallback(async (profileId) => {
+    if (!user) throw new Error("No active authenticated session found.");
+
+    await profileService.deleteSecondaryProfile(profileId);
+
+    // Refresh profiles list
+    const updatedList = await profileService.getUserProfiles(user.id);
+    setProfilesList(updatedList);
+
+    // If the currently active profile was deleted, switch back to the primary profile (member_number = 1)
+    if (profileRef.current?.id === profileId) {
+      const primary = updatedList.find((p) => p.member_number === 1);
+      if (primary) {
+        localStorage.setItem(`last_profile_id_${user.id}`, primary.id);
+        const normalized = normalizeProfile(primary);
+        updateProfileState(normalized);
+      } else {
+        updateProfileState(null);
+      }
+    }
+  }, [user, normalizeProfile, updateProfileState]);
 
   // Expose function to refresh user's profile details
   const refreshProfile = useCallback(async (profileIdToFetch) => {
@@ -348,6 +372,7 @@ export function AuthProvider({ children }) {
     logout,
     selectProfile,
     createSecondaryProfile,
+    deleteSecondaryProfile,
     refreshProfile,
     refreshSession
   };

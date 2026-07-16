@@ -77,6 +77,7 @@ export default function Dashboard() {
   const [editName, setEditName] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
+  const [editPhone, setEditPhone] = useState("");
 
   // Setup quote once on mount
   useEffect(() => {
@@ -90,6 +91,8 @@ export default function Dashboard() {
       setEditName(profile.fullName || profile.full_name || "");
       setEditCity(profile.city || "Labriya");
       setEditAvatar(profile.avatar || profile.avatar_url || "");
+      const rawMobile = profile.phone || profile.mobile || "";
+      setEditPhone(rawMobile.replace(/^\+91/, ""));
     }
   }, [profile]);
 
@@ -226,19 +229,30 @@ export default function Dashboard() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     if (!profile) return;
+
+    const trimmedPhone = editPhone.trim().replace(/\D/g, "");
+    if (trimmedPhone && trimmedPhone.length < 10) {
+      setStatusMessage("❌ Please enter a valid 10-digit mobile number.");
+      setTimeout(() => setStatusMessage(""), 4000);
+      return;
+    }
+    const formattedPhone = trimmedPhone ? `+91${trimmedPhone}` : null;
+
     try {
       // 1. Update in local storage fallback database for leaderboard compatibility
       await db.updateDevoteeProfile(profile.id, {
         fullName: editName,
         city: editCity,
-        avatar: editAvatar
+        avatar: editAvatar,
+        phone: formattedPhone
       });
 
       // 2. Persist profile edits ONLY through Supabase
       await profileService.updateProfile(profile.id, {
         fullName: editName,
         city: editCity,
-        avatar: editAvatar
+        avatar: editAvatar,
+        phone: formattedPhone
       });
 
       // 3. Refresh context profile details
@@ -248,7 +262,12 @@ export default function Dashboard() {
       setTimeout(() => setStatusMessage(""), 4000);
     } catch (err) {
       console.error(err);
-      setStatusMessage("❌ Failed to update profile details.");
+      if (err.message?.includes("unique_active_mobile") || err.code === "23505") {
+        setStatusMessage("❌ This phone number is already registered to another devotee.");
+      } else {
+        setStatusMessage("❌ Failed to update profile details.");
+      }
+      setTimeout(() => setStatusMessage(""), 4000);
     }
   };
 
@@ -444,7 +463,7 @@ export default function Dashboard() {
 
           {profilesList.length === 1 ? (
             <button
-              onClick={() => router.push("/profile-select")}
+              onClick={() => router.push("/profile-select?add=true")}
               className="px-4 py-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border border-neutral-200"
             >
               <UserPlus size={14} />
@@ -896,6 +915,21 @@ export default function Dashboard() {
                     required
                     className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium"
                   />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-text-secondary uppercase font-bold">Mobile Number (Optional)</label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-xs text-text-secondary font-semibold select-none">+91</span>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ""))}
+                      className="w-full pl-10 pr-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium"
+                      placeholder="10-digit number"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-2.5">
