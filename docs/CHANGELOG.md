@@ -4,6 +4,21 @@ All notable changes to the **Labriya Chaturmas Portal** project will be document
 
 ---
 
+## [1.3.0] - 2026-07-16
+
+### Added
+- **Unified Mobile Sticky Headers**: Introduced a sticky mobile top navigation bar containing the temple brand and language switch toggle🌐. This prevents layout overlaps with the bottom navigation panel.
+- **Admin Dashboards Consolidation**: Implemented full CRUD dashboards inside the secure Admin Console for devotee accounts, check-in logs approvals, temple configurations settings, schedules, announcements, panchang, events, and donation receipts.
+- **Worship Timetable CRUD**: Extended the schedules editor to support adding new activities and deleting existing timetable rows with confirmation popups.
+- **Devotee Approvals System**: Added list verification desks allowing administrators to approve or reject devotee daily check-ins, linking directly to the devotees' approved points.
+- **Schedules RLS Policies**: Added the migration script `005_admin_controls.sql` enabling RLS on schedules and mapping SELECT/manage rules to verified admins.
+
+### Fixed
+- **Mobile Overlaps**: Resolved bottom navigation overlaps on smaller viewports (320px - 430px) by removing floating buttons and restructuring mobile layouts.
+- **Admin Panel Mock Decoupling**: Connected all administrative actions (approvals, config adjustments, notices posting, event creators) directly to Supabase PostgREST endpoints.
+
+---
+
 ## [1.2.0] - 2026-07-16
 
 ### Added

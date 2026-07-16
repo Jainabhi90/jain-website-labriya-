@@ -68,4 +68,14 @@ This document catalogs the screens, components, user flows, and business rules i
 - **Voucher Printer**: Outputs 80G tax receipt PDFs.
 
 ### 9. Temple Administrative Console
-- **Dashboard Desk**: Administrative desk to manage schedules, notices, panchang coordinates, and verify donations.
+A secure panel (protected by RLS and Google OAuth checks) allowing temple administrators to oversee operations:
+-   **Analytics Dashboard**: Displays real-time metrics for total devotee profiles, points logs, audit tallies, and Section 80G donations value.
+-   **Check-in Approvals Panel**: Allows the admin to approve or reject devotee daily sadhana vow checklists. Points only credit upon log approval. Includes a bulk "Approve All Pending" command.
+-   **Devotee Accounts Viewer**: Lists all registered devotees, streaks, and points, with profile deletion commands (member 2) and filters.
+-   **Worship Timetable Editor**: Full CRUD (Create, Read, Update, Delete) dashboard to add, reorder, modify, or delete morning and evening schedules.
+-   **Notices & Bulletins**: Interface to publish or de-activate notice feeds.
+-   **Panchang Manager**: Form fields to modify daily Tithi metadata, paksha, sunrise/sunset, and fast recommendations.
+-   **Event Organizer**: Tool to launch spiritual events and view devotee waitlists.
+-   **Donation Audit Desk**: Approves filed UPI transfer transaction IDs to verify receipts.
+-   **Sadhana Vows Configurator**: Interface to configure point values (weights) and categories for spiritual vows, with devotee CSV reports downloader.
+-   **Settings Console**: Panel to modify bank credentials, contact details, and address configurations.

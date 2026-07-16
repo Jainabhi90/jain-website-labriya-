@@ -84,6 +84,17 @@ Devotional milestones unlocked by devotees.
 
 ---
 
+### 5. `public.schedules`
+Morning/Evening daily worship timetable templates.
+- **Columns**:
+  - `id` (UUID, Primary Key, Default: `gen_random_uuid()`)
+  - `time` (VARCHAR, Not Null)
+  - `activity` (VARCHAR, Not Null)
+  - `session` (VARCHAR, Not Null)
+  - `order_num` (INTEGER, Default: `10`)
+
+---
+
 ## 🔐 Security (Row-Level Security)
 
 ### Profiles Table Policies
@@ -100,6 +111,10 @@ Devotional milestones unlocked by devotees.
 ### Profile Badges Table Policies
 - **Select**: Viewable by everyone (`USING (true)`).
 - **Insert**: Allowed if profile is owned by user (`profiles.user_id = auth.uid()`).
+
+### Timetable Schedules Table Policies
+- **Select**: Viewable by everyone (`USING (true)`).
+- **Insert/Update/Delete**: Restructured via [005_admin_controls.sql](file:///supabase/migrations/005_admin_controls.sql) to check admin authorization (`public.is_admin(auth.uid())`).
 
 ---
 

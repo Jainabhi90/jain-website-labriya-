@@ -1,6 +1,6 @@
 # Shree Labriya Jain Chaturmas Portal
 
-Welcome to the official repository of the **Labriya Chaturmas Portal**, a modern digital platform designed for the Shree Labriya Jain Shwetambar Mandir. This portal connects devotees with daily spiritual schedules, lunar Panchang coordinates, community updates, calendar-exported events, waitlist notifications, direct tax-exempt donation reporting, and a family account system, along with an administrative console to manage temple operations.
+Welcome to the official repository of the **Labriya Chaturmas Portal**, a digital platform designed for the Shree Labriya Jain Shwetambar Mandir. This portal connects devotees with daily spiritual schedules, lunar Panchang coordinates, community updates, calendar-exported events, waitlist notifications, direct tax-exempt donation reporting, and a family account system, along with an administrative console to manage temple operations.
 
 ---
 
@@ -34,7 +34,8 @@ jain-website-labriya/
 │       ├── 001_initial_schema.sql
 │       ├── 002_add_profile_complete_fields.sql
 │       ├── 003_family_accounts.sql
-│       └── 004_sadhana_tracker.sql  # Streaks, Points, and Badges Triggers
+│       ├── 004_sadhana_tracker.sql  # Streaks, Points, and Badges Triggers
+│       └── 005_admin_controls.sql   # Schedules RLS & secure admin rules
 ├── src/
 │   ├── app/                   # App Router Pages & Global Layouts
 │   │   ├── admin/             # Temple Admin Console

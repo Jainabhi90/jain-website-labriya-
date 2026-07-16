@@ -22,7 +22,7 @@ This document defines the REST API layer maps representing CRUD database actions
 
 ---
 
-## 👤 Profiles
+## 👤 Devotee Profiles
 
 ### Query User's Family Profiles
 - **Endpoint**: `/rest/v1/profiles?user_id=eq.{user_id}&order=member_number.asc`
@@ -49,40 +49,65 @@ This document defines the REST API layer maps representing CRUD database actions
   ]
   ```
 
+### Delete Devotee Account (Admin Only)
+- **Endpoint**: `/rest/v1/profiles?id=eq.{profile_uuid}`
+- **Method**: `DELETE`
+- **Authentication Required**: Yes (Admin only)
+- **Response**:
+  `204 No Content`
+
 ---
 
-## 📅 Sadhana Activities
+## 📅 Worship Schedules (Timetables)
 
-### Query Active Sadhana Activities
-- **Endpoint**: `/rest/v1/activities?active=eq.true&order=display_order.asc`
+### Query Timetables
+- **Endpoint**: `/rest/v1/schedules?order=order_num.asc`
 - **Method**: `GET`
 - **Authentication Required**: No
 - **Response**:
   ```json
   [
     {
-      "id": "act_upvas_uuid",
-      "name": "Upvas",
-      "description": "Complete fasting for 24 hours.",
-      "points": 10,
-      "category": "Fasting",
-      "icon": "utensils-crossed",
-      "display_order": 10,
-      "difficulty": "Hard",
-      "estimated_duration_minutes": 1440,
-      "active": true
+      "id": "schedule_uuid",
+      "time": "06:30 AM",
+      "activity": "Mangal Aarti",
+      "session": "Morning",
+      "order_num": 10
     }
   ]
   ```
+
+### Create Schedule (Admin Only)
+- **Endpoint**: `/rest/v1/schedules`
+- **Method**: `POST`
+- **Authentication Required**: Yes (Admin only)
+- **Request**:
+  ```json
+  {
+    "time": "07:30 PM",
+    "activity": "Sandhya Aarti",
+    "session": "Evening",
+    "order_num": 50
+  }
+  ```
+- **Response**:
+  `201 Created`
+
+### Delete Schedule (Admin Only)
+- **Endpoint**: `/rest/v1/schedules?id=eq.{schedule_uuid}`
+- **Method**: `DELETE`
+- **Authentication Required**: Yes (Admin only)
+- **Response**:
+  `204 No Content`
 
 ---
 
 ## 📝 User Activities (Daily Logs)
 
-### Query Logs for Active Profile
-- **Endpoint**: `/rest/v1/user_activities?profile_id=eq.{profile_uuid}&select=id,activity_date,points_awarded,status,activities(id,name,category,points)&order=activity_date.desc`
+### Query Logs for Admin Approvals
+- **Endpoint**: `/rest/v1/user_activities?select=id,activity_date,points_awarded,status,created_at,profiles(id,full_name,mobile),activities(id,name,category)&order=created_at.desc`
 - **Method**: `GET`
-- **Authentication Required**: Yes (Bearer JWT)
+- **Authentication Required**: Yes (Admin only)
 - **Response**:
   ```json
   [
@@ -91,67 +116,67 @@ This document defines the REST API layer maps representing CRUD database actions
       "activity_date": "2026-07-16",
       "points_awarded": 10,
       "status": "Pending",
+      "created_at": "2026-07-16T12:00:00Z",
+      "profiles": {
+        "id": "profile_uuid",
+        "full_name": "Devotee Name",
+        "mobile": "+919876543210"
+      },
       "activities": {
         "id": "act_upvas_uuid",
         "name": "Upvas",
-        "category": "Fasting",
-        "points": 10
+        "category": "Fasting"
       }
     }
   ]
   ```
 
-### Batch Submit Daily Check-In
-- **Endpoint**: `/rest/v1/user_activities`
-- **Method**: `POST`
-- **Authentication Required**: Yes (Bearer JWT)
+### Approve Devotee Check-In (Admin Only)
+- **Endpoint**: `/rest/v1/user_activities?id=eq.{log_uuid}`
+- **Method**: `PATCH`
+- **Authentication Required**: Yes (Admin only)
 - **Request**:
   ```json
-  [
-    {
-      "profile_id": "profile_uuid",
-      "activity_id": "act_upvas_uuid",
-      "activity_date": "2026-07-16",
-      "points_awarded": 10,
-      "status": "Pending",
-      "submission_source": "Website"
-    },
-    {
-      "profile_id": "profile_uuid",
-      "activity_id": "act_samayik_uuid",
-      "activity_date": "2026-07-16",
-      "points_awarded": 3,
-      "status": "Pending",
-      "submission_source": "Website"
-    }
-  ]
+  {
+    "status": "Approved"
+  }
   ```
 - **Response**:
-  `201 Created`
-
-### Delete Pending Daily Log
-- **Endpoint**: `/rest/v1/user_activities?profile_id=eq.{profile_uuid}&activity_date=eq.2026-07-16`
-- **Method**: `DELETE`
-- **Authentication Required**: Yes (Bearer JWT) (Guarded by RLS to only allow deleting pending submissions)
-- **Response**:
-  `204 No Content`
+  `200 OK`
 
 ---
 
-## 🏅 Profile Badges (Milestones)
+## ⚙️ Settings (Temple Configurations)
 
-### Query Unlocked Badges for Profile
-- **Endpoint**: `/rest/v1/profile_badges?profile_id=eq.{profile_uuid}`
+### Query Settings
+- **Endpoint**: `/rest/v1/settings?limit=1`
 - **Method**: `GET`
 - **Authentication Required**: No
 - **Response**:
   ```json
-  [
-    {
-      "id": "badge_record_uuid",
-      "profile_id": "profile_uuid",
-      "badge_id": "badge_first_checkin",
-      "unlocked_at": "2026-07-16T12:00:00Z"
-    }
-  ]
+  {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "temple_name": "Shree Labriya Jain Shwetambar Mandir",
+    "upi_id": "shreelabriyatrust@okaxis",
+    "bank_name": "State Bank of India",
+    "account_holder": "Shree Labriya Jain Mandir Trust",
+    "account_number": "38472948194",
+    "ifsc": "SBIN0030129",
+    "contact_number": "+91 98765 43210",
+    "temple_address": "Mandir Marg, Labriya, Dhar District, Madhya Pradesh"
+  }
   ```
+
+### Update Temple Settings (Admin Only)
+- **Endpoint**: `/rest/v1/settings?id=eq.00000000-0000-0000-0000-000000000000`
+- **Method**: `PATCH`
+- **Authentication Required**: Yes (Admin only)
+- **Request**:
+  ```json
+  {
+    "temple_name": "Shree Labriya Jain Shwetambar Mandir (Dhar)",
+    "upi_id": "shreelabriyatrust@okaxis"
+  }
+  ```
+- **Response**:
+  `200 OK`

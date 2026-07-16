@@ -1035,13 +1035,14 @@ export const db = {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, city, total_points, current_streak, avatar_url")
+        .select("*")
         .order("total_points", { ascending: false });
       
       if (!error && data) {
         return data.map(p => ({
           id: p.id,
           fullName: p.full_name,
+          phone: p.mobile,
           city: p.city,
           totalPoints: p.total_points,
           streak: p.current_streak,
@@ -1053,5 +1054,300 @@ export const db = {
     const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
     return Object.values(profiles).sort((a, b) => b.totalPoints - a.totalPoints);
   },
+
+  // --- Admin Console Extended Operations ---
+  async getAllProfiles() {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("full_name", { ascending: true });
+      if (!error && data) {
+        return data.map(p => ({
+          id: p.id,
+          fullName: p.full_name,
+          phone: p.mobile,
+          city: p.city,
+          role: p.role,
+          totalPoints: p.total_points,
+          streak: p.current_streak,
+          longestStreak: p.longest_streak,
+          avatar: p.avatar_url,
+          memberNumber: p.member_number,
+          createdAt: p.created_at
+        }));
+      }
+    }
+    const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
+    return Object.values(profiles);
+  },
+
+  async deleteProfileAdmin(id) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", id);
+      if (!error) return true;
+      throw error;
+    }
+    const profiles = getLocalItem("temp_sadhana_profiles", DEFAULT_DEVOTEE_PROFILES);
+    if (profiles[id]) {
+      delete profiles[id];
+      setLocalItem("temp_sadhana_profiles", profiles);
+      return true;
+    }
+    return false;
+  },
+
+  async getLogsAdmin(filterStatus) {
+    if (isSupabaseConfigured && supabase) {
+      let query = supabase
+        .from("user_activities")
+        .select(`
+          id,
+          activity_date,
+          points_awarded,
+          status,
+          created_at,
+          profiles (
+            id,
+            full_name,
+            mobile
+          ),
+          activities (
+            id,
+            name,
+            category
+          )
+        `)
+        .order("created_at", { ascending: false });
+      
+      if (filterStatus) {
+        query = query.eq("status", filterStatus);
+      }
+
+      const { data, error } = await query;
+      if (!error && data) {
+        return data.map(log => ({
+          id: log.id,
+          dateStr: log.activity_date,
+          points: log.points_awarded,
+          status: log.status,
+          createdAt: log.created_at,
+          devoteeName: log.profiles?.full_name || "Unknown",
+          devoteePhone: log.profiles?.mobile || "Unknown",
+          activityName: log.activities?.name || "Unknown",
+          activityCategory: log.activities?.category || "Unknown"
+        }));
+      }
+    }
+    return [];
+  },
+
+  async updateLogStatus(id, status) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("user_activities")
+        .update({ status })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return null;
+  },
+
+  async approveAllPendingLogs() {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("user_activities")
+        .update({ status: "Approved" })
+        .eq("status", "Pending");
+      if (error) throw error;
+      return true;
+    }
+    return false;
+  },
+
+  async getSettings() {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("settings")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+      if (!error && data) {
+        return {
+          id: data.id,
+          templeName: data.temple_name,
+          templeLogo: data.temple_logo,
+          heroBanner: data.hero_banner,
+          email: data.email,
+          aboutText: data.about_text,
+          trustRegistrationNumber: data.trust_registration_number,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          donationQr: data.donation_qr,
+          upiId: data.upi_id,
+          bankName: data.bank_name,
+          accountHolder: data.account_holder,
+          accountNumber: data.account_number,
+          ifsc: data.ifsc,
+          contactNumber: data.contact_number,
+          templeAddress: data.temple_address,
+          facebook: data.facebook,
+          instagram: data.instagram,
+          youtube: data.youtube,
+          website: data.website
+        };
+      }
+    }
+    return getLocalItem("temp_temple_settings", {
+      templeName: "Shree Labriya Jain Shwetambar Mandir",
+      upiId: "shreelabriyatrust@okaxis",
+      bankName: "State Bank of India",
+      accountHolder: "Shree Labriya Jain Mandir Trust",
+      accountNumber: "38472948194",
+      ifsc: "SBIN0030129",
+      contactNumber: "+91 98765 43210",
+      templeAddress: "Mandir Marg, Labriya, Dhar District, Madhya Pradesh - 454111"
+    });
+  },
+
+  async updateSettings(updates) {
+    if (isSupabaseConfigured && supabase) {
+      const dbUpdates = {
+        temple_name: updates.templeName,
+        temple_logo: updates.templeLogo,
+        hero_banner: updates.heroBanner,
+        email: updates.email,
+        about_text: updates.aboutText,
+        trust_registration_number: updates.trustRegistrationNumber,
+        latitude: updates.latitude,
+        longitude: updates.longitude,
+        donation_qr: updates.donationQr,
+        upi_id: updates.upiId,
+        bank_name: updates.bankName,
+        account_holder: updates.accountHolder,
+        account_number: updates.accountNumber,
+        ifsc: updates.ifsc,
+        contact_number: updates.contactNumber,
+        temple_address: updates.templeAddress,
+        facebook: updates.facebook,
+        instagram: updates.instagram,
+        youtube: updates.youtube,
+        website: updates.website,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from("settings")
+        .update(dbUpdates)
+        .eq("id", "00000000-0000-0000-0000-000000000000")
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    
+    const local = getLocalItem("temp_temple_settings", {});
+    const updated = { ...local, ...updates };
+    setLocalItem("temp_temple_settings", updated);
+    return updated;
+  },
+
+  async createSchedule(schedule) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("schedules")
+        .insert({
+          time: schedule.time,
+          activity: schedule.activity,
+          session: schedule.session,
+          order_num: parseInt(schedule.orderNum) || 0
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return {
+        id: data.id,
+        time: data.time,
+        activity: data.activity,
+        session: data.session,
+        orderNum: data.order_num
+      };
+    }
+    const items = getLocalItem("temp_schedules", DEFAULT_SCHEDULE);
+    const newSched = {
+      ...schedule,
+      id: "sched_" + Math.random().toString(36).substr(2, 9),
+      orderNum: parseInt(schedule.orderNum) || 0
+    };
+    items.push(newSched);
+    setLocalItem("temp_schedules", items);
+    return newSched;
+  },
+
+  async deleteSchedule(id) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("schedules")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return true;
+    }
+    const items = getLocalItem("temp_schedules", DEFAULT_SCHEDULE);
+    const filtered = items.filter(s => s.id !== id);
+    setLocalItem("temp_schedules", filtered);
+    return true;
+  },
+
+  async getAdminAnalytics() {
+    if (isSupabaseConfigured && supabase) {
+      const { count: devoteesCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      const { data: pointsSumData } = await supabase
+        .from("profiles")
+        .select("total_points");
+      const totalPoints = pointsSumData?.reduce((sum, p) => sum + (p.total_points || 0), 0) || 0;
+
+      const { count: logsCount } = await supabase
+        .from("user_activities")
+        .select("*", { count: "exact", head: true });
+
+      const { count: approvedCount } = await supabase
+        .from("user_activities")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "Approved");
+
+      const { data: donationsData } = await supabase
+        .from("donations")
+        .select("amount, verified");
+      const totalDonations = donationsData?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0;
+      const verifiedDonations = donationsData?.filter(d => d.verified).reduce((sum, d) => sum + (d.amount || 0), 0) || 0;
+
+      return {
+        devoteesCount: devoteesCount || 0,
+        totalPoints,
+        logsCount: logsCount || 0,
+        approvedLogsCount: approvedCount || 0,
+        totalDonations,
+        verifiedDonations
+      };
+    }
+    return {
+      devoteesCount: 15,
+      totalPoints: 850,
+      logsCount: 42,
+      approvedLogsCount: 30,
+      totalDonations: 125000,
+      verifiedDonations: 95000
+    };
+  }
 
 };

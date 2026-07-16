@@ -14,7 +14,7 @@ graph TD
 
     %% Next.js Frontend Framework
     subgraph Frontend [Next.js 15 Application - Client-Side App Router]
-        nav[Navigation Bar / Mobile Bottom Nav]
+        nav[Navigation Bar / Mobile Sticky Top & Bottom Nav]
         home[Homepage & Schedules]
         panch[Panchang Calendar]
         evt[Events Registry & ICS Export]
@@ -23,7 +23,7 @@ graph TD
         completeProf[Complete Profile Onboarding]
         dbd[Devotee Dashboard / Sadhana Vows]
         adm[Admin Management Console]
-        translation[Client-Side Hindi/English Dictionary]
+        translation[Client-Side English/Hindi Dictionary]
     end
 
     %% SDK Singleton
@@ -77,22 +77,19 @@ graph TD
 
 ### 1. Frontend Architecture
 The portal utilizes **Next.js 15 App Router** for static rendering and client-side page hydration:
-- **Routing**: Static paths are pre-rendered on the server to optimize loading speeds. Redirection checks intercept route changes inside `/dashboard` and `/admin` to enforce authentication and active profile resolution.
-- **Client Hydration**: Dynamic components (like countdown timers and panchang pickers) are protected against hydration mismatches using state hooks.
-- **Localization**: Localized translations are stored client-side in [translations.js](file:///src/services/translations.js) and synced via global event listeners.
-- **Micro-Animations**: Framer Motion handles transition and layout animations. In the profile selector, card slots utilize spring layouts to transform smoothly into registration forms inline without layout flashes or route changes.
+- **Responsive Layout Design**: The desktop header handles navigation link grids. On mobile screens, routing matches a sticky bottom bar while the brand header and globe language switcher live inside a mobile sticky top bar, preventing overlap bugs.
+- **Client-Side Localization**: Translations are centralized in [translations.js](file:///src/services/translations.js). State mutations synchronize across windows via global event triggers, persisting choices in client localStorage.
+- **Framer Motion Layouts**: Spring-loaded animations drive grid and popup cards, reducing layout shifts.
 
 ### 2. Backend Architecture
 The backend is serverless, relying on the **Supabase platform** to expose CRUD database operations:
-- **Client Wrapper**: A single instantiated Supabase SDK client ([supabase.js](file:///src/lib/supabase.js)) manages network sessions.
-- **API Gateway**: PostgREST maps all database schemas directly to HTTP query routes, removing the need for intermediary API controllers.
-- **Authentication**: Managed via Google Sign-In OAuth. Phone SMS OTP authentication is completely removed.
+- **API PostgREST gateway**: Generates HTTP CRUD endpoints dynamically from relation entities without writing manual controllers.
+- **Client Wrapper**: Exposes unified data access via [db.js](file:///src/services/db.js).
 
 ### 3. Database Engine
 The database is a managed **PostgreSQL** instance:
-- **Relational Integrity**: Foreign key constraints enforce data consistency between tables. Vow logs, events, and announcements reference profile UUIDs in the `profiles` table.
-- **Security Control**: Row-Level Security (RLS) is enabled globally. Policies restrict users from accessing or modifying profiles owned by other user accounts.
-- **Triggers & Functions**: Server-side calculations run on database triggers for automatic points tallying, gaps-and-islands streak counters, and profile badge allocations.
+- **Triggers Calculations**: Streaks calculations and points sums execute automatically on tables inserts/updates.
+- **Row-Level Security (RLS)**: Policies are enforced on all tables (including schedules, profiles, and logs) to verify that devotees can only read or edit their own profile items. Admins hold overrides.
 
 ---
 

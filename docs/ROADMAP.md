@@ -11,8 +11,8 @@ This document outlines the milestones, objectives, checklists, and estimated tim
 | Phase 1 | Google Auth & Family Accounts | Implement single authentication provider and two-profile family limits | Completed |
 | Phase 2 | Family Account Management | Support deletion, editing, mobile validation, and query-parameter-based entry modes | Completed |
 | Phase 3 | Sadhana Tracker | Daily vow log sheet, streak triggers, and automatic badge unlocks | Completed |
-| Phase 4 | Database Design | Schema updates, constraints, triggers, and migrations | Completed |
-| Phase 5 | Profiles & Selection | Profile select screen, onboarding logic, active state context | Completed |
+| Phase 4 | Admin Portal & Polish | Fully operational dashboards, RLS policies, mobile navigation bars, and translations | Completed |
+| Phase 5 | Profiles & Onboarding | Complete profile onboarding forms and selector checks | Completed |
 | Phase 6 | Events Waitlist | Upcoming event waitlist query connections | Completed |
 | Phase 7 | Announcements | Notice board updates & tag management | Completed |
 | Phase 8 | Donations Audit | Transaction logging & 80G PDF receipt outputs | Completed |
@@ -26,7 +26,6 @@ This document outlines the milestones, objectives, checklists, and estimated tim
 
 ### Phase 1: Google Auth & Family Accounts (Completed)
 - **Objectives**: Convert the auth system into a production-ready setup by removing Phone OTP completely and implementing Google Sign-In as the single provider. Enforce a maximum of 2 family members per Google account. Redesign the user experience to use an inline animated registration form with no page-routing flashes or query parameter hooks.
-- **Deliverables**: Updated [login/page.jsx](file:///src/app/login/page.jsx), [AuthContext.jsx](file:///src/context/AuthContext.jsx), [useProfile.js](file:///src/hooks/useProfile.js).
 - **Checklist**:
   - [x] Remove Phone OTP verification UI, logic, and timers.
   - [x] Integrate Google Sign-In with auto-redirect options.
@@ -35,7 +34,6 @@ This document outlines the milestones, objectives, checklists, and estimated tim
 
 ### Phase 2: Family Account Management (Completed)
 - **Objectives**: Support editing devotee profile fields (including phone numbers with validations), deleting secondary profiles with confirmation modals, and handling direct `?add=true` navigation parameters.
-- **Deliverables**: Updated [profile-select/page.jsx](file:///src/app/profile-select/page.jsx), [dashboard/page.jsx](file:///src/app/dashboard/page.jsx), and [profileService.js](file:///src/services/profileService.js).
 - **Checklist**:
   - [x] Auto-display registration form if URL contains `?add=true`.
   - [x] Support profile edits for Name, City, Phone, and Avatar presets, guarding against invalid mobile formats and database duplicate conflicts.
@@ -44,7 +42,6 @@ This document outlines the milestones, objectives, checklists, and estimated tim
 
 ### Phase 3: Sadhana Tracker (Completed)
 - **Objectives**: Implement a completely database-driven devotee daily activity vow log system, with PL/pgSQL database trigger functions for points summation, consecutive check-in streaks calculation, and automated milestone badges unlocks.
-- **Deliverables**: Updated [db.js](file:///src/services/db.js), [dashboard/page.jsx](file:///src/app/dashboard/page.jsx), and migration [004_sadhana_tracker.sql](file:///supabase/migrations/004_sadhana_tracker.sql).
 - **Checklist**:
   - [x] Fetch active spiritual activities dynamically from `activities` table.
   - [x] Batch insert daily check-in routines into `user_activities` (storing profile_id, activity_id, and date).
@@ -54,54 +51,13 @@ This document outlines the milestones, objectives, checklists, and estimated tim
   - [x] Automatically unlock digital milestone badges inside `profile_badges` through PostgreSQL triggers.
   - [x] Add a detailed statistics dashboard grid displaying streaks, submissions, rates, and today's status.
 
-### Phase 4: Database Design (Completed)
-- **Objectives**: Set up SQL schemas, table keys, security policies, and indexes on Supabase.
-- **Deliverables**: [001_initial_schema.sql](file:///supabase/migrations/001_initial_schema.sql), [002_add_profile_complete_fields.sql](file:///supabase/migrations/002_add_profile_complete_fields.sql), and [003_family_accounts.sql](file:///supabase/migrations/003_family_accounts.sql).
+### Phase 4: Admin Portal, Localization, Mobile Optimization & Polish (Completed)
+- **Objectives**: Build fully operational administrative dashboards with real-time analytics, check-in log approvals, profile editors, schedules creators, and bank settings consoles. Move mobile language switcher switches to a sticky top navigation bar to prevent layout overlaps. Add translation frameworks and secure RLS controls on tables.
 - **Checklist**:
-  - [x] Decouple profiles from auth.users primary key.
-  - [x] Implement check constraints (`member_number IN (1, 2)`) and unique index (`UNIQUE(user_id, member_number)`).
-  - [x] Implement partial unique index `unique_active_mobile` for phone number validations across devotees.
-  - [x] Create helper `public.is_admin()` function and enable RLS policies.
-
-### Phase 5: Profiles & Selection (Completed)
-- **Objectives**: Support choosing family member profiles on login and adding secondary members dynamically.
-- **Deliverables**: [profile-select/page.jsx](file:///src/app/profile-select/page.jsx), [complete-profile/page.jsx](file:///src/app/complete-profile/page.jsx), and [profileService.js](file:///src/services/profileService.js).
-- **Checklist**:
-  - [x] Automatically direct users to dashboard if only 1 profile exists.
-  - [x] Show selection screen if two profiles exist, allowing profile switching.
-  - [x] Expose "Add Family Member" buttons on the dashboard when a user only has one profile.
-
-### Phase 6: Events Waitlist (Completed)
-- **Objectives**: Populate upcoming events list from database tables and manage subscriber waitlists.
-- **Deliverables**: Events query integrations.
-- **Checklist**:
-  - [x] Connect `/events` page to read from the `events` table.
-  - [x] Set up waitlist subscriptions database inserts.
-
-### Phase 7: Announcements (Completed)
-- **Objectives**: Connect the notices feed directly to Supabase.
-- **Deliverables**: Announcements list with priority tagging (Notices vs Program updates).
-- **Checklist**:
-  - [x] Connect homepage announcements to database.
-  - [x] Set up priority tag colors.
-
-### Phase 8: Donations Audit (Completed)
-- **Objectives**: Process and store transaction logs for Section 80G tax receipts.
-- **Deliverables**: Verification adapter.
-- **Checklist**:
-  - [x] Query receipts based on active profile phone/mobile numbers.
-  - [x] Support 80G print vouchers.
-
-### Phase 9: Admin Dashboard (Completed)
-- **Objectives**: Maintain temple configurations, panchang schedules, and verify donations.
-- **Deliverables**: Admin Console tab queries.
-- **Checklist**:
-  - [x] Connect schedule, panchang, events, and notices creators.
-  - [x] Set up donation audit desk verification actions.
-
-### Phase 10: System Testing (Completed)
-- **Objectives**: Verify security clearance and responsive boundaries.
-- **Deliverables**: Compile audits.
-- **Checklist**:
-  - [x] Validate RLS filters.
-  - [x] Verify production builds pack successfully with zero warnings/errors.
+  - [x] Replace all mock datasets in admin portal with live queries (analytics, logs, approvals, settings).
+  - [x] Add CRUD operations for timetables, announcements, events, and devotee accounts.
+  - [x] Implement confirmation dialogs for profile deletions, timetable removals, and notice deletions.
+  - [x] Add mobile sticky top navigation bar and migrate the globe language switcher inside it.
+  - [x] Set up translation structures supporting multilingual fallbacks (English, Hindi, and extensible schemas).
+  - [x] Enable RLS and add strict policies on the `schedules` table (`005_admin_controls.sql`).
+  - [x] Verify production builds pack successfully with zero linter errors/warnings.

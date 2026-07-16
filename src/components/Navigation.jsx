@@ -71,6 +71,34 @@ export default function Navigation() {
 
   return (
     <>
+      {/* MOBILE TOP NAVIGATION BAR */}
+      <header className="sticky top-0 z-50 w-full glass-panel border-b border-border-custom px-4 py-3 flex items-center justify-between md:hidden bg-white/80 backdrop-blur-md">
+        <Link href="/" className="flex items-center gap-1.5 group">
+          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-primary/20">
+            <span className="text-primary font-display font-bold text-sm">📿</span>
+          </div>
+          <div>
+            <h1 className="font-display font-semibold text-text-primary text-[10px] sm:text-xs tracking-wide leading-tight">
+              {t.shreeLabriyaMandir}
+            </h1>
+            <p className="text-[7px] text-text-secondary uppercase tracking-widest font-medium">
+              {lang === "en" ? "Chaturmas 2026" : "चातुर्मास २०२६"}
+            </p>
+          </div>
+        </Link>
+
+        {/* Language Toggle switcher */}
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={toggleLanguage}
+          className="px-2.5 py-1.5 rounded-custom-md border border-border-custom bg-white text-[9px] font-bold tracking-wider text-text-secondary hover:text-primary transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+          title="Change Language / भाषा बदलें"
+        >
+          <span>🌐</span>
+          <span>{lang === "en" ? "हिन्दी" : "ENG"}</span>
+        </motion.button>
+      </header>
+
       {/* DESKTOP STICKY NAVIGATION */}
       <header className="sticky top-0 z-50 w-full glass-panel border-b border-border-custom transition-all duration-300 hidden md:block">
         <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
@@ -220,18 +248,6 @@ export default function Navigation() {
           </span>
         </Link>
       </nav>
-
-      {/* Floating Language Toggle for Mobile */}
-      <div className="fixed bottom-24 right-4 z-40 md:hidden">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={toggleLanguage}
-          className="w-12 h-12 rounded-full glass-panel shadow-premium flex flex-col items-center justify-center text-[10px] font-bold text-primary border border-primary/20 cursor-pointer"
-        >
-          <span>🌐</span>
-          <span>{lang === "en" ? "हिन्दी" : "ENG"}</span>
-        </motion.button>
-      </div>
     </>
   );
 }
