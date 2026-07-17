@@ -26,12 +26,16 @@ import {
   X,
   TrendingUp,
   Bell,
-  Megaphone
+  Megaphone,
+  UserCircle,
+  HelpCircle,
+  Check
 } from "lucide-react";
 import { db } from "@/services/db";
 import { useAuth } from "@/context/AuthContext";
 import { profileService } from "@/services/profileService";
 import { sanitizeHTML } from "@/lib/sanitize";
+import confetti from "canvas-confetti";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BADGES_DEFINITIONS = {
@@ -83,21 +87,21 @@ function AnimatedCounter({ target, duration = 1000, suffix = "" }) {
 function StatusBadge({ status }) {
   if (status === "Approved") {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-500/20">
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-500/20">
         <CheckCircle2 size={10} /> Approved
       </span>
     );
   }
   if (status === "Rejected") {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-500/20">
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-500/20">
         <XCircle size={10} /> Rejected
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-500/20">
-      <Clock size={10} /> Pending Approval
+    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-500/20">
+      <Clock size={10} /> Pending
     </span>
   );
 }
@@ -111,58 +115,63 @@ function SuccessModal({ isOpen, onClose, pointsEarned, totalPoints, streak, date
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.85, opacity: 0, y: 20 }}
+            initial={{ scale: 0.9, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center relative overflow-hidden"
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="bg-white rounded-custom-lg shadow-premium p-7 max-w-sm w-full text-center relative border border-[#EA580C]/10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-orange-400 to-amber-500 rounded-t-2xl" />
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#EA580C]" />
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1 rounded-full text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-text-primary hover:bg-[#FCFBF7] transition-colors cursor-pointer"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
+            
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 15 }}
-              className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mx-auto mb-5 shadow-lg"
+              transition={{ delay: 0.1, type: "spring", stiffness: 450, damping: 15 }}
+              className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 border border-emerald-500/10 shadow-sm"
             >
-              <CheckCircle2 size={40} className="text-white" />
+              <CheckCircle2 size={32} />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <h3 className="font-display font-bold text-text-primary text-xl mb-1">Jai Jinendra! 🙏</h3>
-              <p className="text-xs text-text-secondary mb-6">Your Sadhana has been recorded for {date}</p>
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="p-3 rounded-custom-md bg-secondary/40 border border-primary/10">
-                  <div className="text-xl font-extrabold text-primary">+{pointsEarned}</div>
-                  <div className="text-[9px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Points Earned</div>
+
+            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+              <h3 className="font-display font-bold text-text-primary text-lg mb-0.5">Jai Jinendra! 🙏</h3>
+              <p className="text-[10px] text-text-secondary mb-5">Your Sadhana has been recorded for {date}</p>
+              
+              <div className="grid grid-cols-3 gap-2.5 mb-5">
+                <div className="p-2.5 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 text-center">
+                  <div className="text-sm font-extrabold text-[#EA580C]">+{pointsEarned}</div>
+                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Claimed</div>
                 </div>
-                <div className="p-3 rounded-custom-md bg-orange-50 border border-orange-200/50">
-                  <div className="text-xl font-extrabold text-orange-600">{totalPoints}</div>
-                  <div className="text-[9px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Total Points</div>
+                <div className="p-2.5 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 text-center">
+                  <div className="text-sm font-extrabold text-[#EA580C]">{totalPoints}</div>
+                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Total Pts</div>
                 </div>
-                <div className="p-3 rounded-custom-md bg-amber-50 border border-amber-200/50">
-                  <div className="text-xl font-extrabold text-amber-600">🔥 {streak}</div>
-                  <div className="text-[9px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Day Streak</div>
+                <div className="p-2.5 rounded-custom-md bg-[#FFF7ED] border border-[#EA580C]/10 text-center">
+                  <div className="text-sm font-extrabold text-[#EA580C]">🔥 {streak}</div>
+                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Streak</div>
                 </div>
               </div>
-              <div className="p-3 rounded-custom-md bg-blue-50 border border-blue-200/50 flex items-start gap-2 text-left mb-5">
-                <Clock size={14} className="text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-blue-700 leading-relaxed">
-                  Your submission is <strong>pending admin approval</strong>. Points will be officially confirmed after review.
+
+              <div className="p-3 rounded-custom-md bg-emerald-50 border border-emerald-500/10 flex items-start gap-2 text-left mb-5">
+                <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-[9.5px] text-[#4B5563] leading-relaxed">
+                  Your daily sadhana has been <strong>successfully submitted and confirmed</strong>! Your stats are updated instantly.
                 </p>
               </div>
+
               <button
                 onClick={onClose}
-                className="w-full py-2.5 rounded-custom-md bg-primary text-white text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-all cursor-pointer"
+                className="w-full py-2.5 rounded-custom-md bg-[#EA580C] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#EA580C]/90 transition-colors cursor-pointer"
               >
                 Continue Sadhana
               </button>
@@ -445,7 +454,7 @@ export default function Dashboard() {
       setNotifications(notifList);
       setUnreadNotifCount(notifList.filter(n => !n.read).length);
 
-      // Scroll to the status card smoothly
+      // Scroll to status card
       setTimeout(() => {
         const el = document.getElementById("submission-status-card");
         if (el) {
@@ -510,53 +519,58 @@ export default function Dashboard() {
     printWindow.document.close();
   };
 
-  // ── Loading State ─────────────────────────────────────────────────────────────
+  // ── Maintenance Mode ──
   if (maintenanceMode) {
     return (
-      <div className="max-w-md mx-auto my-20 p-8 bg-white border border-border-custom shadow-premium rounded-custom-lg text-center flex flex-col items-center gap-4">
-        <span className="text-4xl animate-pulse">🛠️</span>
-        <h2 className="font-display font-bold text-lg text-text-primary">Maintenance Mode Active</h2>
-        <p className="text-xs text-text-secondary leading-relaxed">
-          Shree Labriya Jain Shwetambar Mandir portal is currently undergoing scheduled database maintenance. 
-          Please check back in a few hours.
-        </p>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer hover:bg-primary/95"
-        >
-          Sign Out
-        </button>
+      <div className="w-full min-h-screen bg-[#FCFBF7] flex items-center justify-center px-4">
+        <div className="max-w-md w-full p-8 bg-white border border-[#EA580C]/10 shadow-premium rounded-custom-lg text-center flex flex-col items-center gap-4">
+          <span className="text-4xl animate-pulse">🛠️</span>
+          <h2 className="font-display font-bold text-lg text-text-primary">Maintenance Mode Active</h2>
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Shree Labriya Jain Shwetambar Mandir devotee portal is currently undergoing scheduled database maintenance. 
+            Please check back in a few hours.
+          </p>
+          <button
+            onClick={handleLogout}
+            className="w-full py-2.5 rounded bg-[#EA580C] text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer hover:bg-[#EA580C]/90"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Skeleton Loader ──
   if (isLoading || !user || !profile) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-16">
-        <div className="w-full bg-white border border-border-custom shadow-premium p-6 sm:p-8 rounded-custom-lg mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <SkeletonCard className="w-16 h-16 rounded-full" />
-            <div className="flex flex-col gap-2">
-              <SkeletonCard className="w-24 h-3" />
-              <SkeletonCard className="w-40 h-5" />
-              <SkeletonCard className="w-32 h-3" />
+      <div className="w-full min-h-screen bg-[#FCFBF7] pt-24 pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="w-full bg-white border border-[#EA580C]/5 shadow-premium p-6 sm:p-8 rounded-custom-lg mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5 w-full">
+              <SkeletonCard className="w-16 h-16 rounded-full" />
+              <div className="flex flex-col gap-2 w-1/3">
+                <SkeletonCard className="w-24 h-3.5" />
+                <SkeletonCard className="w-44 h-5" />
+                <SkeletonCard className="w-32 h-3" />
+              </div>
+            </div>
+            <div className="flex gap-3 shrink-0">
+              <SkeletonCard className="w-24 h-11 rounded-custom-md" />
+              <SkeletonCard className="w-24 h-11 rounded-custom-md" />
             </div>
           </div>
-          <div className="flex gap-4">
-            <SkeletonCard className="w-28 h-14 rounded-custom-md" />
-            <SkeletonCard className="w-28 h-14 rounded-custom-md" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-3 flex flex-col gap-2">
-            {[1,2,3,4,5].map(i => <SkeletonCard key={i} className="h-10 rounded-custom-md" />)}
-          </div>
-          <div className="lg:col-span-9 bg-white border border-border-custom shadow-premium p-6 rounded-custom-lg">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-              {[1,2,3,4,5,6].map(i => <SkeletonCard key={i} className="h-20 rounded-custom-md" />)}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
+              {[1,2,3,4,5].map(i => <SkeletonCard key={i} className="h-11 w-32 lg:w-full rounded-custom-md" />)}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {[1,2,3,4,5,6].map(i => <SkeletonCard key={i} className="h-16 rounded-custom-md" />)}
+            <div className="lg:col-span-9 bg-white border border-[#EA580C]/5 shadow-premium p-6 sm:p-8 rounded-custom-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                {[1,2,3,4,5,6].map(i => <SkeletonCard key={i} className="h-20 rounded-custom-md" />)}
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                {[1,2,3].map(i => <SkeletonCard key={i} className="h-14 rounded-custom-md" />)}
+              </div>
             </div>
           </div>
         </div>
@@ -568,8 +582,9 @@ export default function Dashboard() {
   const completionPercentage = Math.min(100, Math.round((totalSubmissions / 120) * 100));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 md:py-16">
-
+    <div className="w-full min-h-screen bg-[#FCFBF7] pt-24 pb-16">
+      
+      {/* Dynamic Vow Registration Success Confetti Modal */}
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
@@ -579,286 +594,323 @@ export default function Dashboard() {
         date={successData.date}
       />
 
-      {/* ── Header ── */}
-      <div className="w-full bg-white border border-border-custom shadow-premium p-6 sm:p-8 rounded-custom-lg mb-10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-full bg-secondary/30 -skew-x-12 pointer-events-none" />
-        <div className="flex flex-col sm:flex-row items-center gap-5 w-full md:w-auto text-center sm:text-left">
-          <img
-            src={profile.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"}
-            alt="Profile"
-            className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 bg-secondary"
-          />
-          <div>
-            <span className="text-[9px] uppercase tracking-widest font-bold text-primary px-2.5 py-0.5 rounded bg-secondary border border-primary/10">Jai Jinendra</span>
-            <h1 className="font-display font-semibold text-text-primary text-xl sm:text-2xl mt-1.5 leading-tight">{profile.fullName}</h1>
-            <p className="text-xs text-text-secondary mt-1 font-medium">
-              📍 {profile.city}{profile.phone ? ` • +91 ${profile.phone}` : ""}
-            </p>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 shrink-0 w-full md:w-auto border-t md:border-t-0 border-neutral-100 pt-4 md:pt-0">
-          <div className="flex items-center gap-3 bg-secondary/50 px-4 py-3 rounded-custom-md border border-primary/10">
-            <span className="text-xl">🪷</span>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Total Sadhana</span>
-              <span className="text-sm font-bold text-primary">{profile.totalPoints || 0} Points</span>
+        {/* 1. SACRED WELCOME HEADER CARD */}
+        <div className="w-full bg-white border border-[#EA580C]/5 shadow-premium p-6 sm:p-8 rounded-custom-lg mb-8 flex flex-col lg:flex-row items-center justify-between gap-6 relative overflow-hidden text-left">
+          <div className="absolute top-0 right-0 w-36 h-full bg-[#FFF7ED]/30 -skew-x-12 pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row items-center gap-5 w-full lg:w-auto text-center sm:text-left">
+            <img
+              src={profile.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"}
+              alt="Profile Avatar Preset"
+              className="w-16 h-16 rounded-full object-cover border border-[#C28A3E]/20 bg-[#FCFBF7] shadow-sm select-none"
+            />
+            <div>
+              <span className="text-[9.5px] uppercase tracking-widest font-bold text-[#C28A3E] px-2.5 py-0.5 rounded bg-[#FFF7ED] border border-[#EA580C]/10 select-none">
+                Jai Jinendra 🙏
+              </span>
+              <h1 className="font-display font-semibold text-text-primary text-xl sm:text-2xl mt-2 leading-tight">
+                {profile.fullName}
+              </h1>
+              <p className="text-xs text-text-secondary mt-1 font-medium">
+                📍 {profile.city}{profile.phone ? ` • +91 ${profile.phone}` : ""}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-orange-50 px-4 py-3 rounded-custom-md border border-primary/10">
-            <Flame size={20} className="text-primary animate-pulse" />
-            <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Practice Streak</span>
-              <span className="text-sm font-bold text-primary">{profile.streak || 0} Days</span>
+
+          {/* Quick Metrics */}
+          <div className="flex flex-wrap items-center justify-center gap-4 shrink-0 w-full lg:w-auto border-t lg:border-t-0 border-neutral-100 pt-4 lg:pt-0">
+            
+            <div className="flex items-center gap-3 bg-[#FCFBF7] px-4 py-2.5 rounded-custom-md border border-[#C28A3E]/10 select-none">
+              <span className="text-xl">🪷</span>
+              <div className="flex flex-col">
+                <span className="text-[8px] text-text-secondary font-bold uppercase tracking-wider">Total Sadhana</span>
+                <span className="text-xs font-bold text-[#EA580C]">{profile.totalPoints || 0} Points</span>
+              </div>
             </div>
-          </div>
-          {profilesList.length === 1 ? (
-            <button onClick={() => router.push("/profile-select")} className="px-4 py-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border border-neutral-200">
-              <UserPlus size={14} /><span>Add Family Member</span>
-            </button>
-          ) : (
-            <button onClick={() => router.push("/profile-select")} className="px-4 py-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border border-neutral-200">
-              <User size={14} /><span>Switch Profile</span>
-            </button>
-          )}
 
-          {/* Bell Icon / Notification Center Popover */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifMenu(!showNotifMenu)}
-              className="p-2.5 rounded-custom-md bg-white text-text-secondary hover:text-primary transition-all cursor-pointer border border-neutral-200 relative flex items-center justify-center shrink-0"
-              title="Notifications"
-            >
-              <Bell size={14} />
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center animate-pulse">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-3 bg-[#FFF7ED] px-4 py-2.5 rounded-custom-md border border-[#EA580C]/10 select-none">
+              <Flame size={18} className="text-[#EA580C]" />
+              <div className="flex flex-col">
+                <span className="text-[8px] text-text-secondary font-bold uppercase tracking-wider">Day Streak</span>
+                <span className="text-xs font-bold text-[#EA580C]">{profile.streak || 0} Days</span>
+              </div>
+            </div>
 
-            <AnimatePresence>
-              {showNotifMenu && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setShowNotifMenu(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 mt-2 w-64 bg-white border border-border-custom rounded-custom-md shadow-premium z-40 p-3 flex flex-col gap-2 max-h-80 overflow-y-auto"
-                  >
-                    <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-                      <span className="text-[10px] font-bold uppercase text-text-primary">Notifications</span>
-                      {unreadNotifCount > 0 && (
-                        <button
-                          onClick={async () => {
-                            for (const n of notifications) {
-                              if (!n.read) await handleMarkNotifRead(n.id);
-                            }
-                          }}
-                          className="text-[8px] font-extrabold uppercase text-primary cursor-pointer hover:underline"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    {notifications.length === 0 ? (
-                      <p className="text-[10px] text-text-secondary italic text-center py-4">No notifications yet</p>
-                    ) : (
-                      <div className="flex flex-col gap-1.5">
-                        {notifications.map(n => (
-                          <div
-                            key={n.id}
-                            onClick={() => handleMarkNotifRead(n.id)}
-                            className={`p-2 rounded text-[10px] cursor-pointer transition-colors border ${
-                              n.read ? "bg-neutral-50/50 text-text-secondary border-transparent" : "bg-secondary/10 text-text-primary border-primary/20 border-l-2 border-l-primary"
-                            }`}
-                          >
-                            <p className="font-bold">{n.title}</p>
-                            <p className="mt-0.5 leading-normal">{n.message}</p>
-                            <span className="text-[8px] text-text-secondary block mt-1">
-                              {new Date(n.created_at || n.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <button onClick={handleLogout} className="px-4 py-2.5 rounded-custom-md bg-neutral-100 text-text-secondary hover:bg-red-50 hover:text-red-600 flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border border-neutral-200">
-            <LogOut size={14} /><span>Sign Out</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ── Notification Banner ── */}
-      <AnimatePresence>
-        {statusMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`w-full p-4 mb-6 rounded-custom-md text-xs font-semibold flex items-center justify-between shadow-premium border ${
-              statusType === "error" ? "bg-red-50 text-red-700 border-red-200" : "bg-secondary text-primary border-primary/15"
-            }`}
-          >
-            <span>{statusMessage}</span>
-            <button onClick={() => setStatusMessage("")} className="text-xs uppercase font-bold shrink-0 ml-4 hover:opacity-75 cursor-pointer">Dismiss</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Main Grid ── */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-        {/* Sidebar */}
-        <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-thin">
-          {[
-            { id: "sadhana", label: "Daily Check-In", icon: CheckSquare },
-            { id: "notices", label: "Temple Notices", icon: Megaphone, count: unreadAnnCount },
-            { id: "badges", label: "Earned Badges", icon: Award },
-            { id: "history", label: "History & Summary", icon: History },
-            ...(leaderboardEnabled ? [{ id: "leaderboard", label: "Inspiring Leaderboard", icon: Trophy }] : []),
-            { id: "donations", label: "Tax Receipts (80G)", icon: Heart },
-            { id: "profile", label: "Edit Profile", icon: UserCheck },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isTabActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  if (tab.id === "notices") {
-                    localStorage.setItem("last_viewed_announcements_time", new Date().toISOString());
-                    setUnreadAnnCount(0);
-                  }
-                }}
-                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-left ${
-                  isTabActive ? "bg-primary text-white shadow-premium" : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
-                }`}
+            {profilesList.length === 1 ? (
+              <button 
+                onClick={() => router.push("/profile-select")} 
+                className="px-4 py-2.5 rounded-custom-md bg-white hover:bg-[#FCFBF7] text-text-secondary hover:text-[#EA580C] flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 border border-[#C28A3E]/10 shadow-sm cursor-pointer"
               >
-                <div className="flex items-center gap-3">
-                  <Icon size={16} />
-                  <span>{tab.label}</span>
-                </div>
-                {tab.count > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold animate-pulse">
-                    {tab.count}
+                <UserPlus size={14} />
+                <span>Add Family</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => router.push("/profile-select")} 
+                className="px-4 py-2.5 rounded-custom-md bg-white hover:bg-[#FCFBF7] text-text-secondary hover:text-[#EA580C] flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 border border-[#C28A3E]/10 shadow-sm cursor-pointer"
+              >
+                <User size={14} />
+                <span>Switch Profile</span>
+              </button>
+            )}
+
+            {/* Bell Icon Notification Center Popover */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifMenu(!showNotifMenu)}
+                className="p-2.5 rounded-custom-md bg-white text-text-secondary hover:text-[#EA580C] transition-colors cursor-pointer border border-[#C28A3E]/10 relative flex items-center justify-center shrink-0 shadow-sm"
+                title="Notifications"
+                aria-label="Notification center"
+              >
+                <Bell size={14} />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center animate-pulse">
+                    {unreadNotifCount}
                   </span>
                 )}
               </button>
-            );
-          })}
-          <div className="hidden lg:flex flex-col gap-3 p-5 rounded-custom-md bg-secondary/35 border border-primary/10 mt-4">
-            <span className="text-xs">📚</span>
-            <p className="text-[10px] text-text-secondary italic leading-relaxed">&quot;{quote}&quot;</p>
+
+              <AnimatePresence>
+                {showNotifMenu && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowNotifMenu(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute right-0 mt-2 w-64 bg-white border border-[#EA580C]/10 rounded-custom-md shadow-premium z-45 p-3 flex flex-col gap-2 max-h-80 overflow-y-auto"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-100 select-none">
+                        <span className="text-[10px] font-bold uppercase text-text-primary">Notifications</span>
+                        {unreadNotifCount > 0 && (
+                          <button
+                            onClick={async () => {
+                              for (const n of notifications) {
+                                if (!n.read) await handleMarkNotifRead(n.id);
+                              }
+                            }}
+                            className="text-[8.5px] font-bold uppercase text-[#EA580C] cursor-pointer hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      
+                      {notifications.length === 0 ? (
+                        <p className="text-[10px] text-text-secondary italic text-center py-4 select-none">No notifications yet</p>
+                      ) : (
+                        <div className="flex flex-col gap-1.5 text-left">
+                          {notifications.map(n => (
+                            <div
+                              key={n.id}
+                              onClick={() => handleMarkNotifRead(n.id)}
+                              className={`p-2 rounded text-[10px] cursor-pointer transition-colors border ${
+                                n.read ? "bg-neutral-50/50 text-text-secondary border-transparent" : "bg-[#FFF7ED] text-text-primary border-[#EA580C]/10 border-l-2 border-l-[#EA580C]"
+                              }`}
+                            >
+                              <p className="font-bold flex items-center gap-1">
+                                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] shrink-0" />}
+                                <span>{n.title}</span>
+                              </p>
+                              <p className="mt-0.5 leading-normal text-text-secondary">{n.message}</p>
+                              <span className="text-[7.5px] text-[#C28A3E] font-semibold block mt-1">
+                                {new Date(n.created_at || n.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button 
+              onClick={handleLogout} 
+              className="px-4 py-2.5 rounded-custom-md bg-neutral-50 hover:bg-red-50 text-text-secondary hover:text-red-600 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 border border-[#C28A3E]/10 shadow-sm cursor-pointer"
+            >
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
 
-        {/* Right panel */}
-        <div className="lg:col-span-9 bg-white border border-border-custom shadow-premium p-6 sm:p-8 rounded-custom-lg min-h-[500px]">
+        {/* 2. DYNAMIC ALERTS AND BANNERS */}
+        <AnimatePresence>
+          {statusMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={`w-full p-4 mb-6 rounded-custom-md text-xs font-semibold flex items-center justify-between shadow-sm border text-left ${
+                statusType === "error" ? "bg-red-50 text-red-700 border-red-200" : "bg-[#FFF7ED] text-[#EA580C] border-[#EA580C]/10"
+              }`}
+            >
+              <span>{statusMessage}</span>
+              <button 
+                onClick={() => setStatusMessage("")} 
+                className="text-[10px] uppercase font-bold shrink-0 ml-4 hover:opacity-75 cursor-pointer select-none"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* ── DAILY CHECK-IN TAB ── */}
-          {activeTab === "sadhana" && (
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-border-custom">
-                <div>
-                  <h3 className="font-display font-semibold text-text-primary text-base">Daily Sadhana Check-In</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Submit vows & self-improvement routines</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="check-in-date" className="text-[10px] uppercase font-bold text-text-secondary shrink-0">Target Date:</label>
-                  <input
-                    id="check-in-date"
-                    type="date"
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                    className="px-3 py-1.5 text-xs rounded bg-bg-custom border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Submitted banner */}
-              {isViewingToday && isTodaySubmitted && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-custom-md bg-amber-50 border border-amber-200/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                      <Lock size={14} className="text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-amber-800">Today&apos;s check-in has been submitted</p>
-                      <p className="text-[10px] text-amber-600 mt-0.5">Editing is disabled. Contact admin if changes are needed.</p>
-                    </div>
+        {/* 3. TWO COLUMN PORTAL NAVIGATION LAYOUT */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Sidebar Menu Panel */}
+          <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-3 lg:pb-0 scrollbar-thin select-none">
+            {[
+              { id: "sadhana", label: "Daily Check-In", icon: CheckSquare },
+              { id: "notices", label: "Temple Notices", icon: Megaphone, count: unreadAnnCount },
+              { id: "badges", label: "Earned Badges", icon: Award },
+              { id: "history", label: "History & Summary", icon: History },
+              ...(leaderboardEnabled ? [{ id: "leaderboard", label: "Inspiring Leaderboard", icon: Trophy }] : []),
+              { id: "donations", label: "Tax Receipts (80G)", icon: Heart },
+              { id: "profile", label: "Edit Profile", icon: UserCheck },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isTabActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === "notices") {
+                      localStorage.setItem("last_viewed_announcements_time", new Date().toISOString());
+                      setUnreadAnnCount(0);
+                    }
+                  }}
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-custom-md text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap lg:w-full text-left border shadow-sm ${
+                    isTabActive 
+                      ? "bg-[#EA580C] text-white border-transparent" 
+                      : "bg-white border-[#C28A3E]/10 text-text-secondary hover:text-[#EA580C] hover:border-[#EA580C]/25"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon size={14} />
+                    <span>{tab.label}</span>
                   </div>
-                  <StatusBadge status={todayStatus} />
-                </div>
-              )}
+                  {tab.count > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold animate-pulse">
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            
+            {/* Quote Block */}
+            <div className="hidden lg:flex flex-col gap-2 p-5 rounded-custom-md bg-[#FFF7ED]/35 border border-[#C28A3E]/15 mt-4 text-left">
+              <span className="text-xs">📚</span>
+              <p className="text-[10px] text-[#4B5563] italic leading-relaxed">&quot;{quote}&quot;</p>
+            </div>
+          </div>
 
-              {/* Stats grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {[
-                  { icon: "🔥", label: "Current Streak", value: profile.streak || 0, suffix: " Days", bg: "bg-orange-50", border: "border-orange-100" },
-                  { icon: "🏆", label: "Longest Streak", value: profile.longestStreak || 0, suffix: " Days", bg: "bg-amber-50", border: "border-amber-100" },
-                  { icon: "🪷", label: "Total Points", value: profile.totalPoints || 0, suffix: " pts", bg: "bg-secondary/30", border: "border-primary/10" },
-                  { icon: "📝", label: "Submissions", value: totalSubmissions, suffix: " Days", bg: "bg-white", border: "border-border-custom" },
-                  { icon: "⚡", label: "Completion Rate", value: completionPercentage, suffix: "%", bg: "bg-white", border: "border-border-custom" },
-                  { icon: "📅", label: "Today's Check-In", isStatus: true, status: isTodaySubmitted ? "submitted" : "pending", bg: isTodaySubmitted ? "bg-green-50" : "bg-white", border: isTodaySubmitted ? "border-green-100" : "border-border-custom" }
-                ].map((stat, i) => (
-                  <div key={i} className={`p-4 rounded-custom-md ${stat.bg} border ${stat.border} flex items-center gap-3`}>
-                    <span className="text-xl select-none">{stat.icon}</span>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider truncate">{stat.label}</span>
-                      {stat.isStatus ? (
-                        <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border inline-block mt-0.5 ${
-                          stat.status === "submitted" ? "bg-green-100 text-green-700 border-green-200" : "bg-orange-50 text-orange-700 border-orange-200"
-                        }`}>
-                          {stat.status === "submitted" ? "✓ Submitted" : "⏰ Pending"}
-                        </span>
-                      ) : (
-                        <span className="text-sm font-bold text-text-primary">
-                          <AnimatedCounter target={stat.value} suffix={stat.suffix} />
-                        </span>
-                      )}
-                    </div>
+          {/* Right Panel Main Panel Content */}
+          <div className="lg:col-span-9 bg-white border border-[#EA580C]/5 shadow-premium p-6 sm:p-8 rounded-custom-lg min-h-[500px]">
+            
+            {/* TAB CONTENT A: DAILY CHECK-IN */}
+            {activeTab === "sadhana" && (
+              <div className="flex flex-col gap-6">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#EA580C]/5 text-left">
+                  <div>
+                    <h3 className="font-display font-bold text-text-primary text-base">Daily Sadhana Check-In</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Submit vows & self-improvement routines</p>
                   </div>
-                ))}
-              </div>
-
-              {/* Points preview */}
-              <div className="p-4 rounded bg-secondary/50 border border-primary/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                <div>
-                  <h4 className="text-xs font-bold text-primary">Sadhana Check-in Preview</h4>
-                  <p className="text-[10px] text-text-secondary">Checking completed routines updates streak counts and unlocks digital badges.</p>
+                  <div className="flex items-center gap-2 select-none">
+                    <label htmlFor="check-in-date" className="text-[9.5px] uppercase font-bold text-text-secondary shrink-0">Target Date:</label>
+                    <input
+                      id="check-in-date"
+                      type="date"
+                      value={checkInDate}
+                      onChange={(e) => setCheckInDate(e.target.value)}
+                      className="px-3 py-1.5 text-xs rounded bg-[#FCFBF7] border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 bg-white border border-primary/15 px-3 py-1.5 rounded font-bold text-xs text-primary shrink-0">
-                  <TrendingUp size={12} />
-                  <span>Earn Today:</span>
-                  <span className="text-sm font-extrabold">{getTodayPointsPreview()} Points</span>
-                </div>
-              </div>
 
-              {/* Checklist Grid */}
-              <div className="relative">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Submitted lock banner */}
+                {isViewingToday && isTodaySubmitted && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/20 text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#FFF7ED] flex items-center justify-center shrink-0 border border-[#EA580C]/10">
+                        <Lock size={14} className="text-[#EA580C]" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-[#EA580C]">Today&apos;s check-in has been submitted</p>
+                        <p className="text-[9.5px] text-text-secondary mt-0.5">Vows locked. Contact admin desk if alterations are required.</p>
+                      </div>
+                    </div>
+                    <StatusBadge status={todayStatus} />
+                  </div>
+                )}
+
+                {/* Stats summary grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 select-none">
+                  {[
+                    { icon: "🔥", label: "Current Streak", value: profile.streak || 0, suffix: " Days", bg: "bg-[#FFF7ED]/35", border: "border-[#EA580C]/10" },
+                    { icon: "🏆", label: "Longest Streak", value: profile.longestStreak || 0, suffix: " Days", bg: "bg-[#FFF7ED]/35", border: "border-[#EA580C]/10" },
+                    { icon: "🪷", label: "Total Points", value: profile.totalPoints || 0, suffix: " pts", bg: "bg-[#FCFBF7]", border: "border-[#C28A3E]/10" },
+                    { icon: "📝", label: "Submissions", value: totalSubmissions, suffix: " Days", bg: "bg-white", border: "border-[#EA580C]/5" },
+                    { icon: "⚡", label: "Completion Rate", value: completionPercentage, suffix: "%", bg: "bg-white", border: "border-[#EA580C]/5" },
+                    { icon: "📅", label: "Today's Status", isStatus: true, status: isTodaySubmitted ? "submitted" : "pending", bg: isTodaySubmitted ? "bg-emerald-50/40" : "bg-white", border: isTodaySubmitted ? "border-emerald-500/10" : "border-[#EA580C]/5" }
+                  ].map((stat, i) => (
+                    <div key={i} className={`p-4 rounded-custom-md ${stat.bg} border ${stat.border} flex items-center gap-3 text-left`}>
+                      <span className="text-xl">{stat.icon}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider truncate">{stat.label}</span>
+                        {stat.isStatus ? (
+                          <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded border inline-block mt-0.5 w-fit ${
+                            stat.status === "submitted" ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" : "bg-orange-50 text-orange-700 border-orange-200"
+                          }`}>
+                            {stat.status === "submitted" ? "✓ Submitted" : "⏰ Pending"}
+                          </span>
+                        ) : (
+                          <span className="text-sm font-bold text-text-primary">
+                            <AnimatedCounter target={stat.value} suffix={stat.suffix} />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Claim preview panel */}
+                <div className="p-4 rounded bg-[#FCFBF7] border border-[#C28A3E]/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left select-none">
+                  <div>
+                    <h4 className="text-xs font-bold text-[#EA580C]">Sadhana Check-in Preview</h4>
+                    <p className="text-[9.5px] text-text-secondary">Checking completed routines updates streak counts and unlocks digital badges.</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-white border border-[#EA580C]/10 px-3 py-1.5 rounded font-bold text-xs text-[#EA580C] shrink-0 shadow-sm">
+                    <TrendingUp size={12} />
+                    <span>Earn Today:</span>
+                    <span className="text-sm font-extrabold">{getTodayPointsPreview()} Points</span>
+                  </div>
+                </div>
+
+                {/* Vow checklist grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-left">
                   {activities.map((act) => {
                     const isChecked = checkedActivities.includes(act.id);
                     return (
                       <div
                         key={act.id}
                         onClick={() => handleToggleActivity(act.id)}
-                        className={`p-3.5 border rounded-custom-md flex items-center justify-between transition-all ${
+                        className={`p-3.5 border rounded-custom-md flex items-center justify-between transition-all select-none ${
                           isLocked
                             ? isChecked
-                              ? "bg-green-50 border-green-500/20 cursor-default"
-                              : "bg-white border-neutral-100 opacity-50 cursor-default"
+                              ? "bg-emerald-50/40 border-emerald-500/10 cursor-default opacity-85"
+                              : "bg-white border-neutral-100 opacity-45 cursor-default"
                             : isChecked
-                            ? "bg-secondary/40 border-primary shadow-premium cursor-pointer"
-                            : "bg-white border-border-custom hover:border-primary/20 cursor-pointer"
+                            ? "bg-[#FFF7ED]/55 border-[#EA580C] shadow-sm cursor-pointer"
+                            : "bg-white border-[#EA580C]/5 hover:border-[#EA580C]/20 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -867,431 +919,493 @@ export default function Dashboard() {
                             checked={isChecked}
                             readOnly
                             disabled={isLocked}
-                            className="w-4 h-4 rounded text-primary border-border-custom focus:ring-primary cursor-pointer shrink-0"
+                            className="w-4 h-4 rounded text-[#EA580C] border-neutral-300 focus:ring-[#EA580C] cursor-pointer shrink-0"
                           />
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-text-primary">{act.name}</span>
-                            <span className="text-[9px] text-text-secondary mt-0.5">{act.category}</span>
+                            <span className="text-xs font-semibold text-[#1F2937]">{act.name}</span>
+                            <span className="text-[9px] text-[#4B5563] mt-0.5">{act.category}</span>
                           </div>
                         </div>
-                        <span className="text-[9px] font-bold text-primary bg-white border border-primary/10 px-2 py-0.5 rounded">+{act.points} pts</span>
+                        <span className="text-[9px] font-bold text-[#EA580C] bg-white border border-[#EA580C]/10 px-2 py-0.5 rounded">+{act.points} pts</span>
                       </div>
                     );
                   })}
                 </div>
-              </div>
 
-              {/* Sadhana Submission Status Card (Stream 1 & 2) */}
-              {isLocked && selectedDateLog && (
-                <div id="submission-status-card" className="p-6 rounded-custom-lg border border-border-custom bg-neutral-50/50 flex flex-col gap-5 mt-6 transition-all duration-300">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                      <CheckCircle2 size={18} className="text-green-600 animate-bounce" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-text-primary">✓ Submitted Successfully</h4>
-                      <p className="text-[9px] text-text-secondary">Your spiritual check-in has been filed and locked for today.</p>
-                    </div>
-                  </div>
-
-                  {/* Metadata Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-4 rounded-custom-md border border-border-custom text-xs">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] uppercase font-bold text-text-secondary">Submission ID</span>
-                      <span className="font-mono font-bold text-text-primary">
-                        {toReadableId(selectedDateLog.submissionId || selectedDateLog.id, "S")}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] uppercase font-bold text-text-secondary">Submission Date</span>
-                      <span className="font-semibold text-text-primary">
-                        {selectedDateLog.createdAt ? new Date(selectedDateLog.createdAt).toLocaleDateString() : checkInDate}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] uppercase font-bold text-text-secondary">Submission Time</span>
-                      <span className="font-semibold text-text-primary">
-                        {selectedDateLog.createdAt ? new Date(selectedDateLog.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "12:00 PM"}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] uppercase font-bold text-text-secondary">Claimed Points</span>
-                      <span className="font-extrabold text-primary">
-                        +{selectedDateLog.points || 0} Points
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Status Timeline */}
-                  <div className="flex flex-col gap-3 bg-white p-4 rounded-custom-md border border-border-custom">
-                    <p className="text-[9px] uppercase font-bold text-text-secondary">Verification Timeline</p>
-                    
-                    <div className="flex items-center justify-between max-w-sm mx-auto w-full relative py-3 mt-1">
-                      <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-neutral-100 -translate-y-1/2 z-0" />
-                      
-                      {/* Step 1 */}
-                      <div className="flex flex-col items-center gap-1 z-10">
-                        <div className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center text-[9px] font-bold">✓</div>
-                        <span className="text-[8px] font-bold text-text-primary">Submitted</span>
+                {/* Locked Verification Timeline details (Stream 1 & 2) */}
+                {isLocked && selectedDateLog && (
+                  <div id="submission-status-card" className="p-6 rounded-custom-lg border border-[#EA580C]/15 bg-[#FCFBF7]/35 flex flex-col gap-5 text-left">
+                    <div className="flex items-center gap-3 select-none">
+                      <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-500/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={18} className="text-emerald-600" />
                       </div>
-
-                      {/* Step 2 */}
-                      <div className="flex flex-col items-center gap-1 z-10">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                          todayStatus === "Pending" ? "bg-amber-500 text-white animate-pulse" : "bg-green-500 text-white"
-                        }`}>
-                          {todayStatus === "Pending" ? "🟡" : "✓"}
-                        </div>
-                        <span className="text-[8px] font-bold text-text-primary">
-                          {todayStatus === "Pending" ? "Reviewing" : "Reviewed"}
-                        </span>
-                      </div>
-
-                      {/* Step 3 */}
-                      <div className="flex flex-col items-center gap-1 z-10">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                          todayStatus === "Approved" ? "bg-green-500 text-white" : todayStatus === "Rejected" ? "bg-red-500 text-white" : "bg-neutral-200 text-neutral-400"
-                        }`}>
-                          {todayStatus === "Approved" ? "🟢" : todayStatus === "Rejected" ? "🔴" : "○"}
-                        </div>
-                        <span className="text-[8px] font-bold text-text-primary">
-                          {todayStatus === "Approved" ? "Approved" : todayStatus === "Rejected" ? "Rejected" : "Pending"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Remarks details */}
-                  {selectedDateLog.adminNote && (
-                    <div className={`p-4 rounded-custom-md border flex flex-col gap-1 ${
-                      todayStatus === "Rejected" ? "bg-red-50 border-red-200/50 text-red-800" : "bg-green-50 border-green-200/50 text-green-800"
-                    }`}>
-                      <span className="text-[9px] uppercase font-bold">Admin Notes / Remarks</span>
-                      <p className="text-xs font-semibold">{selectedDateLog.adminNote}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Submit footer */}
-              {!isLocked && (
-                <div className="flex justify-end pt-4 border-t border-border-custom mt-4">
-                  <button
-                    onClick={handleSaveSadhana}
-                    disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <><Loader2 size={14} className="animate-spin" /><span>Saving...</span></>
-                    ) : (
-                      <><Save size={14} /><span>Submit Sadhana Logs</span></>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── TEMPLE NOTICES TAB ── */}
-          {activeTab === "notices" && (
-            <div className="flex flex-col gap-6">
-              <div className="pb-3 border-b border-border-custom">
-                <h3 className="font-display font-semibold text-text-primary text-base">Temple Announcements & Notice Board</h3>
-                <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Stay updated with official bulletins, programs, and notice updates</p>
-              </div>
-
-              {announcements.length > 0 ? (
-                <div className="flex flex-col gap-4">
-                  {announcements.map((ann) => {
-                    const isNew = new Date(ann.createdAt).getTime() > new Date(lastViewedTime).getTime();
-                    return (
-                      <div key={ann.id} className="p-5 rounded-custom-md border border-border-custom bg-neutral-50/50 flex flex-col gap-3 relative overflow-hidden">
-                        {isNew && (
-                          <div className="absolute top-0 right-0 bg-primary text-white text-[7px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-bl">
-                            New
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-text-primary text-xs">{ann.title}</h4>
-                            <span className={`text-[7.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                              ann.priority === "high"
-                                ? "bg-red-50 text-red-600 border-red-500/10"
-                                : ann.priority === "low"
-                                ? "bg-blue-50 text-blue-600 border-blue-500/10"
-                                : "bg-orange-50 text-primary border-primary/10"
-                            }`}>
-                              {ann.priority || "normal"}
-                            </span>
-                            {ann.pinned && (
-                              <span className="text-[7.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-500/10 flex items-center gap-1">
-                                📌 Pinned
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[9px] text-text-secondary font-medium">
-                            {new Date(ann.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div 
-                          className="text-xs text-text-secondary leading-relaxed whitespace-pre-line"
-                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-16 border border-dashed border-border-custom rounded-custom-md bg-neutral-50/20">
-                  <span className="text-2xl">🪷</span>
-                  <p className="text-xs text-text-secondary mt-2">No announcements posted at this time. Check back later.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── BADGES TAB ── */}
-          {activeTab === "badges" && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h3 className="font-display font-semibold text-text-primary text-base">Devotional Achievements</h3>
-                <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Spiritual milestone badges</p>
-              </div>
-              {unlockedBadges.length === 0 && (
-                <div className="py-10 flex flex-col items-center justify-center gap-3 border border-dashed border-border-custom rounded-custom-md">
-                  <span className="text-4xl">🏅</span>
-                  <p className="text-sm font-semibold text-text-secondary">No badges earned yet</p>
-                  <p className="text-xs text-text-secondary text-center max-w-xs">Complete daily activities consistently to unlock spiritual achievement badges.</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mt-2">
-                {Object.entries(BADGES_DEFINITIONS).map(([badgeId, val]) => {
-                  const isUnlocked = unlockedBadges.includes(badgeId);
-                  return (
-                    <div key={badgeId} className={`p-5 rounded-custom-lg border text-center flex flex-col items-center justify-center gap-3 transition-all ${
-                      isUnlocked ? "bg-white border-primary shadow-premium ring-2 ring-primary/5" : "bg-neutral-50/50 border-neutral-100 opacity-40 select-none"
-                    }`}>
-                      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-sm ${isUnlocked ? "bg-secondary text-primary" : "bg-neutral-200"}`}>{val.icon}</div>
                       <div>
-                        <h4 className={`text-xs font-bold ${isUnlocked ? "text-text-primary" : "text-text-secondary"}`}>{val.name}</h4>
-                        <p className="text-[9px] text-text-secondary mt-1 leading-normal">{val.desc}</p>
+                        <h4 className="text-xs font-bold text-text-primary">✓ Logs Registered</h4>
+                        <p className="text-[9px] text-text-secondary">Your spiritual check-in has been filed and locked for today.</p>
                       </div>
-                      {isUnlocked ? (
-                        <span className="text-[8px] uppercase tracking-wider font-extrabold text-primary bg-secondary px-2 py-0.5 rounded border border-primary/10">Unlocked</span>
-                      ) : (
-                        <span className="text-[8px] uppercase tracking-wider font-bold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">Locked</span>
-                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
-          {/* ── HISTORY TAB ── */}
-          {activeTab === "history" && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h3 className="font-display font-semibold text-text-primary text-base">Spiritual Logs & Metrics</h3>
-                <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Summary analyses of monthly routines</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {[
-                  { icon: "📅", label: "Days Active", value: `${monthlySummary.count} Days` },
-                  { icon: "🔥", label: "Most Active Duty", value: monthlySummary.mostPerformed },
-                  { icon: "🏅", label: "Monthly Points", value: `${monthlySummary.points} Points` }
-                ].map((item, i) => (
-                  <div key={i} className="p-4 rounded-custom-md bg-secondary/35 border border-primary/10 flex items-center gap-3">
-                    <span className="text-xl">{item.icon}</span>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">{item.label}</span>
-                      <span className="text-sm font-bold text-primary truncate">{item.value}</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-4 rounded-custom-md border border-[#EA580C]/10 text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">Submission ID</span>
+                        <span className="font-mono font-bold text-text-primary">
+                          {toReadableId(selectedDateLog.submissionId || selectedDateLog.id, "S")}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">Date</span>
+                        <span className="font-semibold text-text-primary">
+                          {selectedDateLog.createdAt ? new Date(selectedDateLog.createdAt).toLocaleDateString() : checkInDate}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">Time</span>
+                        <span className="font-semibold text-text-primary">
+                          {selectedDateLog.createdAt ? new Date(selectedDateLog.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "12:00 PM"}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">Claimed Points</span>
+                        <span className="font-extrabold text-[#EA580C]">
+                          +{selectedDateLog.points || 0} Points
+                        </span>
+                      </div>
                     </div>
+
+                    {/* Status timeline visual details */}
+                    <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-500/10 rounded-custom-md select-none text-xs text-emerald-800">
+                      <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                      <span>Your daily score is submitted and credited to your account profile immediately.</span>
+                    </div>
+
+                    {selectedDateLog.adminNote && (
+                      <div className={`p-4 rounded-custom-md border flex flex-col gap-1 ${
+                        todayStatus === "Rejected" ? "bg-red-50 border-red-200/50 text-red-800" : "bg-green-50 border-green-200/50 text-green-800"
+                      }`}>
+                        <span className="text-[9px] uppercase font-bold">Admin Remarks</span>
+                        <p className="text-xs font-semibold">{selectedDateLog.adminNote}</p>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-              <div className="w-full mt-4 overflow-hidden border border-border-custom rounded-custom-lg bg-white">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-bg-custom border-b border-border-custom text-[10px] text-text-secondary font-bold uppercase tracking-wider">
-                        <th className="p-4">Date</th>
-                        <th className="p-4">Activities Completed</th>
-                        <th className="p-4 text-center">Status</th>
-                        <th className="p-4 text-right">Points</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {logs.length > 0 ? (
-                        logs.map((log) => (
-                          <tr key={log.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
-                            <td className="p-4 font-semibold text-text-primary whitespace-nowrap">{log.dateStr}</td>
-                            <td className="p-4">
-                              <div className="flex flex-wrap gap-1.5">
-                                {log.activities.map((actId) => {
-                                  const name = activities.find(a => a.id === actId)?.name || actId;
-                                  return <span key={actId} className="px-2 py-0.5 rounded bg-neutral-100 text-text-secondary text-[9px] font-medium border border-neutral-200">{name}</span>;
-                                })}
-                              </div>
-                            </td>
-                            <td className="p-4 text-center"><StatusBadge status={log.status || "Pending"} /></td>
-                            <td className="p-4 text-right font-extrabold text-primary">+{log.points} pts</td>
-                          </tr>
-                        ))
+                )}
+
+                {/* Form submit triggers */}
+                {!isLocked && (
+                  <div className="flex justify-end pt-4 border-t border-neutral-100 mt-4 select-none">
+                    <button
+                      onClick={handleSaveSadhana}
+                      disabled={isSubmitting}
+                      className="px-8 py-3 rounded bg-[#EA580C] hover:bg-[#EA580C]/90 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? (
+                        <><Loader2 size={14} className="animate-spin" /><span>Saving...</span></>
                       ) : (
-                        <tr><td colSpan={4} className="p-12 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <span className="text-4xl">📋</span>
-                            <p className="text-sm font-semibold text-text-secondary">No logs submitted yet</p>
-                            <p className="text-xs text-text-secondary">Check in daily to build your spiritual record.</p>
-                          </div>
-                        </td></tr>
+                        <><Save size={14} /><span>Submit Daily Logs</span></>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+                    </button>
+                  </div>
+                )}
 
-          {/* ── LEADERBOARD TAB ── */}
-          {activeTab === "leaderboard" && leaderboardEnabled && (
-            <div className="flex flex-col gap-6">
-              <div className="pb-3 border-b border-border-custom">
-                <h3 className="font-display font-semibold text-text-primary text-base">Participant Inspiration</h3>
-                <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Top 10 devotees consistency board</p>
               </div>
-              <div className="p-4 rounded-custom-md bg-secondary/30 border border-primary/10 text-xs text-text-secondary leading-relaxed flex items-start gap-2.5">
-                <Compass size={16} className="text-primary shrink-0 mt-0.5" />
-                <span>This board serves to inspire consistency and devotion. We encourage devotees to maintain their daily vows. Top participants represent consistency in their daily check-ins.</span>
-              </div>
-              {leaderboard.length === 0 ? (
-                <div className="py-10 flex flex-col items-center gap-3">
-                  <span className="text-4xl">🏆</span>
-                  <p className="text-sm font-semibold text-text-secondary">Leaderboard is empty</p>
+            )}
+
+            {/* TAB CONTENT B: TEMPLE ANNOUNCEMENTS */}
+            {activeTab === "notices" && (
+              <div className="flex flex-col gap-6 text-left">
+                <div className="pb-3 border-b border-[#EA580C]/5">
+                  <h3 className="font-display font-semibold text-text-primary text-base">Temple Announcements</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Stay updated with official bulletins, programs, and notice updates</p>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-3 mt-2">
-                  {leaderboard.map((item, index) => {
-                    const isCurrentUser = item.id === profile.id;
-                    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "";
-                    return (
-                      <div key={item.id} className={`p-4 border rounded-custom-md flex items-center justify-between gap-4 transition-all ${isCurrentUser ? "bg-secondary/40 border-primary ring-1 ring-primary/10" : "bg-white border-border-custom"}`}>
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 text-center font-bold text-xs text-text-secondary shrink-0">{medal || `${index + 1}`}</span>
-                          <img src={item.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"} alt={item.fullName} className="w-10 h-10 rounded-full object-cover shrink-0 border border-neutral-100" />
-                          <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-                              {item.fullName}
-                              {isCurrentUser && <span className="text-[8px] uppercase tracking-wider font-bold bg-primary text-white px-1.5 py-0.5 rounded">You</span>}
+
+                {announcements.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {announcements.map((ann) => {
+                      const isNew = new Date(ann.createdAt).getTime() > new Date(lastViewedTime).getTime();
+                      return (
+                        <div key={ann.id} className="p-5 rounded-custom-md border border-[#EA580C]/10 bg-[#FCFBF7]/35 flex flex-col gap-3 relative overflow-hidden">
+                          {isNew && (
+                            <span className="absolute top-0 right-0 bg-[#EA580C] text-white text-[7.5px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-bl select-none">
+                              New
                             </span>
-                            <span className="text-[9px] text-text-secondary mt-0.5">{item.city} • 🔥 {item.streak || 0} Day Streak</span>
+                          )}
+                          <div className="flex items-center justify-between gap-4 select-none">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold text-[#1F2937] text-xs sm:text-sm">{ann.title}</h4>
+                              <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                ann.priority === "high"
+                                  ? "bg-red-50 text-red-600 border-red-500/10"
+                                  : ann.priority === "low"
+                                  ? "bg-blue-50 text-blue-600 border-blue-500/10"
+                                  : "bg-orange-50 text-primary border-primary/10"
+                              }`}>
+                                {ann.priority || "normal"}
+                              </span>
+                              {ann.pinned && (
+                                <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-500/10 flex items-center gap-1">
+                                  📌 Pinned
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-text-secondary font-medium">
+                              {new Date(ann.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
+                          <div 
+                            className="text-xs text-[#4B5563] leading-relaxed whitespace-pre-line"
+                            dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
+                          />
                         </div>
-                        <span className="text-xs font-bold text-primary bg-secondary px-3 py-1 rounded-full border border-primary/5 shrink-0">{item.totalPoints} Points</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── DONATIONS TAB ── */}
-          {activeTab === "donations" && (
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-border-custom">
-                <Heart size={18} className="text-primary" />
-                <div>
-                  <h2 className="font-display font-semibold text-text-primary text-base">Your Donation Tax Receipts</h2>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Download 80G tax certificates</p>
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-16 border border-dashed border-[#C28A3E]/20 rounded-custom-md bg-[#FCFBF7]/10 select-none">
+                    <span className="text-3xl">🪷</span>
+                    <p className="text-xs text-text-secondary mt-2">No announcements posted at this time. Check back later.</p>
+                  </div>
+                )}
               </div>
-              {donations.length > 0 ? (
-                <div className="flex flex-col gap-4">
-                  {donations.map((donation) => (
-                    <div key={donation.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-custom-md bg-bg-custom border border-border-custom gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                          <FileCheck size={18} />
+            )}
+
+            {/* TAB CONTENT C: DIGITAL BADGES */}
+            {activeTab === "badges" && (
+              <div className="flex flex-col gap-6 text-left">
+                <div className="pb-3 border-b border-[#EA580C]/5">
+                  <h3 className="font-display font-semibold text-text-primary text-base">Devotional Achievements</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Spiritual milestone badges</p>
+                </div>
+                
+                {unlockedBadges.length === 0 && (
+                  <div className="py-12 flex flex-col items-center justify-center gap-3 border border-dashed border-[#C28A3E]/20 rounded-custom-md select-none bg-[#FCFBF7]/10">
+                    <span className="text-4xl">🏅</span>
+                    <p className="text-sm font-semibold text-[#4B5563]">No badges earned yet</p>
+                    <p className="text-xs text-text-secondary text-center max-w-xs leading-relaxed">Complete daily activities consistently to unlock spiritual achievement badges.</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {Object.entries(BADGES_DEFINITIONS).map(([badgeId, val]) => {
+                    const isUnlocked = unlockedBadges.includes(badgeId);
+                    return (
+                      <div key={badgeId} className={`p-5 rounded-custom-lg border text-center flex flex-col items-center justify-center gap-3 transition-all select-none ${
+                        isUnlocked 
+                          ? "bg-white border-[#EA580C] shadow-sm ring-1 ring-[#EA580C]/10" 
+                          : "bg-neutral-50/50 border-neutral-100 opacity-40"
+                      }`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm border ${
+                          isUnlocked ? "bg-[#FFF7ED] text-[#EA580C] border-[#EA580C]/10" : "bg-neutral-200"
+                        }`}>
+                          {val.icon}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-text-primary">INR {donation.amount.toLocaleString("en-IN")}.00</span>
-                            <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${donation.verified ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" : "bg-amber-50 text-amber-700 border-amber-500/10"}`}>
-                              {donation.verified ? "Verified" : "Pending"}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-text-secondary mt-1">Txn ID: {donation.txnId} • {new Date(donation.createdAt).toLocaleDateString()}</p>
+                          <h4 className={`text-xs font-bold ${isUnlocked ? "text-text-primary" : "text-text-secondary"}`}>{val.name}</h4>
+                          <p className="text-[9px] text-text-secondary mt-1 leading-normal">{val.desc}</p>
                         </div>
+                        {isUnlocked ? (
+                          <span className="text-[8.5px] uppercase tracking-wider font-extrabold text-[#EA580C] bg-[#FFF7ED] px-2 py-0.5 rounded border border-[#EA580C]/10">Unlocked</span>
+                        ) : (
+                          <span className="text-[8.5px] uppercase tracking-wider font-bold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">Locked</span>
+                        )}
                       </div>
-                      <button onClick={() => triggerPrintReceipt(donation)} className="px-4 py-2 rounded-custom-md bg-white border border-border-custom hover:border-primary/50 text-accent text-xs font-bold uppercase tracking-wider shadow flex items-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto justify-center">
-                        <Download size={14} /><span>Print 80G Receipt</span>
-                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT D: HISTORY LOGS */}
+            {activeTab === "history" && (
+              <div className="flex flex-col gap-6 text-left">
+                <div className="pb-3 border-b border-[#EA580C]/5">
+                  <h3 className="font-display font-semibold text-text-primary text-base">Spiritual Logs & Metrics</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Summary analyses of monthly routines</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 select-none">
+                  {[
+                    { icon: "📅", label: "Days Active", value: `${monthlySummary.count} Days` },
+                    { icon: "🔥", label: "Most Performed", value: monthlySummary.mostPerformed },
+                    { icon: "🏅", label: "Monthly Points", value: `${monthlySummary.points} Points` }
+                  ].map((item, i) => (
+                    <div key={i} className="p-4 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 flex items-center gap-3">
+                      <span className="text-xl">{item.icon}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">{item.label}</span>
+                        <span className="text-xs font-bold text-[#EA580C] truncate">{item.value}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-12 border border-dashed border-border-custom rounded-custom-md flex flex-col items-center justify-center gap-3">
-                  <span className="text-4xl">💝</span>
-                  <div>
-                    <p className="text-sm text-text-primary font-semibold">No donations registered under {profile.phone || profile.mobile || user.phone || "your account"}</p>
-                    <p className="text-xs text-text-secondary max-w-sm mt-1">If you have made a transfer via QR/UPI, please report it at the Donation desk to link the receipt here.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* ── EDIT PROFILE TAB ── */}
-          {activeTab === "profile" && (
-            <div className="flex flex-col gap-6">
-              <div className="pb-3 border-b border-border-custom">
-                <h3 className="font-display font-semibold text-text-primary text-base">Edit Devotee Profile</h3>
-                <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Personalize your sadhana identity</p>
-              </div>
-              <form onSubmit={handleUpdateProfile} className="p-5 rounded-custom-lg bg-bg-custom border border-border-custom flex flex-col gap-4 max-w-xl">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-text-secondary uppercase font-bold">Full Name</label>
-                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-text-secondary uppercase font-bold">City / Residence</label>
-                  <input type="text" value={editCity} onChange={(e) => setEditCity(e.target.value)} required className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-text-secondary uppercase font-bold">Mobile Number (Optional)</label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3 text-xs text-text-secondary font-semibold select-none">+91</span>
-                    <input type="tel" maxLength={10} value={editPhone} onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ""))} className="w-full pl-10 pr-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium" placeholder="10-digit number" />
+                <div className="w-full mt-4 overflow-hidden border border-[#EA580C]/10 rounded-custom-lg bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#FCFBF7] border-b border-[#EA580C]/10 text-[9.5px] text-[#C28A3E] font-bold uppercase tracking-widest select-none">
+                          <th className="p-4">Date</th>
+                          <th className="p-4">Activities Completed</th>
+                          <th className="p-4 text-center">Status</th>
+                          <th className="p-4 text-right">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {logs.length > 0 ? (
+                          logs.map((log) => (
+                            <tr key={log.id} className="border-b border-neutral-100 hover:bg-[#FCFBF7]/35 transition-colors">
+                              <td className="p-4 font-semibold text-text-primary whitespace-nowrap">{log.dateStr}</td>
+                              <td className="p-4">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {log.activities.map((actId) => {
+                                    const name = activities.find(a => a.id === actId)?.name || actId;
+                                    return (
+                                      <span key={actId} className="px-2 py-0.5 rounded bg-white text-text-secondary text-[9.5px] font-medium border border-[#C28A3E]/10">
+                                        {name}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td className="p-4 text-center"><StatusBadge status={log.status || "Pending"} /></td>
+                              <td className="p-4 text-right font-extrabold text-[#EA580C]">+{log.points} pts</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="p-12 text-center">
+                              <div className="flex flex-col items-center gap-3 select-none">
+                                <span className="text-4xl">📋</span>
+                                <p className="text-sm font-semibold text-[#4B5563]">No logs submitted yet</p>
+                                <p className="text-xs text-text-secondary">Check in daily to build your spiritual record.</p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2.5">
-                  <label className="text-[10px] text-text-secondary uppercase font-bold">Avatar Image URL</label>
-                  <input type="text" value={editAvatar} onChange={(e) => setEditAvatar(e.target.value)} placeholder="https://images.unsplash.com..." className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-primary font-medium" />
-                  <div className="flex items-center gap-3.5 mt-1 bg-white p-3 rounded border border-border-custom">
-                    <span className="text-[9px] uppercase font-bold text-text-secondary shrink-0">Quick presets:</span>
-                    <div className="flex gap-2">
-                      {[
-                        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150",
-                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
-                        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150",
-                        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150"
-                      ].map((presetUrl, idx) => (
-                        <img key={idx} src={presetUrl} alt="Preset Avatar" onClick={() => setEditAvatar(presetUrl)} className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition-all ${editAvatar === presetUrl ? "border-primary scale-110 shadow-premium" : "border-transparent hover:border-primary/40"}`} />
-                      ))}
+              </div>
+            )}
+
+            {/* TAB CONTENT E: LEADERBOARD BOARD */}
+            {activeTab === "leaderboard" && leaderboardEnabled && (
+              <div className="flex flex-col gap-6 text-left">
+                <div className="pb-3 border-b border-[#EA580C]/5">
+                  <h3 className="font-display font-semibold text-text-primary text-base">Participant Inspiration</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Top 10 devotees consistency board</p>
+                </div>
+                
+                <div className="p-4 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 text-xs text-text-secondary leading-relaxed flex items-start gap-2.5 select-none">
+                  <Compass size={16} className="text-[#EA580C] shrink-0 mt-0.5" />
+                  <span>This board serves to inspire consistency and devotion. We encourage devotees to maintain their daily vows. Top participants represent consistency in their daily check-ins.</span>
+                </div>
+
+                {leaderboard.length === 0 ? (
+                  <div className="py-10 flex flex-col items-center gap-3 select-none">
+                    <span className="text-4xl">🏆</span>
+                    <p className="text-sm font-semibold text-text-secondary">Leaderboard is empty</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3.5 mt-2">
+                    {leaderboard.map((item, index) => {
+                      const isCurrentUser = item.id === profile.id;
+                      const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "";
+                      return (
+                        <div 
+                          key={item.id} 
+                          className={`p-4 border rounded-custom-md flex items-center justify-between gap-4 transition-colors ${
+                            isCurrentUser 
+                              ? "bg-[#FFF7ED]/55 border-[#EA580C] shadow-sm" 
+                              : "bg-white border-[#EA580C]/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 text-center font-bold text-xs text-text-secondary shrink-0 select-none">
+                              {medal || `${index + 1}`}
+                            </span>
+                            <img 
+                              src={item.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"} 
+                              alt={item.fullName} 
+                              className="w-10 h-10 rounded-full object-cover shrink-0 border border-neutral-100 select-none" 
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                                {item.fullName}
+                                {isCurrentUser && (
+                                  <span className="text-[8px] uppercase tracking-wider font-extrabold bg-[#EA580C] text-white px-2 py-0.5 rounded select-none">
+                                    You
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-[9.5px] text-text-secondary mt-0.5">{item.city} • 🔥 {item.streak || 0} Day Streak</span>
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold text-[#EA580C] bg-[#FFF7ED] px-3.5 py-1 rounded-full border border-[#EA580C]/10 shrink-0 select-none">
+                            {item.totalPoints} Points
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB CONTENT F: DONATIONS 80G RECEIPTS */}
+            {activeTab === "donations" && (
+              <div className="flex flex-col gap-6 text-left">
+                <div className="flex items-center gap-3 pb-3 border-b border-[#EA580C]/5">
+                  <Heart size={18} className="text-[#EA580C]" />
+                  <div>
+                    <h2 className="font-display font-semibold text-text-primary text-base">Your Donation Tax Receipts</h2>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Download 80G tax certificates</p>
+                  </div>
+                </div>
+
+                {donations.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {donations.map((donation) => (
+                      <div key={donation.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-custom-md bg-[#FCFBF7] border border-[#EA580C]/10 gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-500/10 shadow-sm">
+                            <FileCheck size={18} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-text-primary">INR {donation.amount.toLocaleString("en-IN")}.00</span>
+                              <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border select-none ${
+                                donation.verified ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" : "bg-amber-50 text-amber-700 border-amber-500/10"
+                              }`}>
+                                {donation.verified ? "Verified" : "Pending"}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-text-secondary mt-1">Txn ID: {donation.txnId} • {new Date(donation.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => triggerPrintReceipt(donation)} 
+                          className="px-4 py-2.5 rounded-custom-md bg-white border border-[#C28A3E]/20 hover:border-[#EA580C]/40 text-[#C28A3E] hover:text-[#EA580C] text-xs font-bold uppercase tracking-wider shadow flex items-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto justify-center"
+                        >
+                          <Download size={14} />
+                          <span>Print 80G Receipt</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border border-dashed border-[#C28A3E]/20 rounded-custom-md flex flex-col items-center justify-center gap-3 select-none bg-[#FCFBF7]/10">
+                    <span className="text-4xl">💝</span>
+                    <div>
+                      <p className="text-sm text-text-primary font-semibold">No donations registered under {profile.phone || profile.mobile || user.phone || "your account"}</p>
+                      <p className="text-xs text-text-secondary max-w-sm mt-1.5 leading-relaxed">If you have made a transfer via QR/UPI, please report it at the Donation desk to link the receipt here.</p>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB CONTENT G: EDIT PROFILE SETTINGS */}
+            {activeTab === "profile" && (
+              <div className="flex flex-col gap-6 text-left">
+                <div className="pb-3 border-b border-[#EA580C]/5">
+                  <h3 className="font-display font-semibold text-text-primary text-base">Edit Devotee Profile</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Personalize your sadhana identity</p>
                 </div>
-                <button type="submit" className="px-5 py-2.5 rounded bg-primary text-white text-xs font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 w-fit cursor-pointer ml-auto mt-2">
-                  <Save size={14} /><span>Update Profile</span>
-                </button>
-              </form>
-            </div>
-          )}
+                
+                <form onSubmit={handleUpdateProfile} className="p-5 sm:p-6 rounded-custom-lg bg-[#FCFBF7]/40 border border-[#EA580C]/10 flex flex-col gap-4 max-w-xl shadow-sm">
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-name" className="text-[9.5px] text-text-secondary uppercase font-bold">Full Name</label>
+                    <input 
+                      id="edit-name"
+                      type="text" 
+                      value={editName} 
+                      onChange={(e) => setEditName(e.target.value)} 
+                      required 
+                      className="px-3 py-2.5 text-xs sm:text-sm rounded bg-white border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold" 
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-city" className="text-[9.5px] text-text-secondary uppercase font-bold">City / Residence</label>
+                    <input 
+                      id="edit-city"
+                      type="text" 
+                      value={editCity} 
+                      onChange={(e) => setEditCity(e.target.value)} 
+                      required 
+                      className="px-3 py-2.5 text-xs sm:text-sm rounded bg-white border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold" 
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-phone" className="text-[9.5px] text-text-secondary uppercase font-bold">Mobile Number (Optional)</label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3 text-xs text-text-secondary font-bold select-none">+91</span>
+                      <input 
+                        id="edit-phone"
+                        type="tel" 
+                        maxLength={10} 
+                        value={editPhone} 
+                        onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ""))} 
+                        className="w-full pl-10 pr-3 py-2.5 text-xs sm:text-sm rounded bg-white border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold" 
+                        placeholder="10-digit number" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="edit-avatar" className="text-[9.5px] text-text-secondary uppercase font-bold">Avatar Image URL</label>
+                    <input 
+                      id="edit-avatar"
+                      type="text" 
+                      value={editAvatar} 
+                      onChange={(e) => setEditAvatar(e.target.value)} 
+                      placeholder="https://images.unsplash.com..." 
+                      className="px-3 py-2.5 text-xs sm:text-sm rounded bg-white border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold" 
+                    />
+                    
+                    <div className="flex items-center gap-3.5 mt-2.5 bg-white p-3.5 rounded border border-[#EA580C]/10 select-none">
+                      <span className="text-[9px] uppercase font-bold text-text-secondary shrink-0">Presets:</span>
+                      <div className="flex gap-2.5">
+                        {[
+                          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150",
+                          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
+                          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150",
+                          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150"
+                        ].map((presetUrl, idx) => (
+                          <img 
+                            key={idx} 
+                            src={presetUrl} 
+                            alt="Preset Avatar option" 
+                            onClick={() => setEditAvatar(presetUrl)} 
+                            className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition-all ${
+                              editAvatar === presetUrl ? "border-[#EA580C] scale-110 shadow-sm" : "border-transparent hover:border-[#EA580C]/40"
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    className="px-6 py-2.5 rounded bg-[#EA580C] hover:bg-[#EA580C]/90 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors flex items-center justify-center gap-1.5 w-fit cursor-pointer ml-auto mt-2 select-none"
+                  >
+                    <Save size={14} />
+                    <span>Update Profile</span>
+                  </button>
+
+                </form>
+              </div>
+            )}
+
+          </div>
 
         </div>
+
       </div>
+
     </div>
   );
 }

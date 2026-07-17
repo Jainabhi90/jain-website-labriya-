@@ -85,8 +85,11 @@ export default function Admin() {
 
   // Target Filters/Searches
   const [profileSearch, setProfileSearch] = useState("");
-  const [logStatusFilter, setLogStatusFilter] = useState("Pending");
+  const [logStatusFilter, setLogStatusFilter] = useState("Approved");
   const [donationSearch, setDonationSearch] = useState("");
+
+  const [editedLogActivities, setEditedLogActivities] = useState({});
+  const [isSavingLog, setSavingLog] = useState({});
 
   // Expanded operational stats & popovers states
   const [unreadAdminNotifsCount, setUnreadAdminNotifsCount] = useState(0);
@@ -1402,7 +1405,7 @@ export default function Admin() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h3 className="font-display font-semibold text-text-primary text-base">Check-In Approvals Workflow</h3>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Audit and approve daily spiritual vow logs</p>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Audit and update daily devotee checked vows</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <select
@@ -1410,25 +1413,24 @@ export default function Admin() {
                         onChange={(e) => { setLogStatusFilter(e.target.value); reloadLogsOnly(e.target.value); }}
                         className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary font-semibold focus:outline-none bg-white"
                       >
-                        <option value="Pending">Pending Approvals</option>
-                        <option value="Approved">Approved Logs</option>
+                        <option value="Approved">Submitted Logs</option>
                         <option value="Rejected">Rejected Logs</option>
                       </select>
-                      {logStatusFilter === "Pending" && adminLogs.length > 0 && (
-                        <button onClick={handleApproveAllPending} className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer">Approve All</button>
-                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-3 text-left">
                     {adminLogs.length === 0 ? (
                       <div className="p-8 text-center border border-dashed border-border-custom rounded-custom-md">
                         <span className="text-3xl block mb-2">✅</span>
-                        <p className="text-xs font-semibold text-text-secondary">No check-in logs require verification</p>
+                        <p className="text-xs font-semibold text-text-secondary">No check-in logs found for this status</p>
                       </div>
                     ) : (
                       adminLogs.map(log => {
                         const isExpanded = expandedLogId === log.id;
+                        const currentSelections = editedLogActivities[log.id] || log.activities.map(a => a.id);
+                        const isSaving = isSavingLog[log.id] || false;
+
                         return (
                           <div key={log.id} className="border border-border-custom rounded-custom-md bg-white overflow-hidden">
                             {/* Summary row */}
@@ -1445,27 +1447,51 @@ export default function Admin() {
                                       : "bg-amber-50 text-amber-700 border-amber-200"
                                   }`}>{log.status}</span>
                                 </div>
-                                <span className="text-[9px] text-text-secondary">{log.dateStr} • {log.activityName} • +{log.points} claimed pts</span>
+                                <span className="text-[9px] text-text-secondary leading-normal mt-0.5">
+                                  <strong>{log.dateStr}</strong> • Checked: {log.activities.map(a => a.name).join(", ") || "None"} • <strong>+{log.points} pts</strong>
+                                </span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                {log.status === "Pending" && (
-                                  <>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleUpdateLogStatus(log.id, "Approved"); }}
-                                      className="p-1.5 rounded bg-green-50 hover:bg-green-100 text-green-600 cursor-pointer"
-                                      title="Approve"
-                                    >
-                                      <Check size={12} strokeWidth={2.5} />
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleUpdateLogStatus(log.id, "Rejected"); }}
-                                      className="p-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 cursor-pointer"
-                                      title="Reject"
-                                    >
-                                      <XCircle size={12} />
-                                    </button>
-                                  </>
+                                {log.status === "Approved" ? (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Are you sure you want to reject ${log.devoteeName}'s check-in for ${log.dateStr}?`)) {
+                                        try {
+                                          await db.updateGroupedLogStatus(log.profileId, log.dateStr, "Rejected");
+                                          showNotification(`Rejected ${log.devoteeName}'s check-in.`);
+                                          await reloadLogsOnly(logStatusFilter);
+                                        } catch (err) {
+                                          console.error(err);
+                                          showNotification("Failed to reject check-in.", "error");
+                                        }
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-500/10 transition-colors cursor-pointer mr-1"
+                                  >
+                                    Reject
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        await db.updateGroupedLogStatus(log.profileId, log.dateStr, "Approved");
+                                        showNotification(`Approved ${log.devoteeName}'s check-in.`);
+                                        await reloadLogsOnly(logStatusFilter);
+                                      } catch (err) {
+                                        console.error(err);
+                                        showNotification("Failed to approve check-in.", "error");
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-green-600 bg-green-50 hover:bg-green-100 rounded border border-green-500/10 transition-colors cursor-pointer mr-1"
+                                  >
+                                    Approve
+                                  </button>
                                 )}
+                                <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider text-[#EA580C] hover:underline cursor-pointer">
+                                  {isExpanded ? "Hide Details" : "Edit Vows"}
+                                </span>
                                 <span className="text-[10px] text-text-secondary font-medium pl-2">{isExpanded ? "▲" : "▼"}</span>
                               </div>
                             </div>
@@ -1473,40 +1499,60 @@ export default function Admin() {
                             {/* Detail remarks panel */}
                             {isExpanded && (
                               <div className="p-4 bg-neutral-50/50 border-t border-border-custom flex flex-col gap-4">
-                                <p className="text-[9px] uppercase font-bold text-text-secondary">Verify Devotee Sadhana Logs & Override Points</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                  <div className="sm:col-span-2 flex flex-col gap-1">
-                                    <label className="text-[9px] uppercase font-bold text-text-secondary">Admin Remarks / Notes</label>
-                                    <input
-                                      type="text"
-                                      value={logRemarks[log.id] || ""}
-                                      onChange={(e) => setLogRemarks(prev => ({ ...prev, [log.id]: e.target.value }))}
-                                      placeholder="Write remarks or rejection reasons here..."
-                                      className="px-3 py-1.5 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none"
-                                    />
-                                  </div>
-                                  <div className="flex flex-col gap-1">
-                                    <label className="text-[9px] uppercase font-bold text-text-secondary">Override Points</label>
-                                    <input
-                                      type="number"
-                                      value={logPoints[log.id] !== undefined ? logPoints[log.id] : log.points}
-                                      onChange={(e) => setLogPoints(prev => ({ ...prev, [log.id]: e.target.value }))}
-                                      className="px-3 py-1.5 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none font-bold text-primary"
-                                    />
-                                  </div>
+                                <div className="border-b border-neutral-100 pb-2">
+                                  <p className="text-[10px] uppercase font-bold text-[#EA580C]">Edit Devotee Checked Vows</p>
+                                  <p className="text-[9px] text-text-secondary mt-0.5">Select what points they ticked below. Stats will auto-recalculate upon saving.</p>
                                 </div>
-                                <div className="flex gap-2">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                  {sadhanaActivities.map(act => {
+                                    const isChecked = currentSelections.includes(act.id);
+                                    return (
+                                      <label 
+                                        key={act.id} 
+                                        className={`flex items-center gap-2.5 p-2.5 rounded border transition-colors cursor-pointer select-none ${
+                                          isChecked ? "bg-[#FFF7ED] border-[#EA580C]/30" : "bg-white border-neutral-150"
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={() => {
+                                            const updated = isChecked
+                                              ? currentSelections.filter(id => id !== act.id)
+                                              : [...currentSelections, act.id];
+                                            setEditedLogActivities(prev => ({ ...prev, [log.id]: updated }));
+                                          }}
+                                          className="w-4 h-4 rounded text-[#EA580C] border-neutral-300 focus:ring-[#EA580C]"
+                                        />
+                                        <div className="flex flex-col text-left">
+                                          <span className="text-xs font-semibold text-text-primary">{act.name}</span>
+                                          <span className="text-[9px] text-text-secondary">{act.category} • +{act.points} pts</span>
+                                        </div>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+
+                                <div className="flex gap-2 justify-end pt-2 border-t border-neutral-100 mt-2">
                                   <button
-                                    onClick={() => handleUpdateLogStatus(log.id, "Approved")}
-                                    className="flex-1 py-2 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                                    onClick={async () => {
+                                      try {
+                                        setSavingLog(prev => ({ ...prev, [log.id]: true }));
+                                        await db.submitDailySadhana(log.profileId, log.dateStr, currentSelections);
+                                        showNotification("🌸 Devotee daily sadhana logs updated successfully.");
+                                        await reloadLogsOnly(logStatusFilter);
+                                      } catch (err) {
+                                        console.error(err);
+                                        showNotification("Failed to save sadhana changes: " + err.message, "error");
+                                      } finally {
+                                        setSavingLog(prev => ({ ...prev, [log.id]: false }));
+                                      }
+                                    }}
+                                    disabled={isSaving}
+                                    className="px-6 py-2.5 rounded bg-[#EA580C] hover:bg-[#EA580C]/90 text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
                                   >
-                                    Approve & Save Vows
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateLogStatus(log.id, "Rejected")}
-                                    className="flex-1 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold uppercase tracking-wider cursor-pointer"
-                                  >
-                                    Reject Check-In
+                                    {isSaving ? "Saving changes..." : "Save Vow Changes"}
                                   </button>
                                 </div>
                               </div>

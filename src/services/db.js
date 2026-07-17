@@ -1350,7 +1350,7 @@ export const db = {
             activity_id: actId,
             activity_date: dateStr,
             points_awarded: pointsVal,
-            status: "Pending",
+            status: "Approved",
             submission_source: "Website"
           };
         });
@@ -1378,7 +1378,7 @@ export const db = {
           dateStr,
           activities: activityIds,
           points: 0, // points sum is resolved dynamically, set placeholder
-          status: "Pending"
+          status: "Approved"
         },
         profile: {
           totalPoints: updatedProfile.total_points,
@@ -1593,7 +1593,7 @@ export const db = {
           points_awarded,
           status,
           created_at,
-          profiles (
+          profiles!user_activities_profile_id_fkey (
             id,
             full_name,
             mobile
@@ -1612,20 +1612,52 @@ export const db = {
 
       const { data, error } = await query;
       if (!error && data) {
-        return data.map(log => ({
-          id: log.id,
-          dateStr: log.activity_date,
-          points: log.points_awarded,
-          status: log.status,
-          createdAt: log.created_at,
-          devoteeName: log.profiles?.full_name || "Unknown",
-          devoteePhone: log.profiles?.mobile || "Unknown",
-          activityName: log.activities?.name || "Unknown",
-          activityCategory: log.activities?.category || "Unknown"
-        }));
+        const grouped = {};
+        data.forEach(log => {
+          const key = `${log.profiles?.id}_${log.activity_date}`;
+          if (!grouped[key]) {
+            grouped[key] = {
+              id: key,
+              profileId: log.profiles?.id,
+              devoteeName: log.profiles?.full_name || "Unknown",
+              devoteePhone: log.profiles?.mobile || "Unknown",
+              dateStr: log.activity_date,
+              status: log.status,
+              createdAt: log.created_at,
+              points: 0,
+              activities: []
+            };
+          }
+          if (log.activities) {
+            grouped[key].activities.push({
+              id: log.activities.id,
+              name: log.activities.name,
+              category: log.activities.category,
+              points: log.points_awarded
+            });
+            grouped[key].points += log.points_awarded;
+          }
+        });
+        return Object.values(grouped);
       }
     }
-    return [];
+    const logs = getLocalItem("temp_sadhana_logs", []);
+    const profiles = getLocalItem("temp_sadhana_profiles", {});
+    const grouped = logs.map(l => {
+      const p = profiles[l.userId] || { fullName: "Unknown", phone: "Unknown" };
+      return {
+        id: l.id,
+        profileId: l.userId,
+        devoteeName: p.fullName || p.full_name || "Unknown",
+        devoteePhone: p.phone || p.mobile || "Unknown",
+        dateStr: l.dateStr,
+        status: "Approved",
+        createdAt: new Date().toISOString(),
+        points: l.points,
+        activities: l.activities.map(actId => ({ id: actId, name: actId }))
+      };
+    });
+    return grouped;
   },
 
   async updateLogStatus(id, status) {
@@ -1640,6 +1672,50 @@ export const db = {
       return data;
     }
     return null;
+  },
+
+  async updateGroupedLogStatus(profileId, dateStr, status) {
+    if (isSupabaseConfigured && supabase) {
+      if (status === "Rejected") {
+        const { error } = await supabase
+          .from("user_activities")
+          .update({ status, points_awarded: 0 })
+          .eq("profile_id", profileId)
+          .eq("activity_date", dateStr);
+        if (error) throw error;
+      } else {
+        const { data: rows } = await supabase
+          .from("user_activities")
+          .select("activity_id")
+          .eq("profile_id", profileId)
+          .eq("activity_date", dateStr);
+        
+        const activityIds = rows?.map(r => r.activity_id) || [];
+        await this.submitDailySadhana(profileId, dateStr, activityIds);
+      }
+      return true;
+    }
+    
+    // Local storage fallback
+    const logs = getLocalItem("temp_sadhana_logs", []);
+    const matching = logs.find(l => l.userId === profileId && l.dateStr === dateStr);
+    if (matching) {
+      matching.status = status;
+      if (status === "Rejected") {
+        matching.points = 0;
+      } else {
+        const activities = await this.getSadhanaActivities();
+        let pts = 0;
+        matching.activities.forEach(id => {
+          const act = activities.find(a => a.id === id);
+          if (act) pts += act.points;
+        });
+        matching.points = pts;
+      }
+      setLocalItem("temp_sadhana_logs", logs);
+      return true;
+    }
+    return false;
   },
 
   async approveAllPendingLogs() {
@@ -2107,7 +2183,7 @@ export const db = {
           points_awarded,
           status,
           created_at,
-          profiles (full_name),
+          profiles!user_activities_profile_id_fkey (full_name),
           activities (name)
         `)
         .order("created_at", { ascending: false })

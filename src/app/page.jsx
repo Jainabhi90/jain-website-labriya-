@@ -86,119 +86,233 @@ export default function Home() {
     <div className="w-full flex flex-col items-center overflow-x-hidden">
       
       {/* 1. HERO SECTION */}
-      <section className="relative w-full min-h-[95vh] flex flex-col items-center justify-center text-center px-6 py-16 bg-gradient-to-b from-secondary/40 via-white to-bg-custom">
+      <section className="relative w-full min-h-[95vh] flex flex-col items-center justify-center px-4 sm:px-6 py-12 md:py-16 lg:py-20 bg-gradient-to-b from-[#FCFBF7] via-[#FFFDF9] to-white border-b border-[#EA580C]/5 overflow-hidden">
         {/* Background Saffron/Yellow Circle Orbs representing purity */}
         <motion.div 
           animate={{ 
             scale: [1, 1.05, 1],
-            x: [0, 10, 0],
-            y: [0, -10, 0]
+            x: [0, 15, 0],
+            y: [0, -15, 0]
           }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[500px] h-[500px] rounded-full bg-secondary/25 blur-3xl -top-48 -left-48 pointer-events-none -z-10" 
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute w-[600px] h-[600px] rounded-full bg-[#FFF7ED] blur-3xl -top-48 -left-48 pointer-events-none -z-10" 
         />
         <motion.div 
           animate={{ 
             scale: [1.05, 1, 1.05],
-            x: [0, -15, 0],
-            y: [0, 10, 0]
+            x: [0, -20, 0],
+            y: [0, 15, 0]
           }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[450px] h-[450px] rounded-full bg-orange-100/10 blur-3xl -bottom-36 -right-36 pointer-events-none -z-10" 
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute w-[500px] h-[500px] rounded-full bg-orange-100/5 blur-3xl -bottom-36 -right-36 pointer-events-none -z-10" 
         />
 
-        {/* Traditional Jain mandala-inspired layout line */}
-        <div className="absolute w-[380px] h-[380px] rounded-full border border-primary/5 animate-pulse-soft flex items-center justify-center -z-10">
-          <div className="w-[300px] h-[300px] rounded-full border border-accent/5 flex items-center justify-center">
-            <div className="w-[220px] h-[220px] rounded-full border border-primary/5" />
+        {/* Traditional Jain mandala-inspired layout lines */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-[#EA580C]/3 animate-pulse-soft flex items-center justify-center -z-10 pointer-events-none">
+          <div className="w-[400px] h-[400px] rounded-full border border-[#C28A3E]/3 flex items-center justify-center">
+            <div className="w-[300px] h-[300px] rounded-full border border-[#EA580C]/3 flex items-center justify-center">
+              <div className="w-[200px] h-[200px] rounded-full border border-[#C28A3E]/2" />
+            </div>
           </div>
         </div>
 
-        <motion.div 
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="max-w-4xl flex flex-col items-center gap-5 mt-6"
-        >
-          {/* Badge */}
-          <motion.span 
-            variants={itemVariants}
-            className="px-4 py-1.5 rounded-full bg-secondary border border-primary/10 text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-            {t.jaiJinendra}
-          </motion.span>
-
-          {/* Temple Name */}
-          <motion.h2 
-            variants={itemVariants}
-            className="font-display font-medium text-text-secondary text-xs sm:text-sm tracking-widest uppercase mt-1"
-          >
-            {cms.templeName || t.shreeLabriyaMandir}
-          </motion.h2>
-
-          {/* Main Title */}
-          <motion.h1 
-            variants={itemVariants}
-            className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight leading-tight max-w-3xl"
-          >
-            {cms.heroTitle || (lang === "en" ? "Sacred Chaturmas Festival 2026" : "पावन चातुर्मास महोत्सव २०२६")}
-          </motion.h1>
-
-          {/* Hero Subtitle */}
-          {cms.heroSubtitle && (
-            <motion.p
-              variants={itemVariants}
-              className="text-primary text-sm sm:text-base font-semibold tracking-wide uppercase"
-            >
-              {cms.heroSubtitle}
-            </motion.p>
-          )}
-
-          {/* Description */}
-          <motion.p 
-            variants={itemVariants}
-            className="text-text-secondary text-xs sm:text-sm md:text-base max-w-2xl leading-relaxed"
-          >
-            {cms.heroDescription || t.welcomeDescription}
-          </motion.p>
-
-          {/* Spiritual Hero Image Frame */}
-          <motion.div 
-            variants={itemVariants}
-            className="relative w-full max-w-2xl aspect-[16/10] sm:aspect-[16/9.5] rounded-custom-lg overflow-hidden shadow-premium border border-primary/10 mt-2 mb-4 group bg-secondary"
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent z-10" />
-            <img 
-              src={cms.heroBanner || "/jain_hero_spiritual.png"} 
-              alt={cms.templeName || "Shree Labriya Jain Shwetambar Mandir Chaturmas 2026"} 
-              className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-700" 
-            />
-          </motion.div>
-
-          {/* Main CTA */}
-          <motion.div 
-            variants={itemVariants}
-            className="flex items-center justify-center mt-2 w-full"
-          >
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => scrollToSection("schedule")}
-              className="px-10 py-4 rounded-custom-md bg-primary text-white font-bold text-sm shadow-premium hover:shadow-premium-hover hover:bg-primary/95 transition-all w-full sm:w-auto cursor-pointer"
-            >
-              {t.viewTodaySchedule}
-            </motion.button>
-          </motion.div>
+        {/* Modern Split Grid Layout */}
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center z-10">
           
-          {/* Countdown timer */}
+          {/* LEFT SIDE: Spiritual content, CTAs, details */}
           <motion.div 
-            variants={itemVariants}
-            className="mt-6 w-full"
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            className="col-span-1 lg:col-span-7 flex flex-col items-start text-left gap-5"
           >
-            <Countdown />
+            {/* Top Badge */}
+            <motion.div 
+              variants={itemVariants}
+              className="px-4 py-1.5 rounded-full bg-[#FFF7ED] border border-[#C28A3E]/20 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#C28A3E] flex items-center gap-2"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] animate-ping" />
+              <span>{lang === "en" ? "🌸 Jai Jinendra" : "🌸 जय जिनेन्द्र"}</span>
+            </motion.div>
+
+            {/* Temple Name */}
+            <motion.h2 
+              variants={itemVariants}
+              className="font-display font-semibold text-text-secondary text-xs sm:text-sm tracking-widest uppercase leading-none"
+            >
+              {cms.templeName || t.shreeLabriyaMandir}
+            </motion.h2>
+
+            {/* Hero Main Title */}
+            <motion.h1 
+              variants={itemVariants}
+              className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-[54px] tracking-tight leading-[1.1] max-w-2xl"
+            >
+              {cms.heroTitle || (lang === "en" ? "Sacred Chaturmas Festival 2026" : "पावन चातुर्मास महोत्सव २०२६")}
+            </motion.h1>
+
+            {/* Hero Subtitle */}
+            {cms.heroSubtitle && (
+              <motion.p
+                variants={itemVariants}
+                className="text-[#EA580C] text-sm sm:text-base font-semibold tracking-wide uppercase leading-none"
+              >
+                {cms.heroSubtitle}
+              </motion.p>
+            )}
+
+            {/* Description */}
+            <motion.p 
+              variants={itemVariants}
+              className="text-[#4B5563] text-xs sm:text-sm md:text-base max-w-xl leading-relaxed"
+            >
+              {cms.heroDescription || t.welcomeDescription}
+            </motion.p>
+
+            {/* CTA Buttons - Side by Side on Desktop, Stacked on Mobile */}
+            <motion.div 
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2"
+            >
+              {/* Primary button */}
+              <button
+                onClick={() => scrollToSection("schedule")}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-custom-md bg-[#EA580C] text-white font-semibold text-sm shadow-sm hover:bg-[#EA580C]/90 active:bg-[#EA580C]/95 transition-all cursor-pointer text-center select-none"
+              >
+                {t.viewTodaySchedule}
+              </button>
+
+              {/* Secondary button */}
+              <Link href="/panchang" className="w-full sm:w-auto">
+                <button className="w-full px-8 py-3.5 rounded-custom-md border border-[#C28A3E]/20 bg-white text-[#C28A3E] hover:bg-[#FFF7ED]/30 hover:border-[#C28A3E]/40 active:bg-[#FFF7ED]/50 transition-all font-semibold text-sm shadow-sm cursor-pointer text-center select-none">
+                  {lang === "en" ? "View Panchang" : "पंचांग देखें"}
+                </button>
+              </Link>
+            </motion.div>
+
+            {/* Quick Information Cards */}
+            <motion.div 
+              variants={itemVariants}
+              className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 w-full mt-4"
+            >
+              {/* Card 1: Location */}
+              {cms.templeAddress && (
+                <div className="flex items-center gap-2 p-2.5 rounded-custom-sm bg-white border border-[#C28A3E]/10 shadow-[0_4px_12px_rgba(0,0,0,0.01)] text-left shrink-0">
+                  <span className="text-base">📍</span>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] text-[#C28A3E] uppercase font-bold tracking-wider leading-none">
+                      {lang === "en" ? "Location" : "स्थान"}
+                    </span>
+                    <span className="text-[11px] text-text-primary font-medium mt-0.5 max-w-[110px] truncate">
+                      {cms.templeAddress.split(",")[1]?.trim() || cms.templeAddress.split(",")[0]?.trim() || "Labriya"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Card 2: Year */}
+              {cms.chaturmasYear && (
+                <div className="flex items-center gap-2 p-2.5 rounded-custom-sm bg-white border border-[#C28A3E]/10 shadow-[0_4px_12px_rgba(0,0,0,0.01)] text-left shrink-0">
+                  <span className="text-base">🗓</span>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] text-[#C28A3E] uppercase font-bold tracking-wider leading-none">
+                      {lang === "en" ? "Year" : "वर्ष"}
+                    </span>
+                    <span className="text-[11px] text-text-primary font-medium mt-0.5">
+                      {cms.chaturmasYear}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Card 3: Daily Timing */}
+              {(cms.aartiTiming || cms.dailyTimings) && (
+                <div className="flex items-center gap-2 p-2.5 rounded-custom-sm bg-white border border-[#C28A3E]/10 shadow-[0_4px_12px_rgba(0,0,0,0.01)] text-left shrink-0 col-span-2 sm:col-span-1">
+                  <span className="text-base">🙏</span>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] text-[#C28A3E] uppercase font-bold tracking-wider leading-none">
+                      {lang === "en" ? "Worship" : "दर्शन/आरती"}
+                    </span>
+                    <span className="text-[11px] text-text-primary font-medium mt-0.5 max-w-[130px] truncate">
+                      {cms.aartiTiming || cms.dailyTimings}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Countdown timer */}
+            <motion.div 
+              variants={itemVariants}
+              className="w-full mt-4"
+            >
+              <Countdown />
+            </motion.div>
+
           </motion.div>
-        </motion.div>
+
+          {/* RIGHT SIDE: Aspect-ratio preserved image with floating overlays */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
+            className="col-span-1 lg:col-span-5 flex items-center justify-center relative w-full mt-6 lg:mt-0"
+          >
+            {/* Saffron soft glow background behind image */}
+            <div className="absolute inset-0 bg-[#FFF7ED] rounded-2xl filter blur-xl scale-95 opacity-50 -z-10 pointer-events-none" />
+
+            <motion.div 
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-full max-w-[480px] aspect-[16/11.5] sm:aspect-[16/11] lg:aspect-[16/12] rounded-custom-lg border border-[#C28A3E]/20 shadow-premium overflow-hidden bg-white select-none group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent z-10" />
+              <img 
+                src={cms.heroBanner || "/jain_hero_spiritual.png"} 
+                alt={cms.templeName || "Shree Labriya Jain Shwetambar Mandir Chaturmas 2026"} 
+                loading="lazy"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]" 
+              />
+
+              {/* Floating Overlay Card A (Chaturmas Year badge) */}
+              {cms.chaturmasYear && (
+                <div className="bg-white/95 backdrop-blur-sm border border-[#C28A3E]/10 px-3 py-1.5 rounded-custom-sm flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] absolute top-3 right-3 z-20 select-none">
+                  <span className="text-[10px] text-[#C28A3E]">🕊</span>
+                  <span className="text-[10px] font-semibold text-text-primary tracking-wider uppercase">
+                    {lang === "en" ? "Chaturmas" : "चातुर्मास"} {cms.chaturmasYear}
+                  </span>
+                </div>
+              )}
+
+              {/* Floating Overlay Card B (Location badge) */}
+              <div className="bg-white/95 backdrop-blur-sm border border-[#C28A3E]/10 px-3 py-1.5 rounded-custom-sm flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] absolute bottom-3 left-3 z-20 select-none">
+                <span className="text-[10px] text-[#C28A3E]">📍</span>
+                <span className="text-[10px] font-semibold text-[#1F2937] tracking-wider">
+                  {lang === "en" ? "Labriya Mandir, Dhar" : "लाबड़िया मंदिर, धार"}
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+
+        </div>
+
+        {/* Scroll down animated indicator (visible on desktop) */}
+        <div 
+          className="hidden lg:flex flex-col items-center gap-1 absolute bottom-6 left-1/2 -translate-x-1/2 cursor-pointer text-[#4B5563] hover:text-[#EA580C] transition-colors duration-150 z-10 select-none"
+          onClick={() => scrollToSection("schedule")}
+        >
+          <span className="text-[9px] uppercase font-bold tracking-widest leading-none">
+            {lang === "en" ? "Scroll to Explore" : "अन्वेषण करें"}
+          </span>
+          <motion.span
+            animate={{ y: [0, 4, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="text-[12px] text-[#C28A3E] font-bold mt-1"
+          >
+            ↓
+          </motion.span>
+        </div>
+
       </section>
 
       {/* 2. QUICK ACCESS GRID */}
