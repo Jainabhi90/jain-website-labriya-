@@ -16,6 +16,7 @@ import Countdown from "@/components/Countdown";
 import { db } from "@/services/db";
 import { translations } from "@/services/translations";
 import { useCMS } from "@/context/CMSContext";
+import { sanitizeHTML } from "@/lib/sanitize";
 
 // Framer Motion staggered transition variants
 const containerVariants = {
@@ -469,7 +470,7 @@ export default function Home() {
                 : "bg-orange-50 text-primary border-primary/10";
 
               const typeText = lang === "en"
-                ? ann.type.toUpperCase()
+              ? (ann.type ?? "").toUpperCase()
                 : ann.type === "program"
                 ? "उत्सव कार्यक्रम"
                 : ann.type === "update"
@@ -495,9 +496,10 @@ export default function Home() {
                     <h3 className="font-display font-semibold text-text-primary text-base leading-snug">
                       {ann.title}
                     </h3>
-                    <p className="text-xs text-text-secondary leading-relaxed">
-                      {ann.content}
-                    </p>
+                    <div 
+                      className="text-xs text-text-secondary leading-relaxed whitespace-pre-line"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
+                    />
                   </div>
                 </motion.div>
               );

@@ -25,11 +25,13 @@ import {
   Loader2,
   X,
   TrendingUp,
-  Bell
+  Bell,
+  Megaphone
 } from "lucide-react";
 import { db } from "@/services/db";
 import { useAuth } from "@/context/AuthContext";
 import { profileService } from "@/services/profileService";
+import { sanitizeHTML } from "@/lib/sanitize";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BADGES_DEFINITIONS = {
@@ -209,6 +211,9 @@ export default function Dashboard() {
   const [statusType, setStatusType] = useState("success");
   const [donations, setDonations] = useState([]);
   const [unlockedBadges, setUnlockedBadges] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [unreadAnnCount, setUnreadAnnCount] = useState(0);
+  const [lastViewedTime, setLastViewedTime] = useState("1970-01-01T00:00:00.000Z");
 
   // Notification center states
   const [notifications, setNotifications] = useState([]);
@@ -288,6 +293,14 @@ export default function Dashboard() {
         const notifList = await db.getNotifications(profile.id);
         setNotifications(notifList);
         setUnreadNotifCount(notifList.filter(n => !n.read).length);
+
+        // Load active announcements
+        const activeAnn = await db.getAnnouncements();
+        setAnnouncements(activeAnn);
+        const lastViewed = localStorage.getItem("last_viewed_announcements_time") || "1970-01-01T00:00:00.000Z";
+        setLastViewedTime(lastViewed);
+        const unreadAnn = activeAnn.filter(a => new Date(a.createdAt).getTime() > new Date(lastViewed).getTime()).length;
+        setUnreadAnnCount(unreadAnn);
 
         // Check maintenance mode
         const settings = await db.getSettings();
@@ -706,6 +719,7 @@ export default function Dashboard() {
         <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-thin">
           {[
             { id: "sadhana", label: "Daily Check-In", icon: CheckSquare },
+            { id: "notices", label: "Temple Notices", icon: Megaphone, count: unreadAnnCount },
             { id: "badges", label: "Earned Badges", icon: Award },
             { id: "history", label: "History & Summary", icon: History },
             ...(leaderboardEnabled ? [{ id: "leaderboard", label: "Inspiring Leaderboard", icon: Trophy }] : []),
@@ -717,13 +731,26 @@ export default function Dashboard() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-left ${
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === "notices") {
+                    localStorage.setItem("last_viewed_announcements_time", new Date().toISOString());
+                    setUnreadAnnCount(0);
+                  }
+                }}
+                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-custom-md text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-left ${
                   isTabActive ? "bg-primary text-white shadow-premium" : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
                 }`}
               >
-                <Icon size={16} />
-                <span>{tab.label}</span>
+                <div className="flex items-center gap-3">
+                  <Icon size={16} />
+                  <span>{tab.label}</span>
+                </div>
+                {tab.count > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold animate-pulse">
+                    {tab.count}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -960,6 +987,64 @@ export default function Dashboard() {
                       <><Save size={14} /><span>Submit Sadhana Logs</span></>
                     )}
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TEMPLE NOTICES TAB ── */}
+          {activeTab === "notices" && (
+            <div className="flex flex-col gap-6">
+              <div className="pb-3 border-b border-border-custom">
+                <h3 className="font-display font-semibold text-text-primary text-base">Temple Announcements & Notice Board</h3>
+                <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Stay updated with official bulletins, programs, and notice updates</p>
+              </div>
+
+              {announcements.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {announcements.map((ann) => {
+                    const isNew = new Date(ann.createdAt).getTime() > new Date(lastViewedTime).getTime();
+                    return (
+                      <div key={ann.id} className="p-5 rounded-custom-md border border-border-custom bg-neutral-50/50 flex flex-col gap-3 relative overflow-hidden">
+                        {isNew && (
+                          <div className="absolute top-0 right-0 bg-primary text-white text-[7px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-bl">
+                            New
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-text-primary text-xs">{ann.title}</h4>
+                            <span className={`text-[7.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                              ann.priority === "high"
+                                ? "bg-red-50 text-red-600 border-red-500/10"
+                                : ann.priority === "low"
+                                ? "bg-blue-50 text-blue-600 border-blue-500/10"
+                                : "bg-orange-50 text-primary border-primary/10"
+                            }`}>
+                              {ann.priority || "normal"}
+                            </span>
+                            {ann.pinned && (
+                              <span className="text-[7.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-500/10 flex items-center gap-1">
+                                📌 Pinned
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[9px] text-text-secondary font-medium">
+                            {new Date(ann.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div 
+                          className="text-xs text-text-secondary leading-relaxed whitespace-pre-line"
+                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-16 border border-dashed border-border-custom rounded-custom-md bg-neutral-50/20">
+                  <span className="text-2xl">🪷</span>
+                  <p className="text-xs text-text-secondary mt-2">No announcements posted at this time. Check back later.</p>
                 </div>
               )}
             </div>

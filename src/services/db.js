@@ -322,81 +322,252 @@ export const db = {
   // --- Announcements ---
   async getAnnouncements() {
     if (isSupabaseConfigured && supabase) {
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("announcements")
         .select("*")
         .eq("published", true)
-        .order("created_at", { ascending: false });
+        .lte("created_at", now)
+        .or(`expires_at.is.null,expires_at.gt.${now}`);
       if (!error && data) {
-        return data.map(item => ({
+        const mapped = data.map(item => ({
           id: item.id,
           title: item.title,
           content: item.message,
-          type: item.priority === "high" ? "program" : item.priority === "low" ? "notice" : "update",
+          priority: item.priority,
+          pinned: item.pinned,
           active: item.published,
-          createdAt: item.created_at
+          createdAt: item.created_at,
+          expiresAt: item.expires_at,
+          createdBy: item.created_by
         }));
+        return mapped.sort((a, b) => {
+          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+          const weight = { high: 3, normal: 2, low: 1 };
+          const wA = weight[a.priority] || 2;
+          const wB = weight[b.priority] || 2;
+          if (wA !== wB) return wB - wA;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
       }
     }
-    return getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS)
+    const local = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS)
       .filter(a => a.active)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return local;
   },
 
-  async createAnnouncement(announcement) {
-    const newAnn = {
-      ...announcement,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-    };
-
+  async getAnnouncementsAdmin({ page = 1, limit = 10, search = "", status = "", priority = "", pinned = null, dateStart = "", dateEnd = "" }) {
     if (isSupabaseConfigured && supabase) {
-      const dbPriority = announcement.type === "program" ? "high" : announcement.type === "notice" ? "low" : "normal";
+      let query = supabase
+        .from("announcements")
+        .select("*", { count: "exact" });
+
+      if (search) {
+        query = query.or(`title.ilike.%${search}%,message.ilike.%${search}%`);
+      }
+
+      const now = new Date().toISOString();
+      if (status) {
+        if (status === "Draft") {
+          query = query.eq("published", false);
+        } else if (status === "Scheduled") {
+          query = query.eq("published", true).gt("created_at", now);
+        } else if (status === "Expired") {
+          query = query.eq("published", true).lt("expires_at", now);
+        } else if (status === "Published") {
+          query = query.eq("published", true)
+            .lte("created_at", now)
+            .or(`expires_at.is.null,expires_at.gt.${now}`);
+        }
+      }
+
+      if (priority) {
+        query = query.eq("priority", priority.toLowerCase());
+      }
+
+      if (pinned !== null) {
+        query = query.eq("pinned", pinned);
+      }
+
+      if (dateStart) {
+        query = query.gte("created_at", new Date(dateStart).toISOString());
+      }
+
+      if (dateEnd) {
+        query = query.lte("created_at", new Date(dateEnd).toISOString());
+      }
+
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      const { data, error, count } = await query
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (!error && data) {
+        const mapped = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          content: item.message,
+          priority: item.priority,
+          pinned: item.pinned,
+          active: item.published,
+          createdAt: item.created_at,
+          expiresAt: item.expires_at,
+          createdBy: item.created_by
+        }));
+        return { data: mapped, totalCount: count || 0 };
+      }
+    }
+
+    let local = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS);
+    if (search) {
+      local = local.filter(a => a.title.toLowerCase().includes(search.toLowerCase()) || a.content.toLowerCase().includes(search.toLowerCase()));
+    }
+    return { data: local.slice((page - 1) * limit, page * limit), totalCount: local.length };
+  },
+
+  async createAnnouncement(ann) {
+    if (isSupabaseConfigured && supabase) {
+      let dbPriority = ann.priority || "normal";
+      if (dbPriority === "Critical") dbPriority = "high";
+      dbPriority = dbPriority.toLowerCase();
+
+      let userId = null;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        userId = sessionData?.session?.user?.id || null;
+      } catch (e) {
+        console.error("Error retrieving user session for audit:", e);
+      }
+
       const { data, error } = await supabase
         .from("announcements")
         .insert({
-          title: announcement.title,
-          message: announcement.content,
+          title: ann.title,
+          message: ann.content,
           priority: dbPriority,
-          published: announcement.active
+          published: ann.active !== false,
+          pinned: ann.pinned === true,
+          expires_at: ann.expiresAt ? new Date(ann.expiresAt).toISOString() : null,
+          created_at: ann.createdAt ? new Date(ann.createdAt).toISOString() : new Date().toISOString(),
+          created_by: userId
         })
         .select()
         .single();
-      if (!error && data) {
+      if (error) {
+        console.error("Error creating announcement:", error);
+        throw error;
+      }
+      if (data) {
         return {
           id: data.id,
           title: data.title,
           content: data.message,
-          type: data.priority === "high" ? "program" : data.priority === "low" ? "notice" : "update",
+          priority: data.priority,
+          pinned: data.pinned,
           active: data.published,
-          createdAt: data.created_at
+          createdAt: data.created_at,
+          expiresAt: data.expires_at,
+          createdBy: data.created_by
         };
       }
     }
 
-    const items = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS);
-    items.unshift(newAnn);
-    setLocalItem("temp_announcements", items);
+    const local = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS);
+    const newAnn = {
+      id: "ann_" + Math.random().toString(36).substr(2, 9),
+      title: ann.title,
+      content: ann.content,
+      priority: ann.priority || "normal",
+      pinned: ann.pinned || false,
+      active: ann.active !== false,
+      createdAt: ann.createdAt || new Date().toISOString(),
+      expiresAt: ann.expiresAt || null
+    };
+    local.unshift(newAnn);
+    setLocalItem("temp_announcements", local);
     return newAnn;
+  },
+
+  async updateAnnouncement(id, updates) {
+    if (isSupabaseConfigured && supabase) {
+      let dbPriority = updates.priority;
+      if (dbPriority) {
+        if (dbPriority === "Critical") dbPriority = "high";
+        dbPriority = dbPriority.toLowerCase();
+      }
+
+      const dbUpdates = {
+        title: updates.title,
+        message: updates.content,
+        priority: dbPriority,
+        published: updates.active,
+        pinned: updates.pinned,
+        expires_at: updates.expiresAt !== undefined ? (updates.expiresAt ? new Date(updates.expiresAt).toISOString() : null) : undefined,
+        created_at: updates.createdAt !== undefined ? (updates.createdAt ? new Date(updates.createdAt).toISOString() : undefined) : undefined,
+        updated_at: new Date().toISOString()
+      };
+
+      Object.keys(dbUpdates).forEach(k => {
+        if (dbUpdates[k] === undefined) delete dbUpdates[k];
+      });
+
+      const { data, error } = await supabase
+        .from("announcements")
+        .update(dbUpdates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating announcement:", error);
+        throw error;
+      }
+      if (data) {
+        return {
+          id: data.id,
+          title: data.title,
+          content: data.message,
+          priority: data.priority,
+          pinned: data.pinned,
+          active: data.published,
+          createdAt: data.created_at,
+          expiresAt: data.expires_at,
+          createdBy: data.created_by
+        };
+      }
+    }
+
+    const local = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS);
+    const idx = local.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      local[idx] = { ...local[idx], ...updates };
+      setLocalItem("temp_announcements", local);
+      return local[idx];
+    }
+    return null;
   },
 
   async deleteAnnouncement(id) {
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase
         .from("announcements")
-        .update({ published: false })
+        .delete()
         .eq("id", id);
-      if (!error) return true;
-    }
-
-    const items = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS);
-    const index = items.findIndex(item => item.id === id);
-    if (index !== -1) {
-      items[index].active = false;
-      setLocalItem("temp_announcements", items);
+      if (error) {
+        console.error("Error deleting announcement:", error);
+        throw error;
+      }
       return true;
     }
-    return false;
+
+    const local = getLocalItem("temp_announcements", DEFAULT_ANNOUNCEMENTS);
+    const filtered = local.filter(a => a.id !== id);
+    setLocalItem("temp_announcements", filtered);
+    return true;
   },
 
   // --- Panchang ---
@@ -409,6 +580,7 @@ export const db = {
         .maybeSingle();
       if (!error && data) {
         return {
+          id: data.id,
           dateStr: data.date_str,
           tithi: data.tithi,
           sunrise: data.sunrise,
@@ -418,7 +590,17 @@ export const db = {
           festival: data.festival,
           shubh_din: data.shubh_din,
           samayik: data.samayik,
-          event: data.event
+          event: data.event,
+          nakshatra: data.nakshatra || "",
+          yoga: data.yoga || "",
+          karana: data.karana || "",
+          moonSign: data.moon_sign || "",
+          specialNotes: data.special_notes || "",
+          fastingInfo: data.fasting_info || "",
+          importantTimings: data.important_timings || "",
+          additionalRemarks: data.additional_remarks || "",
+          updatedBy: data.updated_by,
+          updatedAt: data.updated_at
         };
       }
     }
@@ -431,10 +613,50 @@ export const db = {
   },
 
   async getPanchangForMonth(year, month) {
-    // month is 1-based (1-12)
+    if (isSupabaseConfigured && supabase) {
+      const monthStr = month.toString().padStart(2, "0");
+      const startDate = `${year}-${monthStr}-01`;
+      const endDate = `${year}-${monthStr}-31`;
+      
+      const { data, error } = await supabase
+        .from("panchang")
+        .select("*")
+        .gte("date_str", startDate)
+        .lte("date_str", endDate);
+
+      if (!error && data) {
+        const monthData = {};
+        data.forEach(item => {
+          monthData[item.date_str] = {
+            id: item.id,
+            dateStr: item.date_str,
+            tithi: item.tithi,
+            sunrise: item.sunrise,
+            sunset: item.sunset,
+            paksha: item.paksha,
+            month: item.month,
+            festival: item.festival,
+            shubh_din: item.shubh_din,
+            samayik: item.samayik,
+            event: item.event,
+            nakshatra: item.nakshatra || "",
+            yoga: item.yoga || "",
+            karana: item.karana || "",
+            moonSign: item.moon_sign || "",
+            specialNotes: item.special_notes || "",
+            fastingInfo: item.fasting_info || "",
+            importantTimings: item.important_timings || "",
+            additionalRemarks: item.additional_remarks || "",
+            updatedBy: item.updated_by,
+            updatedAt: item.updated_at
+          };
+        });
+        return monthData;
+      }
+    }
+
     const prefix = `${year}-${month.toString().padStart(2, "0")}`;
     const records = getLocalItem("temp_tithi_panchang", DEFAULT_PANCHANG);
-    
     const monthData = {};
     for (const [date, val] of Object.entries(records)) {
       if (date.startsWith(prefix)) {
@@ -448,28 +670,191 @@ export const db = {
     const current = await this.getPanchang(dateStr);
     const updated = { ...current, ...updates, dateStr };
 
+    let userId = null;
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase
-        .from("panchang")
-        .upsert({
-          date_str: dateStr,
-          tithi: updated.tithi,
-          sunrise: updated.sunrise,
-          sunset: updated.sunset,
-          paksha: updated.paksha,
-          month: updated.month,
-          festival: updated.festival,
-          shubh_din: updated.shubh_din,
-          samayik: updated.samayik,
-          event: updated.event
-        });
-      if (!error) return updated;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        userId = sessionData?.session?.user?.id || null;
+      } catch (e) {
+        console.error("Error retrieving user session for audit:", e);
+      }
+
+      const payload = {
+        date_str: dateStr,
+        tithi: updated.tithi || "Sud Ekadashi",
+        sunrise: updated.sunrise,
+        sunset: updated.sunset,
+        paksha: updated.paksha,
+        month: updated.month,
+        festival: updated.festival,
+        shubh_din: updated.shubh_din,
+        samayik: updated.samayik,
+        event: updated.event,
+        nakshatra: updated.nakshatra,
+        yoga: updated.yoga,
+        karana: updated.karana,
+        moon_sign: updated.moonSign,
+        special_notes: updated.specialNotes,
+        fasting_info: updated.fastingInfo,
+        important_timings: updated.importantTimings,
+        additional_remarks: updated.additionalRemarks,
+        updated_by: userId,
+        updated_at: new Date().toISOString()
+      };
+
+      let upserted = null;
+      try {
+        const { data, error } = await supabase
+  .from("panchang")
+  .upsert(payload, {
+    onConflict: "date_str"
+  })
+  .select()
+  .single();
+
+        if (error) {
+          console.error("Error upserting panchang:", error);
+          if (error.code === "PGRST204" || error.message?.includes("column")) {
+            console.warn("Retrying panchang upsert with legacy schema columns...");
+            const legacyPayload = {
+              date_str: dateStr,
+              tithi: updated.tithi || "Sud Ekadashi",
+              sunrise: updated.sunrise,
+              sunset: updated.sunset,
+              paksha: updated.paksha,
+              month: updated.month,
+              festival: updated.festival,
+              shubh_din: updated.shubh_din,
+              samayik: updated.samayik,
+              event: updated.event
+            };
+            const { data: legData, error: retryError } = await supabase
+              .from("panchang")
+              .upsert(legacyPayload)
+              .select()
+              .single();
+            if (retryError) throw retryError;
+            upserted = legData;
+          } else {
+            throw error;
+          }
+        } else {
+          upserted = data;
+        }
+      } catch (err) {
+        console.error("Panchang write exception:", err);
+      }
+
+      if (upserted) {
+        try {
+          const { data: versions } = await supabase
+            .from("panchang_versions")
+            .select("version_number")
+            .eq("panchang_id", upserted.id)
+            .order("version_number", { ascending: false })
+            .limit(1);
+          
+          const nextVersion = (versions && versions[0] ? versions[0].version_number : 0) + 1;
+          
+          await supabase
+            .from("panchang_versions")
+            .insert({
+              panchang_id: upserted.id,
+              version_number: nextVersion,
+              date_str: upserted.date_str,
+              tithi: upserted.tithi,
+              sunrise: upserted.sunrise,
+              sunset: upserted.sunset,
+              paksha: upserted.paksha,
+              month: upserted.month,
+              festival: upserted.festival,
+              shubh_din: upserted.shubh_din,
+              samayik: upserted.samayik,
+              event: upserted.event,
+              nakshatra: upserted.nakshatra,
+              yoga: upserted.yoga,
+              karana: upserted.karana,
+              moon_sign: upserted.moon_sign,
+              special_notes: upserted.special_notes,
+              fasting_info: upserted.fasting_info,
+              important_timings: upserted.important_timings,
+              additional_remarks: upserted.additional_remarks,
+              updated_by: userId
+            });
+        } catch (e) {
+          console.warn("Could not write version history record:", e.message);
+        }
+      }
     }
 
     const records = getLocalItem("temp_tithi_panchang", DEFAULT_PANCHANG);
     records[dateStr] = updated;
     setLocalItem("temp_tithi_panchang", records);
     return updated;
+  },
+
+  async getPanchangVersions(dateStr) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: panchang } = await supabase
+        .from("panchang")
+        .select("id")
+        .eq("date_str", dateStr)
+        .maybeSingle();
+
+      if (panchang) {
+        const { data, error } = await supabase
+          .from("panchang_versions")
+          .select("*")
+          .eq("panchang_id", panchang.id)
+          .order("version_number", { ascending: false });
+
+        if (!error && data) {
+          const userIds = [...new Set(data.map(v => v.updated_by).filter(Boolean))];
+          let userNames = {};
+          if (userIds.length > 0) {
+            try {
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .in("id", userIds);
+              if (profiles) {
+                profiles.forEach(p => {
+                  userNames[p.id] = p.full_name;
+                });
+              }
+            } catch (e) {
+              console.error("Error fetching version profile names:", e);
+            }
+          }
+
+          return data.map(v => ({
+            id: v.id,
+            versionNumber: v.version_number,
+            dateStr: v.date_str,
+            tithi: v.tithi,
+            sunrise: v.sunrise,
+            sunset: v.sunset,
+            paksha: v.paksha,
+            month: v.month,
+            festival: v.festival,
+            shubh_din: v.shubh_din,
+            samayik: v.samayik,
+            event: v.event,
+            nakshatra: v.nakshatra || "",
+            yoga: v.yoga || "",
+            karana: v.karana || "",
+            moonSign: v.moon_sign || "",
+            specialNotes: v.special_notes || "",
+            fastingInfo: v.fasting_info || "",
+            importantTimings: v.important_timings || "",
+            additionalRemarks: v.additional_remarks || "",
+            updatedByName: userNames[v.updated_by] || "Admin",
+            updatedAt: v.updated_at
+          }));
+        }
+      }
+    }
+    return [];
   },
 
   // --- Events ---
@@ -1385,18 +1770,18 @@ export const db = {
         console.error("Error fetching settings:", err);
       }
     }
-    const local = getLocalItem("temp_temple_settings", {});
-    const merged = { ...DEFAULT_CMS, ...local };
+    // NOTE: localStorage is only used as a temporary UI cache — the DB is the source of truth.
+    const merged = { ...DEFAULT_CMS };
 
     if (dbData) {
       const mappedDb = {
         id: dbData.id,
+        // 1. General Information — native columns
         templeName: dbData.temple_name,
         templeLogo: dbData.temple_logo,
         heroBanner: dbData.hero_banner,
         email: dbData.email,
-        aboutText: dbData.about_text,
-        trustRegistrationNumber: dbData.trust_registration_number,
+        website: dbData.website,
         latitude: dbData.latitude,
         longitude: dbData.longitude,
         donationQr: dbData.donation_qr,
@@ -1410,8 +1795,26 @@ export const db = {
         facebook: dbData.facebook,
         instagram: dbData.instagram,
         youtube: dbData.youtube,
-        website: dbData.website
+        trustRegistrationNumber: dbData.trust_registration_number,
       };
+
+      // Extended CMS fields are serialised as JSON inside the about_text column
+      // using the sentinel prefix __CMS_EXT__ so they survive any schema state.
+      const CMS_EXT_PREFIX = "__CMS_EXT__";
+      const rawAbout = dbData.about_text || "";
+      if (rawAbout.startsWith(CMS_EXT_PREFIX)) {
+        try {
+          const parsed = JSON.parse(rawAbout.slice(CMS_EXT_PREFIX.length));
+          // Merge all extended fields — these override defaults
+          Object.assign(mappedDb, parsed);
+        } catch {
+          // Fallback: treat raw value as plain about text
+          mappedDb.aboutText = rawAbout;
+        }
+      } else if (rawAbout) {
+        mappedDb.aboutText = rawAbout;
+      }
+
       Object.keys(mappedDb).forEach(k => {
         if (mappedDb[k] !== undefined && mappedDb[k] !== null) {
           merged[k] = mappedDb[k];
@@ -1422,68 +1825,114 @@ export const db = {
   },
 
   async updateSettings(updates) {
-    const local = getLocalItem("temp_temple_settings", {});
-    const updated = { ...local, ...updates };
-    setLocalItem("temp_temple_settings", updated);
-
     if (isSupabaseConfigured && supabase) {
       let rowId = null;
+      // Also read the current about_text so we can preserve the existing extended blob
+      let currentAboutText = "";
       try {
         const { data } = await supabase
           .from("settings")
-          .select("id")
+          .select("id, about_text")
           .limit(1)
           .maybeSingle();
         if (data) {
           rowId = data.id;
+          currentAboutText = data.about_text || "";
         }
       } catch (err) {
-        console.error("Error fetching settings ID:", err);
+        console.error("[CMS] Error fetching settings ID:", err);
       }
-
-      const dbUpdates = {
-        temple_name: updates.templeName !== undefined ? updates.templeName : undefined,
-        temple_logo: updates.templeLogo !== undefined ? updates.templeLogo : undefined,
-        hero_banner: updates.heroBanner !== undefined ? updates.heroBanner : undefined,
-        email: updates.email !== undefined ? updates.email : undefined,
-        about_text: updates.aboutText !== undefined ? updates.aboutText : undefined,
-        trust_registration_number: updates.trustRegistrationNumber !== undefined ? updates.trustRegistrationNumber : undefined,
-        latitude: updates.latitude !== undefined ? (Number(updates.latitude) || null) : undefined,
-        longitude: updates.longitude !== undefined ? (Number(updates.longitude) || null) : undefined,
-        donation_qr: updates.donationQr !== undefined ? updates.donationQr : undefined,
-        upi_id: updates.upiId !== undefined ? updates.upiId : undefined,
-        bank_name: updates.bankName !== undefined ? updates.bankName : undefined,
-        account_holder: updates.accountHolder !== undefined ? updates.accountHolder : undefined,
-        account_number: updates.accountNumber !== undefined ? updates.accountNumber : undefined,
-        ifsc: updates.ifsc !== undefined ? updates.ifsc : undefined,
-        contact_number: updates.contactNumber !== undefined ? updates.contactNumber : undefined,
-        temple_address: updates.templeAddress !== undefined ? updates.templeAddress : undefined,
-        facebook: updates.facebook !== undefined ? updates.facebook : undefined,
-        instagram: updates.instagram !== undefined ? updates.instagram : undefined,
-        youtube: updates.youtube !== undefined ? updates.youtube : undefined,
-        website: updates.website !== undefined ? updates.website : undefined,
-        updated_at: new Date().toISOString()
-      };
-
-      Object.keys(dbUpdates).forEach(k => {
-        if (dbUpdates[k] === undefined) delete dbUpdates[k];
-      });
 
       if (rowId) {
-        const { data, error } = await supabase
-          .from("settings")
-          .update(dbUpdates)
-          .eq("id", rowId)
-          .select()
-          .single();
-        if (error) {
-          console.error("Error updating settings:", error);
-          throw error;
+        // ─── Native columns (always exist in the live 24-column schema) ──────────
+        const nativePayload = {};
+
+        if (updates.templeName !== undefined) nativePayload.temple_name = updates.templeName;
+        if (updates.email !== undefined) nativePayload.email = updates.email;
+        if (updates.website !== undefined) nativePayload.website = updates.website;
+        if (updates.latitude !== undefined) nativePayload.latitude = Number(updates.latitude) || null;
+        if (updates.longitude !== undefined) nativePayload.longitude = Number(updates.longitude) || null;
+        if (updates.upiId !== undefined) nativePayload.upi_id = updates.upiId;
+        if (updates.bankName !== undefined) nativePayload.bank_name = updates.bankName;
+        if (updates.accountHolder !== undefined) nativePayload.account_holder = updates.accountHolder;
+        if (updates.accountNumber !== undefined) nativePayload.account_number = updates.accountNumber;
+        if (updates.ifsc !== undefined) nativePayload.ifsc = updates.ifsc;
+        if (updates.contactNumber !== undefined) nativePayload.contact_number = updates.contactNumber;
+        if (updates.templeAddress !== undefined) nativePayload.temple_address = updates.templeAddress;
+        if (updates.facebook !== undefined) nativePayload.facebook = updates.facebook;
+        if (updates.instagram !== undefined) nativePayload.instagram = updates.instagram;
+        if (updates.youtube !== undefined) nativePayload.youtube = updates.youtube;
+        if (updates.trustRegistrationNumber !== undefined) nativePayload.trust_registration_number = updates.trustRegistrationNumber;
+        // Image URL fields: write to native VARCHAR column ONLY if it's a URL path (not base64).
+        // Base64 images go exclusively into the JSON blob (about_text) where TEXT allows unlimited size.
+        if (updates.templeLogo !== undefined && !String(updates.templeLogo).startsWith("data:")) nativePayload.temple_logo = updates.templeLogo;
+        if (updates.heroBanner !== undefined && !String(updates.heroBanner).startsWith("data:")) nativePayload.hero_banner = updates.heroBanner;
+        if (updates.donationQr !== undefined && !String(updates.donationQr).startsWith("data:")) nativePayload.donation_qr = updates.donationQr;
+        nativePayload.updated_at = new Date().toISOString();
+
+        // ─── Extended fields → JSON blob inside about_text ───────────────────────
+        // Read the existing extended blob (if any) so we don't overwrite untouched fields
+        const CMS_EXT_PREFIX = "__CMS_EXT__";
+        let existingExt = {};
+        if (currentAboutText.startsWith(CMS_EXT_PREFIX)) {
+          try { existingExt = JSON.parse(currentAboutText.slice(CMS_EXT_PREFIX.length)); } catch { /* ignore */ }
         }
-        return data;
+
+        // Merge current update into existing extended blob
+        const extFields = [
+          // General / branding images — stored in JSON blob to support base64 uploads
+          "templeLogo", "heroBanner", "donationQr",
+          // Other extended text + config fields
+          "subtitle", "favicon", "chaturmasYear", "websiteTitle", "seoTitle", "seoDescription",
+          "primaryThemeColor", "secondaryThemeColor",
+          "alternatePhone", "whatsappNumber", "googleMapsEmbedUrl",
+          "branch", "donationInstructions", "eightyGInfo", "taxDisclaimer",
+          "heroTitle", "heroSubtitle", "heroDescription", "welcomeMessage",
+          "aboutTempleSummary", "featuredQuote", "latestAnnouncementBanner",
+          "footerDescription", "copyrightText", "designedByText", "quickContactText", "footerLogo",
+          "whatsapp", "telegram", "xTwitter",
+          "aboutText", "templeHistory", "trustInformation", "mission", "vision",
+          "dailyTimings", "aartiTiming", "pujaTiming", "officeTiming",
+          "registrationOpen", "registrationClosed", "maxParticipants", "defaultEventBanner",
+          "allowNewRegistration", "allowDailyCheckIn", "allowDonations", "allowFamilyProfiles",
+          "enableNotifications", "maintenanceMode",
+          "portalLogo", "adminLogo", "loadingLogo", "loginBackground", "dashboardBanner",
+          "googleAnalyticsId", "metaPixelId", "customFooterHtml", "customHeadScripts"
+        ];
+
+        const newExt = { ...existingExt };
+        extFields.forEach(field => {
+          if (updates[field] !== undefined) {
+            // Allow ALL values including base64 — about_text is TEXT (unlimited size)
+            newExt[field] = updates[field];
+          }
+        });
+
+        nativePayload.about_text = CMS_EXT_PREFIX + JSON.stringify(newExt);
+
+        console.log("[CMS] Saving to Supabase. Native fields:", Object.keys(nativePayload).filter(k => k !== "about_text"));
+        console.log("[CMS] Extended fields stored in about_text JSON:", extFields.filter(f => newExt[f] !== undefined).join(", "));
+
+        try {
+          const { error } = await supabase
+            .from("settings")
+            .update(nativePayload)
+            .eq("id", rowId);
+
+          if (error) {
+            console.error("[CMS] Settings save failed:", error);
+            throw error;
+          }
+
+          console.log("[CMS] ✅ Settings saved successfully to Supabase.");
+          return true;
+        } catch (err) {
+          console.error("[CMS] Settings write exception:", err);
+          throw err;
+        }
       }
     }
-    return updated;
+    return false;
   },
 
   async createSchedule(schedule) {

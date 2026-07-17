@@ -32,6 +32,7 @@ import { db } from "@/services/db";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
 import { useCMS } from "@/context/CMSContext";
+import { sanitizeHTML } from "@/lib/sanitize";
 const toReadableId = (uuid = "", prefix = "ID", padLen = 4) => {
   if (!uuid) return `${prefix}-0000`;
   const num = parseInt(uuid.replace(/-/g, "").slice(-6), 16) % 10000;
@@ -110,13 +111,74 @@ export default function Admin() {
 
   // Create Form states
   const [newSched, setNewSched] = useState({ time: "", activity: "", session: "Morning", orderNum: 10 });
-  const [newAnn, setNewAnn] = useState({ title: "", content: "", type: "program", active: true });
+  const [newAnn, setNewAnn] = useState({
+    id: "",
+    title: "",
+    content: "",
+    priority: "normal",
+    pinned: false,
+    active: true,
+    publishDate: "",
+    publishTime: "",
+    expiryDate: "",
+    expiryTime: ""
+  });
+  const [annPage, setAnnPage] = useState(1);
+  const [annLimit, setAnnLimit] = useState(5);
+  const [annTotal, setAnnTotal] = useState(0);
+  const [annSearch, setAnnSearch] = useState("");
+  const [annStatusFilter, setAnnStatusFilter] = useState("");
+  const [annPriorityFilter, setAnnPriorityFilter] = useState("");
+  const [annPinnedFilter, setAnnPinnedFilter] = useState(null);
+  const [annDateStart, setAnnDateStart] = useState("");
+  const [annDateEnd, setAnnDateEnd] = useState("");
+  const [isEditingAnn, setIsEditingAnn] = useState(false);
+  const [annPreview, setAnnPreview] = useState(null);
+  const [showAnnPreview, setShowAnnPreview] = useState(false);
+
   const [newEvent, setNewEvent] = useState({ title: "", description: "", date: "", location: "", imageUrl: "" });
   const [panchangDate, setPanchangDate] = useState(() => {
     const local = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
     return local.toISOString().split("T")[0];
   });
-  const [panchangVal, setPanchangVal] = useState({ tithi: "", month: "", paksha: "Shukla", sunrise: "06:00 AM", sunset: "07:00 PM", shubh_din: false, samayik: false, event: "" });
+  const [panchangVal, setPanchangVal] = useState({
+    tithi: "",
+    month: "Chatra",
+    paksha: "Shukla",
+    sunrise: "06:00 AM",
+    sunset: "07:00 PM",
+    shubh_din: false,
+    samayik: false,
+    event: "",
+    nakshatra: "",
+    yoga: "",
+    karana: "",
+    moonSign: "",
+    specialNotes: "",
+    fastingInfo: "",
+    importantTimings: "",
+    additionalRemarks: "",
+    festival: ""
+  });
+  const [panchangVersionsList, setPanchangVersionsList] = useState([]);
+  const [adminCalYear, setAdminCalYear] = useState(() => new Date().getFullYear());
+  const [adminCalMonth, setAdminCalMonth] = useState(() => new Date().getMonth() + 1);
+  const [adminMonthPanchangs, setAdminMonthPanchangs] = useState({});
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      const loadMonthData = async () => {
+        try {
+          const data = await db.getPanchangForMonth(adminCalYear, adminCalMonth);
+          setAdminMonthPanchangs(data);
+        } catch (e) {
+          console.error("Month panchang load failed", e);
+        }
+      };
+      loadMonthData();
+    }
+  }, [adminCalYear, adminCalMonth, user, isAdmin, panchangDate]);
+
   const [newSadhanaAct, setNewSadhanaAct] = useState({ name: "", points: 5, category: "Devotion" });
   
   // Confirmation states
@@ -162,8 +224,20 @@ export default function Admin() {
             sunset: data.sunset || "07:00 PM",
             shubh_din: !!data.shubh_din,
             samayik: !!data.samayik,
-            event: data.event || ""
+            event: data.event || "",
+            nakshatra: data.nakshatra || "",
+            yoga: data.yoga || "",
+            karana: data.karana || "",
+            moonSign: data.moonSign || "",
+            specialNotes: data.specialNotes || "",
+            fastingInfo: data.fastingInfo || "",
+            importantTimings: data.importantTimings || "",
+            additionalRemarks: data.additionalRemarks || "",
+            festival: data.festival || ""
           });
+
+          const history = await db.getPanchangVersions(panchangDate);
+          setPanchangVersionsList(history);
         } catch (e) {
           console.error("Panchang load failed", e);
         }
@@ -172,10 +246,36 @@ export default function Admin() {
     }
   }, [panchangDate, user, isAdmin]);
 
+  // Auto-reload announcements on filter/pagination changes
+  useEffect(() => {
+    if (user && isAdmin) {
+      loadAnnouncementsAdmin();
+    }
+  }, [annPage, annLimit, annSearch, annStatusFilter, annPriorityFilter, annPinnedFilter, annDateStart, annDateEnd, user, isAdmin]);
+
   const showNotification = (msg, type = "success") => {
     setStatusMessage(msg);
     setStatusType(type);
     setTimeout(() => setStatusMessage(""), 5000);
+  };
+
+  const loadAnnouncementsAdmin = async () => {
+    try {
+      const result = await db.getAnnouncementsAdmin({
+        page: annPage,
+        limit: annLimit,
+        search: annSearch,
+        status: annStatusFilter,
+        priority: annPriorityFilter,
+        pinned: annPinnedFilter,
+        dateStart: annDateStart,
+        dateEnd: annDateEnd
+      });
+      setAnnouncements(result.data);
+      setAnnTotal(result.totalCount);
+    } catch (err) {
+      console.error("Failed to load admin announcements:", err);
+    }
   };
 
   const refreshData = async () => {
@@ -190,8 +290,7 @@ export default function Admin() {
       setSchedules(schedData);
 
       // 3. Fetch Announcements
-      const annData = await db.getAnnouncements();
-      setAnnouncements(annData);
+      await loadAnnouncementsAdmin();
 
       // 4. Fetch Events
       const eventsData = await db.getEvents();
@@ -316,15 +415,121 @@ export default function Admin() {
   const handleAddAnnouncement = async (e) => {
     e.preventDefault();
     if (!newAnn.title || !newAnn.content) return;
+    
+    let createdAtIso = undefined;
+    if (newAnn.publishDate) {
+      const timeStr = newAnn.publishTime || "00:00";
+      createdAtIso = new Date(`${newAnn.publishDate}T${timeStr}`).toISOString();
+    }
+    
+    let expiresAtIso = null;
+    if (newAnn.expiryDate) {
+      const timeStr = newAnn.expiryTime || "23:59";
+      expiresAtIso = new Date(`${newAnn.expiryDate}T${timeStr}`).toISOString();
+    }
+
     try {
-      const added = await db.createAnnouncement(newAnn);
-      setAnnouncements(prev => [added, ...prev]);
-      setNewAnn({ title: "", content: "", type: "program", active: true });
-      showNotification("Notice announced successfully.");
+      const payload = {
+        title: newAnn.title,
+        content: newAnn.content,
+        priority: newAnn.priority,
+        pinned: newAnn.pinned === true,
+        active: newAnn.active !== false,
+        createdAt: createdAtIso,
+        expiresAt: expiresAtIso
+      };
+
+      if (isEditingAnn) {
+        await db.updateAnnouncement(newAnn.id, payload);
+        showNotification("Notice updated successfully.");
+      } else {
+        await db.createAnnouncement(payload);
+        showNotification("Notice announced successfully.");
+      }
+
+      setNewAnn({
+        id: "",
+        title: "",
+        content: "",
+        priority: "normal",
+        pinned: false,
+        active: true,
+        publishDate: "",
+        publishTime: "",
+        expiryDate: "",
+        expiryTime: ""
+      });
+      setIsEditingAnn(false);
+      await loadAnnouncementsAdmin();
     } catch (err) {
       console.error(err);
-      showNotification("Failed to create announcement.", "error");
+      showNotification("Failed to save announcement.", "error");
     }
+  };
+
+  const handleEditAnnClick = (ann) => {
+    let pDate = "";
+    let pTime = "";
+    if (ann.createdAt) {
+      const dt = new Date(ann.createdAt);
+      pDate = dt.toISOString().split("T")[0];
+      pTime = dt.toTimeString().slice(0, 5);
+    }
+    
+    let eDate = "";
+    let eTime = "";
+    if (ann.expiresAt) {
+      const dt = new Date(ann.expiresAt);
+      eDate = dt.toISOString().split("T")[0];
+      eTime = dt.toTimeString().slice(0, 5);
+    }
+
+    setNewAnn({
+      id: ann.id,
+      title: ann.title,
+      content: ann.content,
+      priority: ann.priority,
+      pinned: ann.pinned,
+      active: ann.active,
+      publishDate: pDate,
+      publishTime: pTime,
+      expiryDate: eDate,
+      expiryTime: eTime
+    });
+    setIsEditingAnn(true);
+  };
+
+  const handleCancelEditAnn = () => {
+    setNewAnn({
+      id: "",
+      title: "",
+      content: "",
+      priority: "normal",
+      pinned: false,
+      active: true,
+      publishDate: "",
+      publishTime: "",
+      expiryDate: "",
+      expiryTime: ""
+    });
+    setIsEditingAnn(false);
+  };
+
+  const injectFormat = (tagStart, tagEnd) => {
+    const txtArea = document.getElementById("ann-content-textarea");
+    if (!txtArea) return;
+    const start = txtArea.selectionStart;
+    const end = txtArea.selectionEnd;
+    const text = newAnn.content || "";
+    const selected = text.substring(start, end);
+    const replacement = tagStart + selected + tagEnd;
+    const newContent = text.substring(0, start) + replacement + text.substring(end);
+    setNewAnn(prev => ({ ...prev, content: newContent }));
+    
+    setTimeout(() => {
+      txtArea.focus();
+      txtArea.setSelectionRange(start + tagStart.length, start + tagStart.length + selected.length);
+    }, 0);
   };
 
   const handleDeleteAnnConfirm = async () => {
@@ -332,9 +537,9 @@ export default function Admin() {
     setIsDeleting(true);
     try {
       await db.deleteAnnouncement(annToDelete.id);
-      setAnnouncements(prev => prev.filter(a => a.id !== annToDelete.id));
       setAnnToDelete(null);
-      showNotification("Announcement de-activated.");
+      showNotification("Announcement deleted successfully.");
+      await loadAnnouncementsAdmin();
     } catch (err) {
       console.error(err);
       showNotification("Failed to delete announcement.", "error");
@@ -343,14 +548,280 @@ export default function Admin() {
     }
   };
 
+  const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
+  const getFirstDayOfMonth = (year, month) => new Date(year, month - 1, 1).getDay();
+
+  const renderAdminCalendarGrid = () => {
+    const daysInMonth = getDaysInMonth(adminCalYear, adminCalMonth);
+    const firstDayIndex = getFirstDayOfMonth(adminCalYear, adminCalMonth);
+    const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    
+    const dayCells = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      dayCells.push(<div key={`empty-${i}`} className="h-10 border border-neutral-100 bg-neutral-50/50" />);
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${adminCalYear}-${adminCalMonth.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+      const isSelected = dateStr === panchangDate;
+      
+      const today = new Date();
+      const isToday = today.getFullYear() === adminCalYear && (today.getMonth() + 1) === adminCalMonth && today.getDate() === day;
+      
+      const record = adminMonthPanchangs[dateStr];
+      const hasFestival = record && (record.festival || record.event);
+      const hasFasting = record && record.fastingInfo;
+      const isShubh = record && record.shubh_din;
+      const isSamayik = record && record.samayik;
+      
+      dayCells.push(
+        <button
+          key={`day-${day}`}
+          type="button"
+          onClick={() => setPanchangDate(dateStr)}
+          className={`h-10 border border-neutral-100 text-left p-1 text-[10px] font-semibold flex flex-col justify-between transition-all select-none hover:bg-primary/5 cursor-pointer ${
+            isSelected 
+              ? "bg-primary/10 text-primary border-primary/30 font-bold ring-1 ring-primary" 
+              : isToday 
+              ? "bg-orange-50 text-primary border-orange-200" 
+              : "bg-white text-text-primary"
+          }`}
+        >
+          <div className="flex justify-between items-center w-full">
+            <span>{day}</span>
+            <div className="flex gap-0.5">
+              {isShubh && <span className="text-[7px]" title="Shubh Din">卐</span>}
+              {isSamayik && <span className="text-[7px]" title="Samayik">📖</span>}
+            </div>
+          </div>
+          
+          <div className="flex gap-0.5 items-center w-full overflow-hidden">
+            {hasFestival && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title={record.festival || record.event} />
+            )}
+            {hasFasting && (
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" title={record.fastingInfo} />
+            )}
+            {record && record.tithi && (
+              <span className="text-[7px] text-text-secondary truncate max-w-[35px] font-medium leading-none">
+                {record.tithi.replace("Sud", "S").replace("Vad", "V")}
+              </span>
+            )}
+          </div>
+        </button>
+      );
+    }
+    
+    const totalCells = dayCells.length;
+    const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let i = 0; i < remaining; i++) {
+      dayCells.push(<div key={`empty-end-${i}`} className="h-10 border border-neutral-100 bg-neutral-50/50" />);
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-7 gap-1 text-center font-bold text-[8px] uppercase tracking-wider text-text-secondary bg-neutral-50 py-1.5 rounded border border-border-custom">
+          {dayLabels.map(label => <div key={label}>{label}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1 rounded overflow-hidden border border-border-custom bg-neutral-100/35">
+          {dayCells}
+        </div>
+      </div>
+    );
+  };
+
   // --- CRUD: Panchang ---
   const handleSavePanchang = async () => {
     try {
       await db.updatePanchang(panchangDate, panchangVal);
       showNotification(`Panchang configurations updated for ${panchangDate}`);
+      const history = await db.getPanchangVersions(panchangDate);
+      setPanchangVersionsList(history);
     } catch (err) {
       console.error(err);
       showNotification("Failed to save panchang.", "error");
+    }
+  };
+
+  const handleRestorePanchangVersion = (ver) => {
+    setPanchangVal({
+      tithi: ver.tithi || "",
+      month: ver.month || "Chatra",
+      paksha: ver.paksha || "Shukla",
+      sunrise: ver.sunrise || "06:00 AM",
+      sunset: ver.sunset || "07:00 PM",
+      shubh_din: !!ver.shubh_din,
+      samayik: !!ver.samayik,
+      event: ver.event || "",
+      nakshatra: ver.nakshatra || "",
+      yoga: ver.yoga || "",
+      karana: ver.karana || "",
+      moonSign: ver.moonSign || "",
+      specialNotes: ver.specialNotes || "",
+      fastingInfo: ver.fastingInfo || "",
+      importantTimings: ver.importantTimings || "",
+      additionalRemarks: ver.additionalRemarks || "",
+      festival: ver.festival || ""
+    });
+    showNotification(`Restored inputs to Version ${ver.versionNumber}. Click "Save Panchang" to commit changes.`);
+  };
+
+  const handlePanchangImportCSV = async (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target.result;
+      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+      if (lines.length <= 1) {
+        showNotification("CSV is empty or invalid.", "error");
+        return;
+      }
+      
+      const headers = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/^["']|["']$/g, ""));
+      const rows = [];
+      const validationErrors = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const rowVals = [];
+        let inQuotes = false;
+        let currentVal = "";
+        const line = lines[i];
+        for (let charIdx = 0; charIdx < line.length; charIdx++) {
+          const char = line[charIdx];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            rowVals.push(currentVal.trim().replace(/^["']|["']$/g, ""));
+            currentVal = "";
+          } else {
+            currentVal += char;
+          }
+        }
+        rowVals.push(currentVal.trim().replace(/^["']|["']$/g, ""));
+        
+        if (rowVals.length < headers.length) {
+          validationErrors.push(`Row ${i + 1}: Column count mismatch`);
+          continue;
+        }
+        
+        const rowObj = {};
+        headers.forEach((h, idx) => {
+          rowObj[h] = rowVals[idx];
+        });
+        
+        const dateStr = rowObj.date || rowObj.date_str || "";
+        const isDateValid = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(Date.parse(dateStr));
+        if (!isDateValid) {
+          validationErrors.push(`Row ${i + 1}: Invalid date format "${dateStr}" (use YYYY-MM-DD)`);
+          continue;
+        }
+        
+        const tithi = rowObj.tithi || "";
+        if (!tithi) {
+          validationErrors.push(`Row ${i + 1}: Missing tithi`);
+          continue;
+        }
+        
+        rows.push({
+          dateStr,
+          tithi,
+          month: rowObj.month || "Chatra",
+          paksha: rowObj.paksha || "Shukla",
+          sunrise: rowObj.sunrise || "06:00 AM",
+          sunset: rowObj.sunset || "07:00 PM",
+          festival: rowObj.festival || "",
+          event: rowObj.event || "",
+          nakshatra: rowObj.nakshatra || "",
+          yoga: rowObj.yoga || "",
+          karana: rowObj.karana || "",
+          moonSign: rowObj.moon_sign || rowObj.moonsign || "",
+          specialNotes: rowObj.special_notes || rowObj.specialnotes || "",
+          fastingInfo: rowObj.fasting_info || rowObj.fastinginfo || "",
+          importantTimings: rowObj.important_timings || rowObj.importanttimings || "",
+          additionalRemarks: rowObj.additional_remarks || rowObj.additionalremarks || "",
+          shubh_din: rowObj.shubh_din === "true" || rowObj.shubh_din === "1",
+          samayik: rowObj.samayik === "true" || rowObj.samayik === "1"
+        });
+      }
+      
+      if (validationErrors.length > 0) {
+        alert("Validation Errors Found:\n" + validationErrors.slice(0, 10).join("\n") + (validationErrors.length > 10 ? `\n...and ${validationErrors.length - 10} more` : ""));
+        showNotification("Import aborted due to validation failures.", "error");
+        return;
+      }
+      
+      setIsDeleting(true);
+      try {
+        for (const row of rows) {
+          await db.updatePanchang(row.dateStr, row);
+        }
+        showNotification(`Successfully imported ${rows.length} panchang entries.`);
+        const currentData = await db.getPanchang(panchangDate);
+        setPanchangVal(currentData);
+        const history = await db.getPanchangVersions(panchangDate);
+        setPanchangVersionsList(history);
+      } catch (err) {
+        console.error("Import failed:", err);
+        showNotification("Import failed to commit.", "error");
+      } finally {
+        setIsDeleting(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handlePanchangExportCSV = async (mode) => {
+    let startDate = "1970-01-01";
+    let endDate = "9999-12-31";
+    const [selYear, selMonth] = panchangDate.split("-");
+    
+    if (mode === "month") {
+      startDate = `${selYear}-${selMonth}-01`;
+      endDate = `${selYear}-${selMonth}-31`;
+    } else if (mode === "year") {
+      startDate = `${selYear}-01-01`;
+      endDate = `${selYear}-12-31`;
+    }
+    
+    try {
+      let exportData = [];
+      if (db.isSupabaseConfigured && db.supabase) {
+        const { data } = await db.supabase
+          .from("panchang")
+          .select("*")
+          .gte("date_str", startDate)
+          .lte("date_str", endDate)
+          .order("date_str", { ascending: true });
+        if (data) exportData = data;
+      } else {
+        const records = getLocalItem("temp_tithi_panchang", DEFAULT_PANCHANG);
+        exportData = Object.keys(records)
+          .filter(d => d >= startDate && d <= endDate)
+          .sort()
+          .map(d => ({ date_str: d, ...records[d] }));
+      }
+      
+      let csvContent = "data:text/csv;charset=utf-8,Date,Tithi,Month,Paksha,Sunrise,Sunset,Festival,Event,Nakshatra,Yoga,Karana,Moon_Sign,Special_Notes,Fasting_Info,Important_Timings,Additional_Remarks,Shubh_Din,Samayik\n";
+      
+      exportData.forEach(row => {
+        const clean = (val) => {
+          if (val === null || val === undefined) return "";
+          return `"${String(val).replace(/"/g, '""')}"`;
+        };
+        csvContent += `${row.date_str || ""},${clean(row.tithi)},${clean(row.month)},${clean(row.paksha)},${clean(row.sunrise)},${clean(row.sunset)},${clean(row.festival)},${clean(row.event)},${clean(row.nakshatra)},${clean(row.yoga)},${clean(row.karana)},${clean(row.moon_sign || row.moonSign)},${clean(row.special_notes || row.specialNotes)},${clean(row.fasting_info || row.fastingInfo)},${clean(row.important_timings || row.importantTimings)},${clean(row.additional_remarks || row.additionalRemarks)},${row.shubh_din || false},${row.samayik || false}\n`;
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Jain_Panchang_Export_${mode}_${panchangDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNotification("Panchang CSV exported successfully.");
+    } catch (e) {
+      console.error(e);
+      showNotification("Export failed.", "error");
     }
   };
 
@@ -1424,127 +1895,613 @@ export default function Admin() {
               {/* TAB 4: ANNOUNCEMENTS */}
               {activeTab === "announcements" && (
                 <div className="flex flex-col gap-6">
-                  <div>
-                    <h3 className="font-display font-semibold text-text-primary text-base">Notices & Bulletins</h3>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Publish community notifications</p>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-display font-semibold text-text-primary text-base">Notices & Community Bulletins</h3>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Manage trust notices, community updates, and holy programs</p>
+                    </div>
+                    {isEditingAnn && (
+                      <button 
+                        onClick={handleCancelEditAnn}
+                        className="px-3 py-1.5 rounded bg-neutral-100 hover:bg-neutral-200 text-text-secondary text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+                      >
+                        Cancel Editing
+                      </button>
+                    )}
                   </div>
 
-                  <form onSubmit={handleAddAnnouncement} className="p-4 rounded-custom-md border border-border-custom bg-neutral-50/50 flex flex-col gap-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="flex flex-col gap-1 sm:col-span-2">
+                  {/* Announcement Creation/Edition Form */}
+                  <form onSubmit={handleAddAnnouncement} className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50 flex flex-col gap-4">
+                    <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">
+                      {isEditingAnn ? "✍️ Edit Announcement" : "📢 Create New Announcement"}
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* Title */}
+                      <div className="flex flex-col gap-1 md:col-span-2">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Notice Title</label>
                         <input 
                           type="text"
-                          placeholder="e.g. Paryushan Mahotsav dates"
+                          placeholder="e.g. Paryushan Mahotsav holy dates 2026"
                           value={newAnn.title}
                           onChange={(e) => setNewAnn(prev => ({ ...prev, title: e.target.value }))}
-                          className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
                           required
                         />
                       </div>
+
+                      {/* Priority */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[9px] uppercase font-bold text-text-secondary">Priority Category</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Priority Level</label>
                         <select 
-                          value={newAnn.type}
-                          onChange={(e) => setNewAnn(prev => ({ ...prev, type: e.target.value }))}
-                          className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none"
+                          value={newAnn.priority}
+                          onChange={(e) => setNewAnn(prev => ({ ...prev, priority: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
                         >
-                          <option value="program">High Priority (Program)</option>
-                          <option value="notice">Medium Priority (Notice)</option>
-                          <option value="update">Low Priority (Update)</option>
+                          <option value="low">Low</option>
+                          <option value="normal">Normal</option>
+                          <option value="high">High</option>
+                          <option value="Critical">Critical</option>
+                        </select>
+                      </div>
+
+                      {/* Status */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Publishing Status</label>
+                        <select 
+                          value={newAnn.active ? "Published" : "Draft"}
+                          onChange={(e) => setNewAnn(prev => ({ ...prev, active: e.target.value === "Published" }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        >
+                          <option value="Published">Published / Active</option>
+                          <option value="Draft">Draft</option>
                         </select>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[9px] uppercase font-bold text-text-secondary">Message content</label>
-                      <textarea 
-                        rows={3}
-                        placeholder="Write announcement description details..."
-                        value={newAnn.content}
-                        onChange={(e) => setNewAnn(prev => ({ ...prev, content: e.target.value }))}
-                        className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
-                        required
-                      />
+                    {/* Rich Text Editor Toolbar */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Announcement Message Content (HTML Enabled)</label>
+                        <span className="text-[8px] text-text-secondary font-semibold uppercase">Use formatting toolbar to inject tags</span>
+                      </div>
+                      
+                      <div className="border border-border-custom rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-primary/30">
+                        {/* Toolbar */}
+                        <div className="flex flex-wrap gap-1 p-1.5 bg-neutral-50 border-b border-border-custom text-[10px]">
+                          <button type="button" onClick={() => injectFormat("<strong>", "</strong>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 font-bold cursor-pointer">B</button>
+                          <button type="button" onClick={() => injectFormat("<em>", "</em>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 italic cursor-pointer">I</button>
+                          <button type="button" onClick={() => injectFormat("<u>", "</u>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 underline cursor-pointer">U</button>
+                          <button type="button" onClick={() => injectFormat("<h3>", "</h3>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 font-extrabold cursor-pointer">H3</button>
+                          <button type="button" onClick={() => injectFormat("<h4>", "</h4>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 font-bold cursor-pointer">H4</button>
+                          <button type="button" onClick={() => injectFormat("<blockquote>", "</blockquote>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer">Quote</button>
+                          <button type="button" onClick={() => injectFormat("<ul><li>", "</li></ul>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer">• List</button>
+                          <button type="button" onClick={() => injectFormat("<ol><li>", "</li></ol>")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer">1. List</button>
+                          <button type="button" onClick={() => {
+                            const url = prompt("Enter hyperlink URL:");
+                            if (url) injectFormat(`<a href="${url}" target="_blank" class="text-primary hover:underline">`, "</a>");
+                          }} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 text-primary font-semibold cursor-pointer">Link</button>
+                          <button type="button" onClick={() => injectFormat("<br/>", "")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer">Line Break</button>
+                        </div>
+                        {/* Textarea */}
+                        <textarea 
+                          id="ann-content-textarea"
+                          rows={4}
+                          placeholder="Write notice descriptions... HTML format works natively."
+                          value={newAnn.content}
+                          onChange={(e) => setNewAnn(prev => ({ ...prev, content: e.target.value }))}
+                          className="px-3 py-2 text-xs text-text-primary bg-white focus:outline-none w-full border-none resize-y"
+                          required
+                        />
+                      </div>
                     </div>
 
-                    <button
-                      type="submit"
-                      className="py-2 px-5 rounded bg-primary hover:bg-primary/95 text-white text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer w-fit ml-auto"
-                    >
-                      <Plus size={12} />
-                      <span>Post Notice</span>
-                    </button>
+                    {/* Pin and Scheduling */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                      {/* Pinned checkbox */}
+                      <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                        <input 
+                          type="checkbox"
+                          checked={newAnn.pinned}
+                          onChange={(e) => setNewAnn(prev => ({ ...prev, pinned: e.target.checked }))}
+                          className="w-4 h-4 rounded text-primary border-border-custom focus:ring-primary cursor-pointer"
+                        />
+                        <span>📌 Pin Notice to Top</span>
+                      </label>
+
+                      {/* Publish Schedule */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Publish Date & Time (Optional)</label>
+                        <div className="flex gap-1.5">
+                          <input 
+                            type="date"
+                            value={newAnn.publishDate}
+                            onChange={(e) => setNewAnn(prev => ({ ...prev, publishDate: e.target.value }))}
+                            className="px-2 py-1 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full"
+                          />
+                          <input 
+                            type="time"
+                            value={newAnn.publishTime}
+                            onChange={(e) => setNewAnn(prev => ({ ...prev, publishTime: e.target.value }))}
+                            className="px-2 py-1 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-[100px]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Expiry Schedule */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Expiry Date & Time (Optional)</label>
+                        <div className="flex gap-1.5">
+                          <input 
+                            type="date"
+                            value={newAnn.expiryDate}
+                            onChange={(e) => setNewAnn(prev => ({ ...prev, expiryDate: e.target.value }))}
+                            className="px-2 py-1 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full"
+                          />
+                          <input 
+                            type="time"
+                            value={newAnn.expiryTime}
+                            onChange={(e) => setNewAnn(prev => ({ ...prev, expiryTime: e.target.value }))}
+                            className="px-2 py-1 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-[100px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnnPreview(newAnn);
+                          setShowAnnPreview(true);
+                        }}
+                        className="py-1.5 px-4 rounded bg-white hover:bg-neutral-50 text-text-secondary border border-border-custom text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        👁️ Preview Notice
+                      </button>
+                      
+                      <button
+                        type="submit"
+                        className="py-1.5 px-5 rounded bg-primary hover:bg-primary/95 text-white text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-premium"
+                      >
+                        <Plus size={12} />
+                        <span>{isEditingAnn ? "Update Notice" : "Publish Notice"}</span>
+                      </button>
+                    </div>
                   </form>
 
-                  <div className="flex flex-col gap-4">
-                    {announcements.map(ann => (
-                      <div key={ann.id} className="p-4 rounded-custom-md border border-border-custom flex items-start justify-between gap-4 bg-white hover:shadow-premium transition-shadow">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-text-primary text-xs">{ann.title}</h4>
-                            <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                              ann.type === "program" 
-                                ? "bg-red-50 text-red-600 border-red-500/10" 
-                                : "bg-neutral-50 text-text-secondary border-neutral-200"
-                            }`}>
-                              {ann.type}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-text-secondary mt-1.5 leading-relaxed">{ann.content}</p>
-                          <span className="text-[8px] text-text-secondary mt-2 block font-semibold">{new Date(ann.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <button 
-                          onClick={() => setAnnToDelete(ann)}
-                          className="p-1.5 rounded-full hover:bg-red-50 text-text-secondary hover:text-red-600 transition-all cursor-pointer"
+                  {/* Filter Panel */}
+                  <div className="p-4 rounded-custom-md border border-border-custom bg-white flex flex-col gap-3">
+                    <div className="flex items-center justify-between border-b border-border-custom pb-2">
+                      <h4 className="font-display font-semibold text-text-primary text-[10px] uppercase tracking-wider">🔍 Search & Filter Notices</h4>
+                      <button 
+                        onClick={() => {
+                          setAnnSearch("");
+                          setAnnStatusFilter("");
+                          setAnnPriorityFilter("");
+                          setAnnPinnedFilter(null);
+                          setAnnDateStart("");
+                          setAnnDateEnd("");
+                        }}
+                        className="text-[9px] uppercase tracking-wider text-primary font-bold hover:underline cursor-pointer"
+                      >
+                        Clear Filters
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
+                      {/* Search */}
+                      <div className="flex flex-col gap-0.5 md:col-span-2">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Search Keyword</label>
+                        <input 
+                          type="text"
+                          placeholder="Search title, message..."
+                          value={annSearch}
+                          onChange={(e) => setAnnSearch(e.target.value)}
+                          className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Status filter */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Filter Status</label>
+                        <select 
+                          value={annStatusFilter}
+                          onChange={(e) => setAnnStatusFilter(e.target.value)}
+                          className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
                         >
-                          <Trash2 size={13} />
+                          <option value="">All Statuses</option>
+                          <option value="Published">Published</option>
+                          <option value="Draft">Draft</option>
+                          <option value="Scheduled">Scheduled</option>
+                          <option value="Expired">Expired</option>
+                        </select>
+                      </div>
+
+                      {/* Priority filter */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Filter Priority</label>
+                        <select 
+                          value={annPriorityFilter}
+                          onChange={(e) => setAnnPriorityFilter(e.target.value)}
+                          className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
+                        >
+                          <option value="">All Priorities</option>
+                          <option value="low">Low</option>
+                          <option value="normal">Normal</option>
+                          <option value="high">High / Critical</option>
+                        </select>
+                      </div>
+
+                      {/* Pinned filter */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Filter Pinned</label>
+                        <select 
+                          value={annPinnedFilter === null ? "" : String(annPinnedFilter)}
+                          onChange={(e) => setAnnPinnedFilter(e.target.value === "" ? null : e.target.value === "true")}
+                          className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
+                        >
+                          <option value="">All Pinned</option>
+                          <option value="true">Pinned Only</option>
+                          <option value="false">Unpinned Only</option>
+                        </select>
+                      </div>
+
+                      {/* Limit filter */}
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Items Per Page</label>
+                        <select 
+                          value={annLimit}
+                          onChange={(e) => {
+                            setAnnLimit(Number(e.target.value));
+                            setAnnPage(1);
+                          }}
+                          className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
+                        >
+                          <option value={5}>5 per page</option>
+                          <option value={10}>10 per page</option>
+                          <option value={20}>20 per page</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notices List Table */}
+                  <div className="border border-border-custom rounded-custom-lg overflow-hidden w-full bg-white shadow-premium">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-bg-custom text-[9px] uppercase font-bold text-text-secondary tracking-wider border-b border-border-custom">
+                          <th className="p-3">Notice Info</th>
+                          <th className="p-3">Schedule Dates</th>
+                          <th className="p-3 text-center">Status</th>
+                          <th className="p-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {announcements.length > 0 ? (
+                          announcements.map(ann => {
+                            const isExpired = ann.expiresAt && new Date(ann.expiresAt) < new Date();
+                            const isScheduled = new Date(ann.createdAt) > new Date();
+                            const calcStatus = !ann.active ? "Draft" : isExpired ? "Expired" : isScheduled ? "Scheduled" : "Published";
+                            
+                            const statusColor = 
+                              calcStatus === "Published" 
+                                ? "bg-green-50 text-green-700 border-green-200" 
+                                : calcStatus === "Scheduled" 
+                                ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                : calcStatus === "Expired" 
+                                ? "bg-red-50 text-red-700 border-red-200" 
+                                : "bg-neutral-50 text-text-secondary border-neutral-300";
+
+                            return (
+                              <tr key={ann.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
+                                <td className="p-3 max-w-[320px]">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-semibold text-text-primary">{ann.title}</span>
+                                      <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                        ann.priority === "high" 
+                                          ? "bg-red-50 text-red-600 border-red-500/10" 
+                                          : ann.priority === "low" 
+                                          ? "bg-blue-50 text-blue-600 border-blue-500/10" 
+                                          : "bg-orange-50 text-primary border-primary/10"
+                                      }`}>
+                                        {ann.priority}
+                                      </span>
+                                      {ann.pinned && (
+                                        <span className="text-[7.5px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-500/10">
+                                          📌 Pinned
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div 
+                                      className="text-[10px] text-text-secondary max-h-[40px] overflow-hidden text-ellipsis line-clamp-2"
+                                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
+                                    />
+                                  </div>
+                                </td>
+                                <td className="p-3 whitespace-nowrap text-[10px] text-text-secondary">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span>🕒 Publish: {new Date(ann.createdAt).toLocaleString()}</span>
+                                    <span>⌛ Expiry: {ann.expiresAt ? new Date(ann.expiresAt).toLocaleString() : "Never Expires"}</span>
+                                  </div>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusColor}`}>
+                                    {calcStatus}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <button 
+                                      onClick={() => handleEditAnnClick(ann)}
+                                      className="p-1 rounded text-primary hover:bg-neutral-100 transition-colors cursor-pointer"
+                                      title="Edit Notice"
+                                    >
+                                      📝
+                                    </button>
+                                    <button 
+                                      onClick={() => setAnnToDelete(ann)}
+                                      className="p-1 rounded text-text-secondary hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                      title="Delete Notice"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="p-6 text-center text-text-secondary italic text-xs">
+                              No announcements match your search or filter configuration.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Server pagination controls */}
+                  {annTotal > annLimit && (
+                    <div className="flex items-center justify-between text-xs px-2">
+                      <span className="text-text-secondary">
+                        Showing {Math.min(annTotal, (annPage - 1) * annLimit + 1)} - {Math.min(annTotal, annPage * annLimit)} of {annTotal} notices
+                      </span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setAnnPage(prev => Math.max(1, prev - 1))}
+                          disabled={annPage === 1}
+                          className="px-3 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                        >
+                          Previous
+                        </button>
+                        <button 
+                          onClick={() => setAnnPage(prev => Math.min(Math.ceil(annTotal / annLimit), prev + 1))}
+                          disabled={annPage >= Math.ceil(annTotal / annLimit)}
+                          className="px-3 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                        >
+                          Next
                         </button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Live Devotee Preview Modal */}
+                  {showAnnPreview && annPreview && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                      <div className="bg-white rounded-custom-lg shadow-2xl p-6 max-w-md w-full relative overflow-hidden flex flex-col gap-4">
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-orange-400" />
+                        
+                        <div className="flex items-center justify-between pb-2 border-b border-border-custom">
+                          <h4 className="font-display font-bold text-text-primary text-xs uppercase tracking-wider">👁️ Notice Live Devotee Preview</h4>
+                          <button onClick={() => { setAnnPreview(null); setShowAnnPreview(false); }} className="text-text-secondary hover:text-text-primary text-xs font-bold font-display cursor-pointer">✕ Close</button>
+                        </div>
+
+                        {/* Emulated Devotee Notice Card */}
+                        <div className="p-5 rounded-custom-lg bg-white border border-border-custom shadow-premium flex flex-col gap-4 text-left">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${
+                                annPreview.priority === "high" 
+                                  ? "bg-red-50 text-red-700 border-red-500/10" 
+                                  : annPreview.priority === "low" 
+                                  ? "bg-blue-50 text-blue-700 border-blue-500/10" 
+                                  : "bg-orange-50 text-primary border-primary/10"
+                              }`}>
+                                {annPreview.priority === "high" ? "PROGRAM" : annPreview.priority === "low" ? "NOTICE" : "UPDATE"}
+                              </span>
+                              <span className="text-[10px] text-text-secondary">
+                                {new Date(annPreview.publishDate || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </span>
+                            </div>
+                            <h3 className="font-display font-semibold text-text-primary text-base leading-snug">
+                              {annPreview.title || "Announcement Title"}
+                            </h3>
+                            <div 
+                              className="text-xs text-text-secondary leading-relaxed whitespace-pre-line"
+                              dangerouslySetInnerHTML={{ __html: sanitizeHTML(annPreview.content || "<i>Announcement content draft...</i>") }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-neutral-50 p-3 rounded text-[9.5px] text-text-secondary border border-border-custom">
+                          ⚠️ This is how devotees will see the notice on the homepage and dashboard once published.
+                        </div>
+
+                        <button 
+                          onClick={() => { setAnnPreview(null); setShowAnnPreview(false); }}
+                          className="w-full py-2.5 rounded bg-primary text-white text-[10px] font-bold uppercase tracking-wider hover:bg-primary/95 transition-all cursor-pointer"
+                        >
+                          Back to Editor
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* TAB 5: PANCHANG */}
               {activeTab === "panchang" && (
                 <div className="flex flex-col gap-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Header Row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-custom pb-4">
                     <div>
-                      <h3 className="font-display font-semibold text-text-primary text-base">Panchang Editor</h3>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Auspicious lunar days setup</p>
+                      <h3 className="font-display font-semibold text-text-primary text-base">Panchang Calendar Management CMS</h3>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Control daily coordinates, solar calculations, and moon transits</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <label htmlFor="panchang-date" className="text-[10px] uppercase font-bold text-text-secondary">Calendar Date:</label>
-                      <input 
-                        id="panchang-date"
-                        type="date"
-                        value={panchangDate}
-                        onChange={(e) => setPanchangDate(e.target.value)}
-                        className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary focus:outline-none"
-                      />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="panchang-date" className="text-[10px] uppercase font-bold text-text-secondary">Selected Date:</label>
+                        <input 
+                          id="panchang-date"
+                          type="date"
+                          value={panchangDate}
+                          onChange={(e) => setPanchangDate(e.target.value)}
+                          className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary focus:outline-none bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50 flex flex-col gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* Main Grid: Left (Calendar) & Right (Utilities/CSV) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Monthly Calendar View */}
+                    <div className="lg:col-span-2 p-5 rounded-custom-lg border border-border-custom bg-white flex flex-col gap-4 shadow-premium">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-display font-semibold text-text-primary text-xs uppercase tracking-wider">📅 Monthly Schedule Grid</h4>
+                        
+                        <div className="flex items-center gap-1.5">
+                          <select 
+                            value={adminCalMonth} 
+                            onChange={(e) => setAdminCalMonth(Number(e.target.value))}
+                            className="px-2 py-1 text-[10px] font-semibold bg-white border border-border-custom rounded focus:outline-none"
+                          >
+                            {Array.from({ length: 12 }, (_, idx) => (
+                              <option key={idx + 1} value={idx + 1}>
+                                {new Date(2000, idx).toLocaleString("en-US", { month: "long" })}
+                              </option>
+                            ))}
+                          </select>
+                          <select 
+                            value={adminCalYear} 
+                            onChange={(e) => setAdminCalYear(Number(e.target.value))}
+                            className="px-2 py-1 text-[10px] font-semibold bg-white border border-border-custom rounded focus:outline-none"
+                          >
+                            {Array.from({ length: 10 }, (_, idx) => {
+                              const y = new Date().getFullYear() - 5 + idx;
+                              return <option key={y} value={y}>{y}</option>;
+                            })}
+                          </select>
+                        </div>
+                      </div>
+
+                      {renderAdminCalendarGrid()}
+
+                      <div className="flex gap-4 text-[9px] text-text-secondary justify-end border-t border-neutral-100 pt-2 font-medium">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 block" /> Festival / Event
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500 block" /> Fasting Day
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span>卐</span> Shubh Din
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span>📖</span> Samayik Day
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Import / Export / Operations */}
+                    <div className="p-5 rounded-custom-lg border border-border-custom bg-neutral-50/50 flex flex-col gap-5 shadow-premium">
+                      <div>
+                        <h4 className="font-display font-semibold text-text-primary text-xs uppercase tracking-wider">📤 Data Import & Export</h4>
+                        <p className="text-[9px] text-text-secondary mt-0.5">Bulk update calendar sheets via Excel CSV templates</p>
+                      </div>
+
+                      {/* Export Options */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Export Data Sheet</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            onClick={() => handlePanchangExportCSV("month")}
+                            className="px-2 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 text-[9px] font-bold text-text-primary uppercase tracking-wider cursor-pointer text-center"
+                          >
+                            Selected Month
+                          </button>
+                          <button
+                            onClick={() => handlePanchangExportCSV("year")}
+                            className="px-2 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 text-[9px] font-bold text-text-primary uppercase tracking-wider cursor-pointer text-center"
+                          >
+                            Selected Year
+                          </button>
+                          <button
+                            onClick={() => handlePanchangExportCSV("all")}
+                            className="px-2 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 text-[9px] font-bold text-text-primary uppercase tracking-wider cursor-pointer text-center"
+                          >
+                            Entire Calendar
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Import Option */}
+                      <div className="flex flex-col gap-2 pt-2 border-t border-border-custom">
+                        <label className="text-[8px] uppercase font-bold text-text-secondary">Bulk CSV Upload</label>
+                        <div className="relative border border-dashed border-border-custom rounded p-3 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col items-center justify-center text-center">
+                          <input 
+                            type="file" 
+                            accept=".csv"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePanchangImportCSV(file);
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <span className="text-xs">📂 Click to Upload CSV file</span>
+                          <span className="text-[7.5px] text-text-secondary mt-1 uppercase tracking-wider font-semibold">Will validate coordinates and reject rows with errors</span>
+                        </div>
+                      </div>
+
+                      {/* Template Instructions */}
+                      <div className="p-3 rounded border border-border-custom bg-amber-50/60 text-[9px] text-text-secondary leading-relaxed flex flex-col gap-1.5">
+                        <strong className="text-amber-800 uppercase font-semibold text-[8px]">💡 CSV Template Format:</strong>
+                        <span>Ensure columns map to headers exactly: <code>Date, Tithi, Month, Paksha, Sunrise, Sunset, Festival, Event, Nakshatra, Yoga, Karana, Moon_Sign, Special_Notes, Fasting_Info, Important_Timings, Additional_Remarks, Shubh_Din, Samayik</code></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Editor form panel */}
+                  <div className="p-6 rounded-custom-lg border border-border-custom bg-white shadow-premium flex flex-col gap-4">
+                    <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">
+                      ✍️ Panchang Editor & Daily Form Details for {panchangDate}
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Tithi */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Lunar Tithi</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Lunar Tithi</label>
                         <input 
-                          type="text" 
+                          type="text"
                           placeholder="e.g. Sud Ekadashi"
                           value={panchangVal.tithi}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, tithi: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                          required
                         />
                       </div>
+
+                      {/* Lunar Month */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Lunar Month</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Lunar Month</label>
                         <select 
                           value={panchangVal.month}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, month: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
                         >
                           <option value="Chatra">Chatra (चैत्र)</option>
                           <option value="Vaisakha">Vaisakha (वैशाख)</option>
@@ -1556,46 +2513,171 @@ export default function Admin() {
                           <option value="Kartika">Kartika (कार्तिक)</option>
                         </select>
                       </div>
+
+                      {/* Paksha */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Paksha</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Paksha</label>
                         <select 
                           value={panchangVal.paksha}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, paksha: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
                         >
                           <option value="Shukla">Shukla Paksha (शुक्ल पक्ष)</option>
                           <option value="Krishna">Krishna Paksha (कृष्ण पक्ष)</option>
                         </select>
                       </div>
+
+                      {/* Nakshatra */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Festival / Fast Day description</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Nakshatra</label>
                         <input 
-                          type="text" 
+                          type="text"
+                          placeholder="e.g. Rohini"
+                          value={panchangVal.nakshatra}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, nakshatra: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                      </div>
+
+                      {/* Yoga */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Yoga</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. Ayushman"
+                          value={panchangVal.yoga}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, yoga: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                      </div>
+
+                      {/* Karana */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Karana</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. Bava"
+                          value={panchangVal.karana}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, karana: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                      </div>
+
+                      {/* Moon Sign */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Moon Sign (Rashi)</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. Vrishabha"
+                          value={panchangVal.moonSign}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, moonSign: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                      </div>
+
+                      {/* Festival Name */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Festival Title</label>
+                        <input 
+                          type="text"
                           placeholder="e.g. Mahavir Janma Kalyanak"
                           value={panchangVal.festival}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, festival: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
                         />
                       </div>
+
+                      {/* Event Banner */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Sunrise Time</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Dashboard Alert banner text</label>
                         <input 
-                          type="text" 
+                          type="text"
+                          placeholder="e.g. Holy Discourse today at 09:00 AM"
+                          value={panchangVal.event}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, event: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                      </div>
+
+                      {/* Sunrise */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Sunrise Time</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. 06:12 AM"
                           value={panchangVal.sunrise}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, sunrise: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
                         />
                       </div>
+
+                      {/* Sunset */}
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-text-secondary uppercase font-bold">Sunset Time</label>
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Sunset Time</label>
                         <input 
-                          type="text" 
+                          type="text"
+                          placeholder="e.g. 07:18 PM"
                           value={panchangVal.sunset}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, sunset: e.target.value }))}
-                          className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none text-text-primary font-medium"
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
                         />
                       </div>
-                      <div className="flex items-center gap-4 sm:col-span-3 py-2">
+                    </div>
+
+                    {/* Text Areas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Fasting Information */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Fasting Information</label>
+                        <textarea 
+                          rows={2}
+                          placeholder="e.g. Upvas, Ekasana, Biyasana allowed timings..."
+                          value={panchangVal.fastingInfo}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, fastingInfo: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                        />
+                      </div>
+
+                      {/* Important Timings */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Important Timings (Navkarshi, Porashi etc)</label>
+                        <textarea 
+                          rows={2}
+                          placeholder="e.g. Navkarshi: 07:05 AM, Porashi: 09:30 AM"
+                          value={panchangVal.importantTimings}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, importantTimings: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                        />
+                      </div>
+
+                      {/* Special Notes */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Special Spiritual Notes</label>
+                        <textarea 
+                          rows={2}
+                          placeholder="Write key auspicious warnings or guidelines..."
+                          value={panchangVal.specialNotes}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, specialNotes: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                        />
+                      </div>
+
+                      {/* Additional Remarks */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] uppercase font-bold text-text-secondary">Additional Remarks</label>
+                        <textarea 
+                          rows={2}
+                          placeholder="Administrative or extra temple annotations..."
+                          value={panchangVal.additionalRemarks}
+                          onChange={(e) => setPanchangVal(prev => ({ ...prev, additionalRemarks: e.target.value }))}
+                          className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Flags & Save Row */}
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 border-t border-neutral-100">
+                      <div className="flex items-center gap-4 py-2">
                         <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
                           <input 
                             type="checkbox"
@@ -1603,7 +2685,7 @@ export default function Admin() {
                             onChange={(e) => setPanchangVal(prev => ({ ...prev, shubh_din: e.target.checked }))}
                             className="rounded border-border-custom text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                           />
-                          <span>Shubh Din (卐 Swastik Marker)</span>
+                          <span>卐 Shubh Din Marker (Flag Swastik on devotee calendar)</span>
                         </label>
                         <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
                           <input 
@@ -1612,18 +2694,65 @@ export default function Admin() {
                             onChange={(e) => setPanchangVal(prev => ({ ...prev, samayik: e.target.checked }))}
                             className="rounded border-border-custom text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                           />
-                          <span>Samayik Day (📖 Book Marker)</span>
+                          <span>📖 Samayik Day Marker (Flag Book symbol on devotee calendar)</span>
                         </label>
                       </div>
-                    </div>
 
-                    <button 
-                      onClick={handleSavePanchang}
-                      className="px-4 py-2 rounded bg-primary text-white text-[10px] font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 w-fit cursor-pointer ml-auto mt-2"
-                    >
-                      <Save size={14} />
-                      <span>Save Panchang</span>
-                    </button>
+                      <button 
+                        onClick={handleSavePanchang}
+                        className="py-2 px-6 rounded bg-primary text-white text-[10px] font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 w-full sm:w-auto cursor-pointer"
+                      >
+                        <Save size={14} />
+                        <span>Save Panchang Sheet</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Version History List */}
+                  <div className="p-5 rounded-custom-lg border border-border-custom bg-white shadow-premium flex flex-col gap-4">
+                    <h4 className="font-display font-semibold text-text-primary text-xs uppercase tracking-wider">🕒 Version History & Audit Logs ({panchangDate})</h4>
+                    
+                    <div className="border border-border-custom rounded overflow-hidden">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-bg-custom text-[9px] uppercase font-bold text-text-secondary tracking-wider border-b border-border-custom">
+                            <th className="p-3">Ver #</th>
+                            <th className="p-3">Tithi</th>
+                            <th className="p-3">Festival</th>
+                            <th className="p-3">Modified By</th>
+                            <th className="p-3">Modified Time</th>
+                            <th className="p-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {panchangVersionsList.length > 0 ? (
+                            panchangVersionsList.map(ver => (
+                              <tr key={ver.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
+                                <td className="p-3 font-bold text-primary">v{ver.versionNumber}</td>
+                                <td className="p-3 font-semibold text-text-primary">{ver.tithi}</td>
+                                <td className="p-3 text-text-secondary">{ver.festival || "-"}</td>
+                                <td className="p-3 text-text-secondary font-medium">{ver.updatedByName}</td>
+                                <td className="p-3 text-text-secondary">{new Date(ver.updatedAt).toLocaleString()}</td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={() => handleRestorePanchangVersion(ver)}
+                                    className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 text-text-primary text-[9px] font-bold uppercase tracking-wider cursor-pointer"
+                                  >
+                                    Load / Restore
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={6} className="p-6 text-center text-text-secondary italic text-xs">
+                                No modifications tracked for this date yet. Making edits will record version history.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
