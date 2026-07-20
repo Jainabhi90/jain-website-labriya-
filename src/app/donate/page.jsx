@@ -155,13 +155,17 @@ export default function Donate() {
 
   // Printable receipt generator
   const triggerPrintReceipt = (donation) => {
+    const templeName = cms.templeName || "Shree Labriya Jain Shwetambar Mandir";
+    const trustName = (cms.accountHolder || templeName).toUpperCase() + " TRUST";
+    const templeAddress = cms.templeAddress || "Mandir Marg, Labriya, Dhar, Madhya Pradesh - 454111";
+    const taxDisclaimer = cms.taxDisclaimer || "All contributions are exempt under Section 80G of the Income Tax Act.";
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Donation Receipt - Shree Labriya Mandir Trust</title>
+          <title>Donation Receipt - ${trustName}</title>
           <style>
             body {
               font-family: 'Inter', sans-serif;
@@ -262,8 +266,8 @@ export default function Donate() {
           </div>
           <div class="receipt-box">
             <div class="header">
-              <h1>SHREE LABRIYA JAIN SHWETAMBAR MANDIR TRUST</h1>
-              <p>Mandir Marg, Labriya, Dhar, Madhya Pradesh - 454111</p>
+              <h1>${trustName}</h1>
+              <p>${templeAddress}</p>
             </div>
             
             <div class="title">DONATION RECEIPT VOUCHER</div>
@@ -309,9 +313,9 @@ export default function Donate() {
             </div>
 
             <div class="footer-notes">
-              Thank you for your generous contribution towards the Chaturmas 2026 arrangements. <br />
+              Thank you for your generous contribution towards the ${cms.subtitle || "Chaturmas"} ${cms.chaturmasYear || "2026"} arrangements. <br />
               This is a computer-generated voucher and does not require a physical stamp. <br />
-              All contributions are exempt under Section 80G of the Income Tax Act.
+              ${taxDisclaimer}
             </div>
           </div>
         </body>

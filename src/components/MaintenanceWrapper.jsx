@@ -14,7 +14,11 @@ export default function MaintenanceWrapper({ children }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-bg-custom">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          {cms?.templeLogo ? (
+            <img src={cms.templeLogo} alt="Temple Logo" className="w-12 h-12 rounded-full object-cover shadow-sm animate-pulse-soft" />
+          ) : (
+            <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          )}
           <span className="text-xs text-text-secondary uppercase tracking-widest font-bold">Loading Temple Portal...</span>
         </div>
       </div>
@@ -26,8 +30,12 @@ export default function MaintenanceWrapper({ children }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-secondary/40 via-white to-bg-custom p-6 text-center">
         <div className="max-w-md w-full glass-panel border border-border-custom p-8 rounded-custom-lg shadow-premium flex flex-col items-center gap-6">
-          <div className="w-16 h-16 rounded-full bg-orange-50 border border-primary/20 flex items-center justify-center text-primary text-3xl animate-bounce-soft">
-            🪷
+          <div className="w-16 h-16 rounded-full bg-orange-50 border border-primary/20 flex items-center justify-center text-primary text-3xl animate-bounce-soft overflow-hidden">
+            {cms.templeLogo ? (
+              <img src={cms.templeLogo} alt="Temple Logo" className="w-full h-full object-cover" />
+            ) : (
+              <span>🪷</span>
+            )}
           </div>
           <div>
             <h1 className="font-display font-bold text-text-primary text-xl">Portal Under Maintenance</h1>

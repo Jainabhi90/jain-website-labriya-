@@ -36,6 +36,7 @@ import { useAuth } from "@/context/AuthContext";
 import { profileService } from "@/services/profileService";
 import { sanitizeHTML } from "@/lib/sanitize";
 import confetti from "canvas-confetti";
+import { useCMS } from "@/context/CMSContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BADGES_DEFINITIONS = {
@@ -194,6 +195,7 @@ const toReadableId = (uuid = "", prefix = "ID", padLen = 4) => {
 export default function Dashboard() {
   const router = useRouter();
   const { user, profile, profilesList, loading, logout, refreshProfile } = useAuth();
+  const { cms } = useCMS();
 
   const [activeTab, setActiveTab] = useState("sadhana");
   const [isLoading, setIsLoading] = useState(true);
@@ -228,7 +230,6 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   const [editName, setEditName] = useState("");
   const [editCity, setEditCity] = useState("");
@@ -311,11 +312,7 @@ export default function Dashboard() {
         const unreadAnn = activeAnn.filter(a => new Date(a.createdAt).getTime() > new Date(lastViewed).getTime()).length;
         setUnreadAnnCount(unreadAnn);
 
-        // Check maintenance mode
-        const settings = await db.getSettings();
-        if (settings && settings.maintenanceMode && profile.role !== "admin") {
-          setMaintenanceMode(true);
-        }
+        // Maintenance mode is handled via CMS context (no extra DB call needed)
       } catch {
         showNotification("Failed to load dashboard data.", "error");
       } finally {
@@ -496,13 +493,17 @@ export default function Dashboard() {
   };
 
   const triggerPrintReceipt = (donation) => {
+    const templeName = cms.templeName || "Shree Labriya Jain Shwetambar Mandir";
+    const trustName = (cms.accountHolder || templeName).toUpperCase() + " TRUST";
+    const templeAddress = cms.templeAddress || "Mandir Marg, Labriya, Dhar, Madhya Pradesh - 454111";
+    const taxDisclaimer = cms.taxDisclaimer || "All contributions are exempt under Section 80G of the Income Tax Act.";
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Donation Receipt - Shree Labriya Mandir Trust</title>
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Donation Receipt - ${trustName}</title>
       <style>body{font-family:Inter,sans-serif;color:#1F2937;padding:40px;line-height:1.6}.receipt-box{max-width:700px;margin:0 auto;border:1px solid #ECECEC;border-radius:12px;padding:40px;box-shadow:0 4px 12px rgba(0,0,0,.02)}.header{text-align:center;border-bottom:2px solid #EA580C;padding-bottom:20px;margin-bottom:30px}.header h1{font-size:24px;margin:0;color:#C28A3E}.header p{font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:5px 0 0;color:#6B7280}.title{text-align:center;font-size:18px;font-weight:700;text-decoration:underline;margin-bottom:30px}.details-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}.detail-item{font-size:14px}.detail-item strong{display:block;color:#6B7280;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.amount-word{font-size:15px;font-weight:600;background:#FFF7ED;padding:15px;border-radius:6px;border:1px solid #FFE3C3;margin-bottom:40px}.footer-notes{font-size:11px;color:#6B7280;border-top:1px solid #ECECEC;padding-top:20px;text-align:center}.signatures{display:flex;justify-content:space-between;margin-top:50px;margin-bottom:30px}.sig-line{width:180px;border-top:1px solid #6B7280;text-align:center;font-size:12px;padding-top:5px}@media print{.no-print{display:none}body{padding:0}.receipt-box{border:none;box-shadow:none;padding:0}}</style>
       </head><body>
       <div class="no-print" style="max-width:700px;margin:0 auto 20px auto;text-align:right"><button onclick="window.print()" style="background:#EA580C;color:#fff;border:none;padding:10px 20px;font-weight:700;border-radius:6px;cursor:pointer">Print Receipt</button></div>
-      <div class="receipt-box"><div class="header"><h1>SHREE LABRIYA JAIN SHWETAMBAR MANDIR TRUST</h1><p>Mandir Marg, Labriya, Dhar, Madhya Pradesh - 454111</p></div>
+      <div class="receipt-box"><div class="header"><h1>${trustName}</h1><p>${templeAddress}</p></div>
       <div class="title">DONATION RECEIPT VOUCHER</div>
       <div class="details-grid">
       <div class="detail-item"><strong>Receipt Number</strong>#LAB-REC-${donation.id.toUpperCase()}</div>
@@ -514,20 +515,20 @@ export default function Dashboard() {
       </div>
       <div class="amount-word"><strong style="display:block;font-size:11px;text-transform:uppercase;color:#EA580C;margin-bottom:5px">Amount Donated</strong>INR ${donation.amount.toLocaleString("en-IN")}.00</div>
       <div class="signatures"><div class="sig-line">Donor Signature</div><div class="sig-line" style="color:#EA580C;font-weight:700"><span style="font-family:'Brush Script MT',cursive;font-size:20px;display:block;height:24px;margin-top:-15px">Trust Office</span>Authorized Signatory</div></div>
-      <div class="footer-notes">Thank you for your generous contribution towards the Chaturmas 2026 arrangements.<br>This is a computer-generated voucher and does not require a physical stamp.<br>All contributions are exempt under Section 80G of the Income Tax Act.</div>
+      <div class="footer-notes">Thank you for your generous contribution towards the ${cms.subtitle || "Chaturmas"} ${cms.chaturmasYear || ""} arrangements.<br>This is a computer-generated voucher and does not require a physical stamp.<br>${taxDisclaimer}</div>
       </div></body></html>`);
     printWindow.document.close();
   };
 
-  // ── Maintenance Mode ──
-  if (maintenanceMode) {
+  // ── Maintenance Mode (from CMS context) ──
+  if (cms.maintenanceMode && profile?.role !== "admin") {
     return (
       <div className="w-full min-h-screen bg-[#FCFBF7] flex items-center justify-center px-4">
         <div className="max-w-md w-full p-8 bg-white border border-[#EA580C]/10 shadow-premium rounded-custom-lg text-center flex flex-col items-center gap-4">
           <span className="text-4xl animate-pulse">🛠️</span>
           <h2 className="font-display font-bold text-lg text-text-primary">Maintenance Mode Active</h2>
           <p className="text-xs text-text-secondary leading-relaxed">
-            Shree Labriya Jain Shwetambar Mandir devotee portal is currently undergoing scheduled database maintenance. 
+            {cms.templeName || "Shree Labriya Jain Shwetambar Mandir"} devotee portal is currently undergoing scheduled maintenance. 
             Please check back in a few hours.
           </p>
           <button

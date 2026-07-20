@@ -118,7 +118,7 @@ export default function About() {
 
           <div className="md:col-span-5 aspect-[4/3] rounded-custom-lg overflow-hidden border border-[#C28A3E]/20 shadow-premium relative bg-white group select-none">
             <img 
-              src={cms.heroBanner || "https://images.unsplash.com/photo-1609137144814-0e31189c445a?q=80&w=800&auto=format&fit=crop"} 
+              src={cms.aboutHeroBanner || cms.heroBanner || "https://images.unsplash.com/photo-1609137144814-0e31189c445a?q=80&w=800&auto=format&fit=crop"} 
               alt="Temple Banner" 
               className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
               loading="lazy"
@@ -169,9 +169,9 @@ export default function About() {
           </div>
           
           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
-            {lang === "en"
+            {cms.chaturmasDescription || (lang === "en"
               ? "Chaturmas (four months) is the holy monsoon retreat when Jain ascetics (Sadhu-Sadhvi) temporarily suspend barefoot vihar to avoid causing harm to tiny micro-organisms that multiply during rains. This period is highly auspicious for devotees to deepen spiritual studies, observe vows, practice meditation, and absorb daily discourses (Pravachan)."
-              : "चातुर्मास वर्षा ऋतु के चार महीनों की वह अवधि है जब जैन संत (साधु-साध्वी) सूक्ष्म जीवों की रक्षा हेतु विहार स्थगित कर एक स्थान पर वास करते हैं। यह काल स्वाध्याय, तपस्या, सामायिक और दैनिक प्रवचन श्रवण द्वारा आत्म-कल्याण के लिए अत्यंत श्रेष्ठ माना गया है।"}
+              : "चातुर्मास वर्षा ऋतु के चार महीनों की वह अवधि है जब जैन संत (साधु-साध्वी) सूक्ष्म जीवों की रक्षा हेतु विहार स्थगित कर एक स्थान पर वास करते हैं। यह काल स्वाध्याय, तपस्या, सामायिक और दैनिक प्रवचन श्रवण द्वारा आत्म-कल्याण के लिए अत्यंत श्रेष्ठ माना गया है।")}
           </p>
         </div>
 
@@ -179,11 +179,11 @@ export default function About() {
         <div className="p-6 sm:p-8 rounded-custom-lg bg-white border border-[#C28A3E]/20 shadow-premium grid grid-cols-1 lg:grid-cols-12 gap-8 items-center text-left">
           <div className="lg:col-span-4 flex flex-col items-center text-center gap-4 select-none">
             <div className="w-36 h-36 rounded-full overflow-hidden border border-[#C28A3E]/30 bg-[#FCFBF7] relative shadow-sm">
-              <img src={guruLineage.imageUrl} alt={guruLineage.name} className="w-full h-full object-cover" loading="lazy" />
+              <img src={cms.guruImage || guruLineage.imageUrl} alt={cms.guruName || guruLineage.name} className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-text-primary text-sm sm:text-base leading-snug">{guruLineage.name}</h3>
-              <p className="text-[9px] text-[#C28A3E] uppercase tracking-widest font-bold mt-1">{guruLineage.title}</p>
+              <h3 className="font-display font-bold text-text-primary text-sm sm:text-base leading-snug">{cms.guruName || guruLineage.name}</h3>
+              <p className="text-[9px] text-[#C28A3E] uppercase tracking-widest font-bold mt-1">{cms.guruTitle || guruLineage.title}</p>
             </div>
           </div>
 
@@ -193,7 +193,7 @@ export default function About() {
             </span>
             
             <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
-              {guruLineage.bio}
+              {cms.guruBio || guruLineage.bio}
             </p>
             
             <div className="flex flex-col gap-2 pt-3.5 border-t border-[#EA580C]/10">
@@ -246,7 +246,7 @@ export default function About() {
             </div>
             <div className="p-3.5 rounded bg-[#FCFBF7] border border-[#C28A3E]/10">
               <span className="text-[9px] text-[#C28A3E] uppercase font-bold block mb-1">{lang === "en" ? "Pravachan Time" : "दैनिक धर्मसभा/प्रवचन"}</span>
-              <span className="font-bold text-text-primary block">{cms.officeTiming || "09:00 AM - 10:30 AM"}</span>
+              <span className="font-bold text-text-primary block">{cms.pravachanTiming || "09:00 AM - 10:30 AM"}</span>
             </div>
             <div className="p-3.5 rounded bg-[#FCFBF7] border border-[#C28A3E]/10">
               <span className="text-[9px] text-[#C28A3E] uppercase font-bold block mb-1">{lang === "en" ? "Evening Aarti" : "सन्ध्या आरती"}</span>
@@ -302,12 +302,12 @@ export default function About() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs text-[#4B5563]">
             <div className="flex flex-col gap-1.5">
               <strong className="text-text-primary">{lang === "en" ? "Dress Code" : "वेशभूषा नियम"}</strong>
-              <p className="leading-relaxed">{lang === "en" ? "Devotees are requested to wear clean, traditional Indian attire while entering the main sanctuary for Pujas." : "मुख्य पूजा स्थल में प्रवेश करते समय श्रद्धालुओं से स्वच्छ, पारंपरिक और शालीन परिधान पहनने का अनुरोध है।"}</p>
+              <p className="leading-relaxed">{cms.dressCodeText || (lang === "en" ? "Devotees are requested to wear clean, traditional Indian attire while entering the main sanctuary for Pujas." : "मुख्य पूजा स्थल में प्रवेश करते समय श्रद्धालुओं से स्वच्छ, पारंपरिक और शालीन परिधान पहनने का अनुरोध है।")}</p>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <strong className="text-text-primary">{lang === "en" ? "Accommodation (Dharamshala)" : "धर्मशाला आवास"}</strong>
-              <p className="leading-relaxed">{lang === "en" ? "Rooms and bhojanashala arrangements are open to all devotees. Register via Devotee Portal for room bookings." : "सभी तीर्थयात्रियों के लिए धर्मशाला और भोजनशाला व्यवस्था उपलब्ध है। कमरे बुक करने के लिए भक्त पोर्टल का उपयोग करें।"}</p>
+              <p className="leading-relaxed">{cms.lodgingText || (lang === "en" ? "Rooms and bhojanashala arrangements are open to all devotees. Register via Devotee Portal for room bookings." : "सभी तीर्थयात्रियों के लिए धर्मशाला और भोजनशाला व्यवस्था उपलब्ध है। कमरे बुक करने के लिए भक्त पोर्टल का उपयोग करें।")}</p>
             </div>
           </div>
         </div>
@@ -315,7 +315,7 @@ export default function About() {
         {/* I. SPIRITUAL QUOTE ENDING */}
         <div className="py-8 border-y border-[#C28A3E]/20 text-center select-none">
           <p className="font-display italic text-[#EA580C] text-lg sm:text-xl font-bold leading-relaxed max-w-xl mx-auto">
-            "सच्चं लोगम्मि सारभूयं"
+            "{cms.aboutEndingQuote || "सच्चं लोगम्मि सारभूयं"}"
           </p>
           <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mt-2">
             {lang === "en" ? "Truth is the only essence in this universe" : "इस संसार में केवल सत्य ही शाश्वत सार है"}

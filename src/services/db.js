@@ -1801,7 +1801,19 @@ export const db = {
       dailyTimings: "06:00 AM - 09:00 PM",
       aartiTiming: "07:00 PM Daily",
       pujaTiming: "07:30 AM Daily",
+      pravachanTiming: "09:00 AM - 10:30 AM Daily",
       officeTiming: "09:00 AM - 06:00 PM",
+      chaturmasTitle: "What is Chaturmas?",
+      chaturmasDescription: "Chaturmas (four months) is the holy monsoon retreat when Jain ascetics (Sadhu-Sadhvi) temporarily suspend barefoot vihar to avoid causing harm to tiny micro-organisms that multiply during rains. This period is highly auspicious for devotees to deepen spiritual studies, observe vows, practice meditation, and absorb daily discourses (Pravachan).",
+      guruName: "Acharya Dev Shrimad Vijay Rajendrasuri Maharaj",
+      guruTitle: "Revered Guru & Spiritual Guide",
+      guruBio: "Pujya Gurudev is known for his deep mastery of Jain scriptures and strict adherence to monastic vows. He has traveled thousands of kilometers on barefoot (Vihar) to spread the message of non-violence (Ahimsa) and self-restraint. Under his blessings, the Chaturmas 2026 at Labriya is organized to inspire the youth and nurture traditional values.",
+      guruImage: "https://images.unsplash.com/photo-1542856391-010fb87dcfed?q=80&w=600&auto=format&fit=crop",
+      dressCodeText: "Devotees are requested to wear clean, traditional Indian attire while entering the main sanctuary for Pujas.",
+      lodgingText: "Rooms and bhojanashala arrangements are open to all devotees. Register via Devotee Portal for room bookings.",
+      aboutHeroBanner: "/jain_hero_spiritual.png",
+      aboutEndingQuote: "सच्चं लोगम्मि सारभूयं",
+      volunteerHelpText: "Connect directly with our WhatsApp coordination cell.",
 
       // 8. Event Configuration
       registrationOpen: true,
@@ -1902,63 +1914,82 @@ export const db = {
 
   async updateSettings(updates) {
     if (isSupabaseConfigured && supabase) {
+      const startTime = Date.now();
       let rowId = null;
-      // Also read the current about_text so we can preserve the existing extended blob
       let currentAboutText = "";
+      let existingRow = null;
+
       try {
         const { data } = await supabase
           .from("settings")
-          .select("id, about_text")
+          .select("*")
           .limit(1)
           .maybeSingle();
         if (data) {
           rowId = data.id;
           currentAboutText = data.about_text || "";
+          existingRow = data;
         }
       } catch (err) {
-        console.error("[CMS] Error fetching settings ID:", err);
+        console.error("[CMS Audit] Error fetching settings ID:", err);
       }
 
       if (rowId) {
-        // ─── Native columns (always exist in the live 24-column schema) ──────────
-        const nativePayload = {};
-
-        if (updates.templeName !== undefined) nativePayload.temple_name = updates.templeName;
-        if (updates.email !== undefined) nativePayload.email = updates.email;
-        if (updates.website !== undefined) nativePayload.website = updates.website;
-        if (updates.latitude !== undefined) nativePayload.latitude = Number(updates.latitude) || null;
-        if (updates.longitude !== undefined) nativePayload.longitude = Number(updates.longitude) || null;
-        if (updates.upiId !== undefined) nativePayload.upi_id = updates.upiId;
-        if (updates.bankName !== undefined) nativePayload.bank_name = updates.bankName;
-        if (updates.accountHolder !== undefined) nativePayload.account_holder = updates.accountHolder;
-        if (updates.accountNumber !== undefined) nativePayload.account_number = updates.accountNumber;
-        if (updates.ifsc !== undefined) nativePayload.ifsc = updates.ifsc;
-        if (updates.contactNumber !== undefined) nativePayload.contact_number = updates.contactNumber;
-        if (updates.templeAddress !== undefined) nativePayload.temple_address = updates.templeAddress;
-        if (updates.facebook !== undefined) nativePayload.facebook = updates.facebook;
-        if (updates.instagram !== undefined) nativePayload.instagram = updates.instagram;
-        if (updates.youtube !== undefined) nativePayload.youtube = updates.youtube;
-        if (updates.trustRegistrationNumber !== undefined) nativePayload.trust_registration_number = updates.trustRegistrationNumber;
-        // Image URL fields: write to native VARCHAR column ONLY if it's a URL path (not base64).
-        // Base64 images go exclusively into the JSON blob (about_text) where TEXT allows unlimited size.
-        if (updates.templeLogo !== undefined && !String(updates.templeLogo).startsWith("data:")) nativePayload.temple_logo = updates.templeLogo;
-        if (updates.heroBanner !== undefined && !String(updates.heroBanner).startsWith("data:")) nativePayload.hero_banner = updates.heroBanner;
-        if (updates.donationQr !== undefined && !String(updates.donationQr).startsWith("data:")) nativePayload.donation_qr = updates.donationQr;
-        nativePayload.updated_at = new Date().toISOString();
-
-        // ─── Extended fields → JSON blob inside about_text ───────────────────────
-        // Read the existing extended blob (if any) so we don't overwrite untouched fields
         const CMS_EXT_PREFIX = "__CMS_EXT__";
         let existingExt = {};
         if (currentAboutText.startsWith(CMS_EXT_PREFIX)) {
           try { existingExt = JSON.parse(currentAboutText.slice(CMS_EXT_PREFIX.length)); } catch { /* ignore */ }
         }
 
-        // Merge current update into existing extended blob
+        let extChanged = false;
+        // Purge legacy Base64 strings from old database rows
+        Object.keys(existingExt).forEach(key => {
+          const val = existingExt[key];
+          if (typeof val === "string" && val.startsWith("data:")) {
+            console.warn(`[CMS Cleanse] Purging legacy Base64 string from existing DB field: '${key}'`);
+            delete existingExt[key];
+            extChanged = true;
+          }
+        });
+
+        // ─── Native Columns (Update only if value actually changed) ─────────
+        const nativePayload = {};
+
+        const checkNativeDiff = (jsKey, dbCol) => {
+          if (updates[jsKey] !== undefined && existingRow) {
+            const newVal = updates[jsKey];
+            const oldVal = existingRow[dbCol];
+            // Do NOT store raw Base64 data strings in native varchar columns
+            if (typeof newVal === "string" && newVal.startsWith("data:")) return;
+            if (newVal !== oldVal) {
+              nativePayload[dbCol] = newVal;
+            }
+          }
+        };
+
+        checkNativeDiff("templeName", "temple_name");
+        checkNativeDiff("email", "email");
+        checkNativeDiff("website", "website");
+        checkNativeDiff("latitude", "latitude");
+        checkNativeDiff("longitude", "longitude");
+        checkNativeDiff("upiId", "upi_id");
+        checkNativeDiff("bankName", "bank_name");
+        checkNativeDiff("accountHolder", "account_holder");
+        checkNativeDiff("accountNumber", "account_number");
+        checkNativeDiff("ifsc", "ifsc");
+        checkNativeDiff("contactNumber", "contact_number");
+        checkNativeDiff("templeAddress", "temple_address");
+        checkNativeDiff("facebook", "facebook");
+        checkNativeDiff("instagram", "instagram");
+        checkNativeDiff("youtube", "youtube");
+        checkNativeDiff("trustRegistrationNumber", "trust_registration_number");
+        checkNativeDiff("templeLogo", "temple_logo");
+        checkNativeDiff("heroBanner", "hero_banner");
+        checkNativeDiff("donationQr", "donation_qr");
+
+        // ─── Extended fields → JSON blob inside about_text ─────────────────────
         const extFields = [
-          // General / branding images — stored in JSON blob to support base64 uploads
           "templeLogo", "heroBanner", "donationQr",
-          // Other extended text + config fields
           "subtitle", "favicon", "chaturmasYear", "websiteTitle", "seoTitle", "seoDescription",
           "primaryThemeColor", "secondaryThemeColor",
           "alternatePhone", "whatsappNumber", "googleMapsEmbedUrl",
@@ -1968,7 +1999,9 @@ export const db = {
           "footerDescription", "copyrightText", "designedByText", "quickContactText", "footerLogo",
           "whatsapp", "telegram", "xTwitter",
           "aboutText", "templeHistory", "trustInformation", "mission", "vision",
-          "dailyTimings", "aartiTiming", "pujaTiming", "officeTiming",
+          "dailyTimings", "aartiTiming", "pujaTiming", "pravachanTiming", "officeTiming",
+          "chaturmasTitle", "chaturmasDescription", "guruName", "guruTitle", "guruBio", "guruImage",
+          "dressCodeText", "lodgingText", "aboutHeroBanner", "aboutEndingQuote", "volunteerHelpText",
           "registrationOpen", "registrationClosed", "maxParticipants", "defaultEventBanner",
           "allowNewRegistration", "allowDailyCheckIn", "allowDonations", "allowFamilyProfiles",
           "enableNotifications", "maintenanceMode",
@@ -1977,30 +2010,85 @@ export const db = {
         ];
 
         const newExt = { ...existingExt };
+        let changedCount = 0;
+        let unchangedCount = 0;
+
         extFields.forEach(field => {
           if (updates[field] !== undefined) {
-            // Allow ALL values including base64 — about_text is TEXT (unlimited size)
-            newExt[field] = updates[field];
+            const val = updates[field];
+            if (newExt[field] !== val) {
+              newExt[field] = val;
+              extChanged = true;
+              changedCount++;
+            } else {
+              unchangedCount++;
+            }
           }
         });
 
-        nativePayload.about_text = CMS_EXT_PREFIX + JSON.stringify(newExt);
+        if (extChanged) {
+          nativePayload.about_text = CMS_EXT_PREFIX + JSON.stringify(newExt);
+        }
 
-        console.log("[CMS] Saving to Supabase. Native fields:", Object.keys(nativePayload).filter(k => k !== "about_text"));
-        console.log("[CMS] Extended fields stored in about_text JSON:", extFields.filter(f => newExt[f] !== undefined).join(", "));
+        // ─── STRICT BASE64 RECURSIVE GUARD ─────────────────────────────────────
+        const checkBase64Recursively = (obj, path = "") => {
+          if (!obj) return null;
+          if (typeof obj === "string") {
+            if (obj.startsWith("data:image")) return path;
+            return null;
+          }
+          if (typeof obj === "object") {
+            for (const k of Object.keys(obj)) {
+              const res = checkBase64Recursively(obj[k], path ? `${path}.${k}` : k);
+              if (res) return res;
+            }
+          }
+          return null;
+        };
 
+        const badField = checkBase64Recursively(nativePayload);
+        if (badField) {
+          console.error(`❌ [CMS GUARD CRITICAL ABORT] Outgoing payload aborted! Base64 image detected in field: '${badField}'`);
+          throw new Error(`Save aborted: Base64 data string detected in field '${badField}'. All images must be uploaded to Storage first.`);
+        }
+
+        // ─── AUDIT METRICS LOGGING ───────────────────────────────────────────
+        const payloadBytes = Buffer.byteLength(JSON.stringify(nativePayload), "utf8");
+        const payloadKB = (payloadBytes / 1024).toFixed(2);
+        const prePatchTime = Date.now() - startTime;
+
+        console.log("=================================================");
+        console.log("📊 [CMS AUDIT METRICS REPORT BEFORE PATCH]");
+        console.log(`• Final Outgoing Payload Size: ${payloadKB} KB (Target: < 20 KB)`);
+        console.log(`• Changed Fields Count: ${changedCount + Object.keys(nativePayload).length}`);
+        console.log(`• Unchanged Fields Count: ${unchangedCount}`);
+        console.log(`• Base64 Data Strings in Outgoing Payload: ZERO (VERIFIED 100% CLEAN)`);
+        console.log(`• Pre-PATCH Preparation Duration: ${prePatchTime} ms`);
+        console.log("=================================================");
+
+        if (Object.keys(nativePayload).length === 0) {
+          console.log("[CMS] Zero changed fields detected. Skipping DB UPDATE query.");
+          return true;
+        }
+
+        nativePayload.updated_at = new Date().toISOString();
+
+        const patchStartTime = Date.now();
         try {
           const { error } = await supabase
             .from("settings")
             .update(nativePayload)
             .eq("id", rowId);
 
+          const patchWaitTime = Date.now() - patchStartTime;
+          console.log(`[CMS AUDIT] Database response duration: ${patchWaitTime} ms`);
+
           if (error) {
-            console.error("[CMS] Settings save failed:", error);
+            console.error("[CMS] Settings save failed (Supabase Error):", error);
             throw error;
           }
 
-          console.log("[CMS] ✅ Settings saved successfully to Supabase.");
+          console.log("[CMS] ✅ Settings successfully updated in Supabase.");
           return true;
         } catch (err) {
           console.error("[CMS] Settings write exception:", err);

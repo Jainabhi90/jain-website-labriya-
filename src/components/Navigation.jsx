@@ -217,8 +217,8 @@ export default function Navigation() {
           {/* Logo & Brand Info */}
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group select-none">
             <div className="w-[38px] h-[38px] sm:w-[44px] sm:h-[44px] md:w-[52px] md:h-[52px] rounded-full bg-[#FFF7ED] border border-[#EA580C]/20 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm transition-transform duration-300 group-hover:scale-105">
-              {cms.portalLogo ? (
-                <img src={cms.portalLogo} alt="Logo" className="w-full h-full object-cover" />
+              {(cms.templeLogo || cms.portalLogo) ? (
+                <img src={cms.templeLogo || cms.portalLogo} alt="Logo" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-[#EA580C] font-display font-semibold text-base sm:text-lg md:text-xl">📿</span>
               )}
@@ -362,8 +362,8 @@ export default function Navigation() {
               <div className="flex items-center justify-between pb-5 border-b border-[#EA580C]/10">
                 <div className="flex items-center gap-2">
                   <div className="w-[32px] h-[32px] rounded-full bg-[#FFF7ED] border border-[#EA580C]/20 flex items-center justify-center overflow-hidden">
-                    {cms.portalLogo ? (
-                      <img src={cms.portalLogo} alt="Logo" className="w-full h-full object-cover" />
+                    {(cms.templeLogo || cms.portalLogo) ? (
+                      <img src={cms.templeLogo || cms.portalLogo} alt="Logo" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-[#EA580C] text-xs">📿</span>
                     )}

@@ -20,32 +20,49 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata = {
-  metadataBase: new URL("https://labriyachaturmasin.vercel.app"),
-  title: "Shree Labriya Jain Shwetambar Mandir | Chaturmas Festival 2026",
-  description: "Welcome to the official portal of Shree Labriya Jain Shwetambar Mandir for Chaturmas 2026. Explore daily pravachans, Panchang timings, community announcements, donation channels, and spiritual events.",
-  keywords: ["Jain Mandir", "Labriya", "Chaturmas 2026", "Jainism", "Pravachan", "Panchang", "Jai Jinendra", "Aarti Schedule"],
-  openGraph: {
-    title: "Shree Labriya Jain Shwetambar Mandir | Chaturmas 2026",
-    description: "Connect with the spiritual events, live daily pravachans, and panchang of the Chaturmas 2026 festival at Labriya Jain Mandir.",
-    type: "website",
-    locale: "en_US",
-    images: [
-      {
-        url: "/jain_hero_spiritual.png",
-        width: 1200,
-        height: 630,
-        alt: "Shree Labriya Jain Mandir Chaturmas 2026",
-      }
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Shree Labriya Jain Shwetambar Mandir | Chaturmas 2026",
-    description: "Connect with the spiritual events, live daily pravachans, and panchang of the Chaturmas 2026 festival at Labriya Jain Mandir.",
-    images: ["/jain_hero_spiritual.png"],
-  },
-};
+import { db } from "@/services/db";
+
+export async function generateMetadata() {
+  let settings = null;
+  try {
+    settings = await db.getSettings();
+  } catch {
+    // silently fall back to defaults
+  }
+
+  const title = settings?.seoTitle || settings?.websiteTitle || "Shree Labriya Jain Shwetambar Mandir | Chaturmas Festival 2026";
+  const description = settings?.seoDescription || "Welcome to the official portal of Shree Labriya Jain Shwetambar Mandir for Chaturmas 2026. Explore daily pravachans, Panchang timings, community announcements, donation channels, and spiritual events.";
+  const heroBanner = settings?.heroBanner || "/jain_hero_spiritual.png";
+  const templeName = settings?.templeName || "Shree Labriya Jain Shwetambar Mandir";
+
+  return {
+    metadataBase: new URL("https://labriyachaturmasin.vercel.app"),
+    title,
+    description,
+    keywords: ["Jain Mandir", "Labriya", "Chaturmas", "Jainism", "Pravachan", "Panchang", "Jai Jinendra", "Aarti Schedule", templeName],
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: "en_US",
+      images: [
+        {
+          url: heroBanner.startsWith("data:") ? "/jain_hero_spiritual.png" : heroBanner,
+          width: 1200,
+          height: 630,
+          alt: `${templeName} Chaturmas`,
+        }
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [heroBanner.startsWith("data:") ? "/jain_hero_spiritual.png" : heroBanner],
+    },
+  };
+}
+
 
 export default function RootLayout({ children }) {
   return (

@@ -6,10 +6,12 @@ import { motion } from "framer-motion";
 import { AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
+import { useCMS } from "@/context/CMSContext";
 
 export default function Login() {
   const router = useRouter();
   const { loading, isAuthenticated, loginWithGoogle } = useAuth();
+  const { cms } = useCMS();
   const [lang, setLang] = useState("en");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -147,12 +149,16 @@ export default function Login() {
 
           {/* Brand/Header */}
           <div className="flex flex-col items-center text-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary border border-primary/20 animate-pulse-soft">
-              <span className="text-xl">🪷</span>
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary border border-primary/20 animate-pulse-soft overflow-hidden">
+              {(cms.templeLogo || cms.portalLogo) ? (
+                <img src={cms.templeLogo || cms.portalLogo} alt={cms.templeName || "Temple Logo"} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl">🪷</span>
+              )}
             </div>
             <div>
               <h2 className="font-display font-semibold text-text-primary text-xl">
-                {t.portalSignIn}
+                {cms.templeName ? `${cms.templeName}` : t.portalSignIn}
               </h2>
               <p className="text-xs text-text-secondary mt-1">
                 {lang === "en"

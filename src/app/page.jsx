@@ -288,7 +288,7 @@ export default function Home() {
               <div className="bg-white/95 backdrop-blur-sm border border-[#C28A3E]/10 px-3 py-1.5 rounded-custom-sm flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] absolute bottom-3 left-3 z-20 select-none">
                 <span className="text-[10px] text-[#C28A3E]">📍</span>
                 <span className="text-[10px] font-semibold text-[#1F2937] tracking-wider">
-                  {lang === "en" ? "Labriya Mandir, Dhar" : "लाबड़िया मंदिर, धार"}
+                  {cms.templeAddress ? cms.templeAddress.split(",").slice(0, 2).join(",").trim() : (lang === "en" ? "Labriya Mandir, Dhar" : "लाबड़िया मंदिर, धार")}
                 </span>
               </div>
             </motion.div>

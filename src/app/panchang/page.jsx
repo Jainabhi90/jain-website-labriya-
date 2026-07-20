@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { db } from "@/services/db";
 import { translations } from "@/services/translations";
+import { useCMS } from "@/context/CMSContext";
 
 const JAIN_QUOTES = [
   {
@@ -56,6 +57,7 @@ const JAIN_QUOTES = [
 ];
 
 export default function Panchang() {
+  const { cms } = useCMS();
   const [selectedDate, setSelectedDate] = useState("");
   const [panchang, setPanchang] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -716,7 +718,7 @@ export default function Panchang() {
                       </h4>
                       <div className="flex items-center gap-4 text-xs text-text-secondary mt-1.5">
                         <span className="flex items-center gap-1"><Clock size={12} /> {item.time}</span>
-                        <span className="flex items-center gap-1"><MapPin size={12} /> Shree Labriya Mandir</span>
+                        <span className="flex items-center gap-1"><MapPin size={12} /> {cms.templeName || "Shree Labriya Mandir"}</span>
                       </div>
                     </div>
 
@@ -889,7 +891,7 @@ export default function Panchang() {
           <div className="p-4 rounded-custom-lg bg-[#FFF7ED]/35 border border-[#EA580C]/10 flex items-start gap-3 text-left">
             <Compass size={18} className="text-[#C28A3E] shrink-0 mt-0.5" />
             <p className="text-[9.5px] text-[#4B5563] leading-relaxed">
-              {t.panchangFootnote || "All calculations are approximated based on standard local coordinates and coordinates of Shree Labriya Mandir. Devotees are requested to consult local experts for highly specific rites."}
+              {t.panchangFootnote || `All calculations are approximated based on standard local coordinates and coordinates of ${cms.templeName || "Shree Labriya Mandir"}. Devotees are requested to consult local experts for highly specific rites.`}
             </p>
           </div>
 

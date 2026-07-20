@@ -144,8 +144,8 @@ export default function Footer() {
         <div className="lg:col-span-4 flex flex-col gap-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-[#C28A3E]/20 overflow-hidden shrink-0 shadow-sm select-none">
-              {cms.footerLogo ? (
-                <img src={cms.footerLogo} alt="Temple Logo" className="w-full h-full object-cover" />
+              {(cms.templeLogo || cms.footerLogo) ? (
+                <img src={cms.templeLogo || cms.footerLogo} alt="Temple Logo" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl">📿</span>
               )}

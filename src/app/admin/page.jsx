@@ -2,17 +2,17 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  User, 
-  Clock, 
-  Megaphone, 
-  Calendar as CalendarIcon, 
-  Heart, 
+import {
+  User,
+  Clock,
+  Megaphone,
+  Calendar as CalendarIcon,
+  Heart,
   CalendarDays,
-  Plus, 
-  Trash2, 
-  Check, 
-  Save, 
+  Plus,
+  Trash2,
+  Check,
+  Save,
   LogOut,
   Award,
   Download,
@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/services/db";
+import { storageService } from "@/services/storageService";
 import { useAuth } from "@/context/AuthContext";
 import { translations } from "@/services/translations";
 import { useCMS } from "@/context/CMSContext";
@@ -39,16 +40,145 @@ const toReadableId = (uuid = "", prefix = "ID", padLen = 4) => {
   return `${prefix}-${String(num).padStart(padLen, "0")}`;
 };
 
+function ImageUpload({ label, value, onChange, accept = "image/png, image/jpeg, image/jpg, image/webp" }) {
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const inputRef = React.useRef(null);
+
+  const getFileSize = (str) => {
+    if (!str) return null;
+    if (typeof str === "string" && str.startsWith("data:")) {
+      const base64Length = str.length - (str.indexOf(",") + 1);
+      const sizeInBytes = Math.round((base64Length * 3) / 4);
+      if (sizeInBytes > 1024 * 1024) return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+      return `${(sizeInBytes / 1024).toFixed(1)} KB`;
+    }
+    return "Asset File";
+  };
+
+  const handleFile = (file) => {
+    if (!file) return;
+    if (!file.type.match(/image\/(png|jpeg|jpg|webp)/i)) {
+      alert("Please upload a valid image file (PNG, JPG, JPEG, or WEBP)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      onChange(reader.result);
+      setUploadStatus("Uploaded successfully!");
+      setTimeout(() => setUploadStatus(""), 3000);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const fileSize = getFileSize(value);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{label}</label>
+      
+      {value ? (
+        <div className="relative flex items-center gap-4 p-3 rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="w-16 h-16 rounded-lg bg-neutral-50 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
+            <img src={value} alt={label} className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <span className="text-xs font-semibold text-text-primary truncate">{label}</span>
+            {fileSize && (
+              <span className="text-[10px] text-text-secondary">Size: {fileSize}</span>
+            )}
+            {uploadStatus && (
+              <span className="text-[10px] text-emerald-600 font-bold">✓ {uploadStatus}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-[#1F2937] text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+            dragActive
+              ? "border-[#EA580C] bg-[#FFF7ED]"
+              : "border-neutral-200 bg-white hover:border-[#EA580C]/40 hover:bg-[#FFF7ED]/20"
+          }`}
+        >
+          <div className="w-10 h-10 rounded-full bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center text-lg">
+            📷
+          </div>
+          <div>
+            <span className="text-xs font-bold text-text-primary block">Click or Drag & Drop to Upload</span>
+            <span className="text-[10px] text-text-secondary">PNG, JPG, JPEG, or WEBP supported</span>
+          </div>
+        </div>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={(e) => handleFile(e.target.files?.[0])}
+        className="hidden"
+      />
+    </div>
+  );
+}
+
 export default function Admin() {
   const router = useRouter();
   const { user, profile, loading, isAdmin, logout } = useAuth();
   const { refreshCMS } = useCMS();
-  
+
   const [lang, setLang] = useState("en");
   const [activeTab, setActiveTab] = useState("analytics");
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState("success"); // success, error
+
+  // CMS Save & Status States
+  const [cmsSaveState, setCmsSaveState] = useState("published"); // published, unsaved, saving, failed
+  const [lastSavedTime, setLastSavedTime] = useState("6:42 PM");
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSavingCms, setIsSavingCms] = useState(false);
+  const [floatingToast, setFloatingToast] = useState(null);
+  const initialSettingsRef = React.useRef("");
 
   // Live Database States
   const [analytics, setAnalytics] = useState({
@@ -183,7 +313,7 @@ export default function Admin() {
   }, [adminCalYear, adminCalMonth, user, isAdmin, panchangDate]);
 
   const [newSadhanaAct, setNewSadhanaAct] = useState({ name: "", points: 5, category: "Devotion" });
-  
+
   // Confirmation states
   const [profileToDelete, setProfileToDelete] = useState(null);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
@@ -248,6 +378,34 @@ export default function Admin() {
       fetchPanchangForDate();
     }
   }, [panchangDate, user, isAdmin]);
+
+  // Handle setting field change & track dirty state
+  const handleSettingChange = (key, value) => {
+    setTempleSettings(prev => {
+      const updated = { ...prev, [key]: value };
+      if (JSON.stringify(updated) !== initialSettingsRef.current) {
+        setIsDirty(true);
+        setCmsSaveState("unsaved");
+      } else {
+        setIsDirty(false);
+        setCmsSaveState("published");
+      }
+      return updated;
+    });
+  };
+
+  // Unsaved changes browser prompt protection
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Leave without saving?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   // Auto-reload announcements on filter/pagination changes
   useEffect(() => {
@@ -326,6 +484,9 @@ export default function Admin() {
       // 11. Fetch Settings
       const settingsData = await db.getSettings();
       setTempleSettings(settingsData);
+      initialSettingsRef.current = JSON.stringify(settingsData);
+      setIsDirty(false);
+      setCmsSaveState("published");
 
       // 12. Fetch Admin Notifications & Audit Logs
       const notifs = await db.getNotifications(profile.id);
@@ -418,13 +579,13 @@ export default function Admin() {
   const handleAddAnnouncement = async (e) => {
     e.preventDefault();
     if (!newAnn.title || !newAnn.content) return;
-    
+
     let createdAtIso = undefined;
     if (newAnn.publishDate) {
       const timeStr = newAnn.publishTime || "00:00";
       createdAtIso = new Date(`${newAnn.publishDate}T${timeStr}`).toISOString();
     }
-    
+
     let expiresAtIso = null;
     if (newAnn.expiryDate) {
       const timeStr = newAnn.expiryTime || "23:59";
@@ -478,7 +639,7 @@ export default function Admin() {
       pDate = dt.toISOString().split("T")[0];
       pTime = dt.toTimeString().slice(0, 5);
     }
-    
+
     let eDate = "";
     let eTime = "";
     if (ann.expiresAt) {
@@ -528,7 +689,7 @@ export default function Admin() {
     const replacement = tagStart + selected + tagEnd;
     const newContent = text.substring(0, start) + replacement + text.substring(end);
     setNewAnn(prev => ({ ...prev, content: newContent }));
-    
+
     setTimeout(() => {
       txtArea.focus();
       txtArea.setSelectionRange(start + tagStart.length, start + tagStart.length + selected.length);
@@ -558,37 +719,36 @@ export default function Admin() {
     const daysInMonth = getDaysInMonth(adminCalYear, adminCalMonth);
     const firstDayIndex = getFirstDayOfMonth(adminCalYear, adminCalMonth);
     const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    
+
     const dayCells = [];
     for (let i = 0; i < firstDayIndex; i++) {
       dayCells.push(<div key={`empty-${i}`} className="h-10 border border-neutral-100 bg-neutral-50/50" />);
     }
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${adminCalYear}-${adminCalMonth.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
       const isSelected = dateStr === panchangDate;
-      
+
       const today = new Date();
       const isToday = today.getFullYear() === adminCalYear && (today.getMonth() + 1) === adminCalMonth && today.getDate() === day;
-      
+
       const record = adminMonthPanchangs[dateStr];
       const hasFestival = record && (record.festival || record.event);
       const hasFasting = record && record.fastingInfo;
       const isShubh = record && record.shubh_din;
       const isSamayik = record && record.samayik;
-      
+
       dayCells.push(
         <button
           key={`day-${day}`}
           type="button"
           onClick={() => setPanchangDate(dateStr)}
-          className={`h-10 border border-neutral-100 text-left p-1 text-[10px] font-semibold flex flex-col justify-between transition-all select-none hover:bg-primary/5 cursor-pointer ${
-            isSelected 
-              ? "bg-primary/10 text-primary border-primary/30 font-bold ring-1 ring-primary" 
-              : isToday 
-              ? "bg-orange-50 text-primary border-orange-200" 
-              : "bg-white text-text-primary"
-          }`}
+          className={`h-10 border border-neutral-100 text-left p-1 text-[10px] font-semibold flex flex-col justify-between transition-all select-none hover:bg-primary/5 cursor-pointer ${isSelected
+              ? "bg-primary/10 text-primary border-primary/30 font-bold ring-1 ring-primary"
+              : isToday
+                ? "bg-orange-50 text-primary border-orange-200"
+                : "bg-white text-text-primary"
+            }`}
         >
           <div className="flex justify-between items-center w-full">
             <span>{day}</span>
@@ -597,7 +757,7 @@ export default function Admin() {
               {isSamayik && <span className="text-[7px]" title="Samayik">📖</span>}
             </div>
           </div>
-          
+
           <div className="flex gap-0.5 items-center w-full overflow-hidden">
             {hasFestival && (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title={record.festival || record.event} />
@@ -614,7 +774,7 @@ export default function Admin() {
         </button>
       );
     }
-    
+
     const totalCells = dayCells.length;
     const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
     for (let i = 0; i < remaining; i++) {
@@ -679,11 +839,11 @@ export default function Admin() {
         showNotification("CSV is empty or invalid.", "error");
         return;
       }
-      
+
       const headers = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/^["']|["']$/g, ""));
       const rows = [];
       const validationErrors = [];
-      
+
       for (let i = 1; i < lines.length; i++) {
         const rowVals = [];
         let inQuotes = false;
@@ -701,30 +861,30 @@ export default function Admin() {
           }
         }
         rowVals.push(currentVal.trim().replace(/^["']|["']$/g, ""));
-        
+
         if (rowVals.length < headers.length) {
           validationErrors.push(`Row ${i + 1}: Column count mismatch`);
           continue;
         }
-        
+
         const rowObj = {};
         headers.forEach((h, idx) => {
           rowObj[h] = rowVals[idx];
         });
-        
+
         const dateStr = rowObj.date || rowObj.date_str || "";
         const isDateValid = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(Date.parse(dateStr));
         if (!isDateValid) {
           validationErrors.push(`Row ${i + 1}: Invalid date format "${dateStr}" (use YYYY-MM-DD)`);
           continue;
         }
-        
+
         const tithi = rowObj.tithi || "";
         if (!tithi) {
           validationErrors.push(`Row ${i + 1}: Missing tithi`);
           continue;
         }
-        
+
         rows.push({
           dateStr,
           tithi,
@@ -746,13 +906,13 @@ export default function Admin() {
           samayik: rowObj.samayik === "true" || rowObj.samayik === "1"
         });
       }
-      
+
       if (validationErrors.length > 0) {
         alert("Validation Errors Found:\n" + validationErrors.slice(0, 10).join("\n") + (validationErrors.length > 10 ? `\n...and ${validationErrors.length - 10} more` : ""));
         showNotification("Import aborted due to validation failures.", "error");
         return;
       }
-      
+
       setIsDeleting(true);
       try {
         for (const row of rows) {
@@ -777,7 +937,7 @@ export default function Admin() {
     let startDate = "1970-01-01";
     let endDate = "9999-12-31";
     const [selYear, selMonth] = panchangDate.split("-");
-    
+
     if (mode === "month") {
       startDate = `${selYear}-${selMonth}-01`;
       endDate = `${selYear}-${selMonth}-31`;
@@ -785,7 +945,7 @@ export default function Admin() {
       startDate = `${selYear}-01-01`;
       endDate = `${selYear}-12-31`;
     }
-    
+
     try {
       let exportData = [];
       if (db.isSupabaseConfigured && db.supabase) {
@@ -803,9 +963,9 @@ export default function Admin() {
           .sort()
           .map(d => ({ date_str: d, ...records[d] }));
       }
-      
+
       let csvContent = "data:text/csv;charset=utf-8,Date,Tithi,Month,Paksha,Sunrise,Sunset,Festival,Event,Nakshatra,Yoga,Karana,Moon_Sign,Special_Notes,Fasting_Info,Important_Timings,Additional_Remarks,Shubh_Din,Samayik\n";
-      
+
       exportData.forEach(row => {
         const clean = (val) => {
           if (val === null || val === undefined) return "";
@@ -813,7 +973,7 @@ export default function Admin() {
         };
         csvContent += `${row.date_str || ""},${clean(row.tithi)},${clean(row.month)},${clean(row.paksha)},${clean(row.sunrise)},${clean(row.sunset)},${clean(row.festival)},${clean(row.event)},${clean(row.nakshatra)},${clean(row.yoga)},${clean(row.karana)},${clean(row.moon_sign || row.moonSign)},${clean(row.special_notes || row.specialNotes)},${clean(row.fasting_info || row.fastingInfo)},${clean(row.important_timings || row.importantTimings)},${clean(row.additional_remarks || row.additionalRemarks)},${row.shubh_din || false},${row.samayik || false}\n`;
       });
-      
+
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
@@ -931,7 +1091,7 @@ export default function Admin() {
       }
       map[p.userId].members.push(p);
     });
-    
+
     let csvContent = "data:text/csv;charset=utf-8,Family ID,Member ID,Name,Phone,City,Points,Streak,Registration Date\n";
     Object.values(map).forEach(fam => {
       const familyReadableId = toReadableId(fam.userId, "F");
@@ -941,7 +1101,7 @@ export default function Admin() {
         csvContent += `"${familyReadableId}","${memberReadableId}","${m.fullName}","${m.phone || ""}","${m.city}",${m.totalPoints || 0},${m.streak || 0},"${regDate}"\n`;
       });
     });
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.href = encodedUri;
@@ -1084,16 +1244,102 @@ export default function Admin() {
     }
   };
 
-  // --- CRUD: Settings Console ---
+  // --- CRUD: Settings Console (Production Pipeline - Single Image Upload & Post-Upload Diffing) ---
   const handleSaveSettings = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isSavingCms) return;
+    setIsSavingCms(true);
+    setCmsSaveState("saving");
+
+    const pipelineStartTime = Date.now();
+
     try {
-      await db.updateSettings(templeSettings);
+      let initialObj = {};
+      try { initialObj = JSON.parse(initialSettingsRef.current || "{}"); } catch { /* ignore */ }
+
+      // 1. Storage Upload Phase: Upload each physical image ONCE to Supabase Storage & sync aliases
+      const { processedObj, uploadCount, uploadedFields, totalUploadTimeMs } = 
+        await storageService.processImageUploadsWithAliases(templeSettings, initialObj);
+      
+      // Update form state with returned Storage HTTPS URLs (0 Base64 strings survive)
+      setTempleSettings(processedObj);
+
+      // 2. Post-Upload Diffing Phase: Compare final Storage URLs against initial settings
+      const changedFields = {};
+      const modifiedKeysList = [];
+      Object.keys(processedObj).forEach(key => {
+        if (processedObj[key] !== initialObj[key]) {
+          changedFields[key] = processedObj[key];
+          modifiedKeysList.push(key);
+        }
+      });
+
+      console.log("=================================================");
+      console.log("📊 [CMS PRE-PATCH TELEMETRY AUDIT]");
+      console.log(`• Uploaded Image Count: ${uploadCount} (Physical Uploads)`);
+      console.log(`• Modified Image Fields: ${uploadedFields.length > 0 ? uploadedFields.join(", ") : "None"}`);
+      console.log(`• Storage Upload Duration: ${totalUploadTimeMs} ms`);
+      console.log(`• Total Changed Fields to Update: ${modifiedKeysList.length}`);
+      console.log(`• List of Changed Fields:`, modifiedKeysList);
+      console.log("=================================================");
+
+      // 3. Database Write Phase: PATCH only changed fields
+      const dbStartTime = Date.now();
+      await db.updateSettings(changedFields);
+      const dbDuration = Date.now() - dbStartTime;
+
+      // 4. Verification Phase: Re-fetch latest settings from Supabase
+      const verifyStartTime = Date.now();
+      const verifyData = await db.getSettings();
+      const verifyDuration = Date.now() - verifyStartTime;
+
+      const isVerified = verifyData && (
+        !processedObj.templeName || verifyData.templeName === processedObj.templeName
+      );
+
+      if (!isVerified) {
+        throw new Error("Verification check failed after save operation");
+      }
+
+      console.log("[CMS Verification Read] Successfully verified persisted settings:", {
+        templeName: verifyData.templeName,
+        templeLogo: verifyData.templeLogo,
+        heroBanner: verifyData.heroBanner
+      });
+
+      // 5. Context Sync Phase: Refresh CMS Context across public site
       await refreshCMS();
-      showNotification("Temple console settings updated successfully.");
-    } catch (e) {
-      console.error(e);
-      showNotification("Failed to update settings.", "error");
+
+      // 6. State Clean Phase: Reset dirty state & update initial reference
+      initialSettingsRef.current = JSON.stringify(processedObj);
+      setIsDirty(false);
+
+      // 7. Status & Timestamp Logging
+      const totalPipelineMs = Date.now() - pipelineStartTime;
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setLastSavedTime(timeStr);
+      setCmsSaveState("published");
+
+      console.log("=================================================");
+      console.log("⚡ [CMS SAVE PIPELINE COMPLETED SUCCESSFULLY]");
+      console.log(`• Storage Upload Duration: ${totalUploadTimeMs} ms`);
+      console.log(`• Database Write Duration: ${dbDuration} ms`);
+      console.log(`• Verification Read Duration: ${verifyDuration} ms`);
+      console.log(`• Total Pipeline Execution Time: ${totalPipelineMs} ms`);
+      console.log("=================================================");
+
+      // 8. Show floating success toast
+      setFloatingToast({ message: "Temple website updated successfully.", type: "success" });
+      setTimeout(() => setFloatingToast(null), 2500);
+
+    } catch (err) {
+      console.error("❌ [CMS Save Pipeline Failed]", err);
+      setCmsSaveState("failed");
+      setFloatingToast({ message: err.message || "Couldn't save your changes. Please try again.", type: "error" });
+      setTimeout(() => setFloatingToast(null), 3500);
+    } finally {
+      setIsSavingCms(false);
     }
   };
 
@@ -1125,13 +1371,61 @@ export default function Admin() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 min-h-[90vh]">
-      
+
+      {/* Floating Top Notification Toast */}
+      {floatingToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
+          <div className={`px-5 py-3 rounded-full shadow-2xl border text-xs font-semibold flex items-center gap-3 select-none backdrop-blur-md ${
+            floatingToast.type === "success"
+              ? "bg-emerald-900/95 text-emerald-100 border-emerald-500/30 shadow-emerald-950/20"
+              : "bg-red-900/95 text-red-100 border-red-500/30 shadow-red-950/20"
+          }`}>
+            <span className="text-base">{floatingToast.type === "success" ? "✓" : "⚠️"}</span>
+            <div className="flex flex-col">
+              <span className="font-bold leading-none">{floatingToast.type === "success" ? "Changes Saved Successfully" : "Save Error"}</span>
+              <span className="text-[10px] opacity-90 mt-0.5">{floatingToast.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Admin Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-border-custom mb-8">
         <div>
-          <span className="px-2.5 py-1 rounded bg-accent/15 text-accent font-bold text-[9px] uppercase tracking-wider border border-accent/25 select-none">
-            Secure Admin Console
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded bg-accent/15 text-accent font-bold text-[9px] uppercase tracking-wider border border-accent/25 select-none">
+              Secure Admin Console
+            </span>
+
+            {/* Live CMS Status Pill */}
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-bold shadow-xs select-none transition-all">
+              {cmsSaveState === "saving" && (
+                <span className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                  <span>🔄 Saving…</span>
+                </span>
+              )}
+              {cmsSaveState === "unsaved" && (
+                <span className="flex items-center gap-1.5 text-yellow-800 bg-yellow-50 border-yellow-300 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  <span>🟡 Unsaved Changes</span>
+                </span>
+              )}
+              {cmsSaveState === "published" && (
+                <span className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50 border-emerald-300 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>🟢 Published · Last saved {lastSavedTime}</span>
+                </span>
+              )}
+              {cmsSaveState === "failed" && (
+                <span className="flex items-center gap-1.5 text-red-800 bg-red-50 border-red-300 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  <span>🔴 Save Failed</span>
+                </span>
+              )}
+            </div>
+          </div>
+
           <h2 className="font-display font-semibold text-text-primary text-xl mt-3">
             Temple Management System
           </h2>
@@ -1189,9 +1483,8 @@ export default function Admin() {
                           <div
                             key={n.id}
                             onClick={() => handleMarkAdminNotifRead(n.id)}
-                            className={`p-2 rounded text-[10px] cursor-pointer transition-colors border ${
-                              n.read ? "bg-neutral-50/50 text-text-secondary border-transparent" : "bg-amber-50/20 text-text-primary border-amber-200 border-l-2 border-l-amber-500"
-                            }`}
+                            className={`p-2 rounded text-[10px] cursor-pointer transition-colors border ${n.read ? "bg-neutral-50/50 text-text-secondary border-transparent" : "bg-amber-50/20 text-text-primary border-amber-200 border-l-2 border-l-amber-500"
+                              }`}
                           >
                             <p className="font-bold">{n.title}</p>
                             <p className="mt-0.5 leading-normal">{n.message}</p>
@@ -1208,7 +1501,7 @@ export default function Admin() {
             </AnimatePresence>
           </div>
 
-          <button 
+          <button
             onClick={handleLogout}
             className="px-4 py-2 rounded-custom-md bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer w-fit"
           >
@@ -1220,11 +1513,10 @@ export default function Admin() {
 
       {/* Message Notifications Banner */}
       {statusMessage && (
-        <div className={`w-full p-4 mb-6 rounded-custom-md border text-xs font-semibold flex items-center justify-between shadow-premium select-none ${
-          statusType === "success" 
-            ? "bg-green-50 text-green-700 border-green-500/10" 
+        <div className={`w-full p-4 mb-6 rounded-custom-md border text-xs font-semibold flex items-center justify-between shadow-premium select-none ${statusType === "success"
+            ? "bg-green-50 text-green-700 border-green-500/10"
             : "bg-red-50 text-red-600 border-red-500/10"
-        }`}>
+          }`}>
           <span>{statusMessage}</span>
           <button onClick={() => setStatusMessage("")} className="text-xs uppercase font-bold shrink-0">Dismiss</button>
         </div>
@@ -1232,7 +1524,7 @@ export default function Admin() {
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Left Side: Sidebar Tabs */}
         <div className="lg:col-span-3 flex flex-row lg:flex-col gap-1 overflow-x-auto pb-4 lg:pb-0 scrollbar-thin select-none">
           {[
@@ -1255,11 +1547,10 @@ export default function Admin() {
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setStatusMessage(""); }}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-custom-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer lg:w-full text-left shrink-0 ${
-                  isTabActive 
-                    ? "bg-primary text-white shadow-premium" 
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-custom-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer lg:w-full text-left shrink-0 ${isTabActive
+                    ? "bg-primary text-white shadow-premium"
                     : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
-                }`}
+                  }`}
               >
                 <Icon size={14} />
                 <span>{tab.label}</span>
@@ -1270,7 +1561,7 @@ export default function Admin() {
 
         {/* Right Side: Tab Workspace Content */}
         <div className="lg:col-span-9 bg-white border border-border-custom shadow-premium p-6 sm:p-8 rounded-custom-lg min-h-[500px]">
-          
+
           {isLoading ? (
             <div className="h-96 flex flex-col items-center justify-center gap-3">
               <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -1441,11 +1732,10 @@ export default function Admin() {
                               <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold text-xs text-text-primary">{log.devoteeName}</span>
-                                  <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                    log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
+                                  <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
                                       : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200"
-                                  }`}>{log.status}</span>
+                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                    }`}>{log.status}</span>
                                 </div>
                                 <span className="text-[9px] text-text-secondary leading-normal mt-0.5">
                                   <strong>{log.dateStr}</strong> • Checked: {log.activities.map(a => a.name).join(", ") || "None"} • <strong>+{log.points} pts</strong>
@@ -1508,11 +1798,10 @@ export default function Admin() {
                                   {sadhanaActivities.map(act => {
                                     const isChecked = currentSelections.includes(act.id);
                                     return (
-                                      <label 
-                                        key={act.id} 
-                                        className={`flex items-center gap-2.5 p-2.5 rounded border transition-colors cursor-pointer select-none ${
-                                          isChecked ? "bg-[#FFF7ED] border-[#EA580C]/30" : "bg-white border-neutral-150"
-                                        }`}
+                                      <label
+                                        key={act.id}
+                                        className={`flex items-center gap-2.5 p-2.5 rounded border transition-colors cursor-pointer select-none ${isChecked ? "bg-[#FFF7ED] border-[#EA580C]/30" : "bg-white border-neutral-150"
+                                          }`}
                                       >
                                         <input
                                           type="checkbox"
@@ -1641,11 +1930,10 @@ export default function Admin() {
                                   <span className="font-bold text-text-primary">{log.dateStr}</span>
                                   <span className="text-[10px] text-text-secondary ml-3">{log.points} pts</span>
                                 </div>
-                                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                  log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
+                                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
                                     : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
-                                    : "bg-amber-50 text-amber-700 border-amber-200"
-                                }`}>{log.status}</span>
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}>{log.status}</span>
                               </div>
                             ))
                           )}
@@ -1665,9 +1953,8 @@ export default function Admin() {
                                   <span className="font-bold text-text-primary">₹ {d.amount.toLocaleString("en-IN")}</span>
                                   <span className="font-mono text-[9px] text-text-secondary ml-3">{d.txnId}</span>
                                 </div>
-                                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                  d.verified ? "bg-green-50 text-green-700 border-green-200" : "bg-orange-50 text-orange-700 border-orange-200"
-                                }`}>{d.verified ? "Verified" : "Pending"}</span>
+                                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${d.verified ? "bg-green-50 text-green-700 border-green-200" : "bg-orange-50 text-orange-700 border-orange-200"
+                                  }`}>{d.verified ? "Verified" : "Pending"}</span>
                               </div>
                             ))
                           )}
@@ -1693,7 +1980,7 @@ export default function Admin() {
                             />
                             <Search size={12} className="text-text-secondary absolute left-2.5 top-1/2 -translate-y-1/2" />
                           </div>
-                          
+
                           {/* Devotee advanced sort selector */}
                           <select
                             value={devoteeFilters.sortBy}
@@ -1801,11 +2088,10 @@ export default function Admin() {
                                               >
                                                 {member.fullName}
                                               </span>
-                                              <span className={`text-[7px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
-                                                member.memberNumber === 1
+                                              <span className={`text-[7px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${member.memberNumber === 1
                                                   ? "bg-primary/10 text-primary border border-primary/20"
                                                   : "bg-neutral-100 text-text-secondary border border-neutral-200"
-                                              }`}>
+                                                }`}>
                                                 {member.memberNumber === 1 ? "Primary" : "Secondary"}
                                               </span>
                                             </div>
@@ -1852,7 +2138,7 @@ export default function Admin() {
                   <form onSubmit={handleAddSchedule} className="p-4 rounded-custom-md border border-border-custom bg-neutral-50/50 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] uppercase font-bold text-text-secondary">Time interval</label>
-                      <input 
+                      <input
                         type="text"
                         placeholder="e.g. 06:30 AM"
                         value={newSched.time}
@@ -1863,7 +2149,7 @@ export default function Admin() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] uppercase font-bold text-text-secondary">Activity description</label>
-                      <input 
+                      <input
                         type="text"
                         placeholder="e.g. Mangal Aarti"
                         value={newSched.activity}
@@ -1874,7 +2160,7 @@ export default function Admin() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] uppercase font-bold text-text-secondary">Session category</label>
-                      <select 
+                      <select
                         value={newSched.session}
                         onChange={(e) => setNewSched(prev => ({ ...prev, session: e.target.value }))}
                         className="px-3 py-1.5 text-xs rounded border border-border-custom text-text-primary focus:outline-none bg-white font-semibold"
@@ -1907,7 +2193,7 @@ export default function Admin() {
                           <tr key={sched.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
                             <td className="p-3 font-bold text-primary">{sched.session}</td>
                             <td className="p-3">
-                              <input 
+                              <input
                                 type="text"
                                 value={sched.time}
                                 onChange={(e) => handleScheduleUpdate(sched.id, "time", e.target.value)}
@@ -1915,7 +2201,7 @@ export default function Admin() {
                               />
                             </td>
                             <td className="p-3 w-full">
-                              <input 
+                              <input
                                 type="text"
                                 value={sched.activity}
                                 onChange={(e) => handleScheduleUpdate(sched.id, "activity", e.target.value)}
@@ -1923,7 +2209,7 @@ export default function Admin() {
                               />
                             </td>
                             <td className="p-3 text-right">
-                              <button 
+                              <button
                                 onClick={() => setScheduleToDelete(sched)}
                                 className="p-1 text-text-secondary hover:text-red-600 transition-colors cursor-pointer"
                               >
@@ -1947,7 +2233,7 @@ export default function Admin() {
                       <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Manage trust notices, community updates, and holy programs</p>
                     </div>
                     {isEditingAnn && (
-                      <button 
+                      <button
                         onClick={handleCancelEditAnn}
                         className="px-3 py-1.5 rounded bg-neutral-100 hover:bg-neutral-200 text-text-secondary text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
                       >
@@ -1966,7 +2252,7 @@ export default function Admin() {
                       {/* Title */}
                       <div className="flex flex-col gap-1 md:col-span-2">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Notice Title</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Paryushan Mahotsav holy dates 2026"
                           value={newAnn.title}
@@ -1979,7 +2265,7 @@ export default function Admin() {
                       {/* Priority */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Priority Level</label>
-                        <select 
+                        <select
                           value={newAnn.priority}
                           onChange={(e) => setNewAnn(prev => ({ ...prev, priority: e.target.value }))}
                           className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -1994,7 +2280,7 @@ export default function Admin() {
                       {/* Status */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Publishing Status</label>
-                        <select 
+                        <select
                           value={newAnn.active ? "Published" : "Draft"}
                           onChange={(e) => setNewAnn(prev => ({ ...prev, active: e.target.value === "Published" }))}
                           className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -2011,7 +2297,7 @@ export default function Admin() {
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Announcement Message Content (HTML Enabled)</label>
                         <span className="text-[8px] text-text-secondary font-semibold uppercase">Use formatting toolbar to inject tags</span>
                       </div>
-                      
+
                       <div className="border border-border-custom rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-primary/30">
                         {/* Toolbar */}
                         <div className="flex flex-wrap gap-1 p-1.5 bg-neutral-50 border-b border-border-custom text-[10px]">
@@ -2030,7 +2316,7 @@ export default function Admin() {
                           <button type="button" onClick={() => injectFormat("<br/>", "")} className="px-2 py-1 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer">Line Break</button>
                         </div>
                         {/* Textarea */}
-                        <textarea 
+                        <textarea
                           id="ann-content-textarea"
                           rows={4}
                           placeholder="Write notice descriptions... HTML format works natively."
@@ -2046,7 +2332,7 @@ export default function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                       {/* Pinned checkbox */}
                       <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                        <input 
+                        <input
                           type="checkbox"
                           checked={newAnn.pinned}
                           onChange={(e) => setNewAnn(prev => ({ ...prev, pinned: e.target.checked }))}
@@ -2059,13 +2345,13 @@ export default function Admin() {
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Publish Date & Time (Optional)</label>
                         <div className="flex gap-1.5">
-                          <input 
+                          <input
                             type="date"
                             value={newAnn.publishDate}
                             onChange={(e) => setNewAnn(prev => ({ ...prev, publishDate: e.target.value }))}
                             className="px-2 py-1 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full"
                           />
-                          <input 
+                          <input
                             type="time"
                             value={newAnn.publishTime}
                             onChange={(e) => setNewAnn(prev => ({ ...prev, publishTime: e.target.value }))}
@@ -2078,13 +2364,13 @@ export default function Admin() {
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Expiry Date & Time (Optional)</label>
                         <div className="flex gap-1.5">
-                          <input 
+                          <input
                             type="date"
                             value={newAnn.expiryDate}
                             onChange={(e) => setNewAnn(prev => ({ ...prev, expiryDate: e.target.value }))}
                             className="px-2 py-1 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full"
                           />
-                          <input 
+                          <input
                             type="time"
                             value={newAnn.expiryTime}
                             onChange={(e) => setNewAnn(prev => ({ ...prev, expiryTime: e.target.value }))}
@@ -2106,7 +2392,7 @@ export default function Admin() {
                       >
                         👁️ Preview Notice
                       </button>
-                      
+
                       <button
                         type="submit"
                         className="py-1.5 px-5 rounded bg-primary hover:bg-primary/95 text-white text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-premium"
@@ -2121,7 +2407,7 @@ export default function Admin() {
                   <div className="p-4 rounded-custom-md border border-border-custom bg-white flex flex-col gap-3">
                     <div className="flex items-center justify-between border-b border-border-custom pb-2">
                       <h4 className="font-display font-semibold text-text-primary text-[10px] uppercase tracking-wider">🔍 Search & Filter Notices</h4>
-                      <button 
+                      <button
                         onClick={() => {
                           setAnnSearch("");
                           setAnnStatusFilter("");
@@ -2140,7 +2426,7 @@ export default function Admin() {
                       {/* Search */}
                       <div className="flex flex-col gap-0.5 md:col-span-2">
                         <label className="text-[8px] uppercase font-bold text-text-secondary">Search Keyword</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="Search title, message..."
                           value={annSearch}
@@ -2152,7 +2438,7 @@ export default function Admin() {
                       {/* Status filter */}
                       <div className="flex flex-col gap-0.5">
                         <label className="text-[8px] uppercase font-bold text-text-secondary">Filter Status</label>
-                        <select 
+                        <select
                           value={annStatusFilter}
                           onChange={(e) => setAnnStatusFilter(e.target.value)}
                           className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
@@ -2168,7 +2454,7 @@ export default function Admin() {
                       {/* Priority filter */}
                       <div className="flex flex-col gap-0.5">
                         <label className="text-[8px] uppercase font-bold text-text-secondary">Filter Priority</label>
-                        <select 
+                        <select
                           value={annPriorityFilter}
                           onChange={(e) => setAnnPriorityFilter(e.target.value)}
                           className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
@@ -2183,7 +2469,7 @@ export default function Admin() {
                       {/* Pinned filter */}
                       <div className="flex flex-col gap-0.5">
                         <label className="text-[8px] uppercase font-bold text-text-secondary">Filter Pinned</label>
-                        <select 
+                        <select
                           value={annPinnedFilter === null ? "" : String(annPinnedFilter)}
                           onChange={(e) => setAnnPinnedFilter(e.target.value === "" ? null : e.target.value === "true")}
                           className="px-2 py-1 text-xs rounded border border-border-custom text-text-primary bg-white focus:outline-none"
@@ -2197,7 +2483,7 @@ export default function Admin() {
                       {/* Limit filter */}
                       <div className="flex flex-col gap-0.5">
                         <label className="text-[8px] uppercase font-bold text-text-secondary">Items Per Page</label>
-                        <select 
+                        <select
                           value={annLimit}
                           onChange={(e) => {
                             setAnnLimit(Number(e.target.value));
@@ -2230,15 +2516,15 @@ export default function Admin() {
                             const isExpired = ann.expiresAt && new Date(ann.expiresAt) < new Date();
                             const isScheduled = new Date(ann.createdAt) > new Date();
                             const calcStatus = !ann.active ? "Draft" : isExpired ? "Expired" : isScheduled ? "Scheduled" : "Published";
-                            
-                            const statusColor = 
-                              calcStatus === "Published" 
-                                ? "bg-green-50 text-green-700 border-green-200" 
-                                : calcStatus === "Scheduled" 
-                                ? "bg-blue-50 text-blue-700 border-blue-200" 
-                                : calcStatus === "Expired" 
-                                ? "bg-red-50 text-red-700 border-red-200" 
-                                : "bg-neutral-50 text-text-secondary border-neutral-300";
+
+                            const statusColor =
+                              calcStatus === "Published"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : calcStatus === "Scheduled"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : calcStatus === "Expired"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-neutral-50 text-text-secondary border-neutral-300";
 
                             return (
                               <tr key={ann.id} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
@@ -2246,13 +2532,12 @@ export default function Admin() {
                                   <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="font-semibold text-text-primary">{ann.title}</span>
-                                      <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                        ann.priority === "high" 
-                                          ? "bg-red-50 text-red-600 border-red-500/10" 
-                                          : ann.priority === "low" 
-                                          ? "bg-blue-50 text-blue-600 border-blue-500/10" 
-                                          : "bg-orange-50 text-primary border-primary/10"
-                                      }`}>
+                                      <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ann.priority === "high"
+                                          ? "bg-red-50 text-red-600 border-red-500/10"
+                                          : ann.priority === "low"
+                                            ? "bg-blue-50 text-blue-600 border-blue-500/10"
+                                            : "bg-orange-50 text-primary border-primary/10"
+                                        }`}>
                                         {ann.priority}
                                       </span>
                                       {ann.pinned && (
@@ -2261,7 +2546,7 @@ export default function Admin() {
                                         </span>
                                       )}
                                     </div>
-                                    <div 
+                                    <div
                                       className="text-[10px] text-text-secondary max-h-[40px] overflow-hidden text-ellipsis line-clamp-2"
                                       dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
                                     />
@@ -2280,14 +2565,14 @@ export default function Admin() {
                                 </td>
                                 <td className="p-3 text-right">
                                   <div className="flex justify-end gap-1">
-                                    <button 
+                                    <button
                                       onClick={() => handleEditAnnClick(ann)}
                                       className="p-1 rounded text-primary hover:bg-neutral-100 transition-colors cursor-pointer"
                                       title="Edit Notice"
                                     >
                                       📝
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={() => setAnnToDelete(ann)}
                                       className="p-1 rounded text-text-secondary hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                                       title="Delete Notice"
@@ -2317,14 +2602,14 @@ export default function Admin() {
                         Showing {Math.min(annTotal, (annPage - 1) * annLimit + 1)} - {Math.min(annTotal, annPage * annLimit)} of {annTotal} notices
                       </span>
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => setAnnPage(prev => Math.max(1, prev - 1))}
                           disabled={annPage === 1}
                           className="px-3 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-bold uppercase tracking-wider cursor-pointer"
                         >
                           Previous
                         </button>
-                        <button 
+                        <button
                           onClick={() => setAnnPage(prev => Math.min(Math.ceil(annTotal / annLimit), prev + 1))}
                           disabled={annPage >= Math.ceil(annTotal / annLimit)}
                           className="px-3 py-1.5 rounded border border-border-custom bg-white hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-bold uppercase tracking-wider cursor-pointer"
@@ -2340,7 +2625,7 @@ export default function Admin() {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                       <div className="bg-white rounded-custom-lg shadow-2xl p-6 max-w-md w-full relative overflow-hidden flex flex-col gap-4">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-orange-400" />
-                        
+
                         <div className="flex items-center justify-between pb-2 border-b border-border-custom">
                           <h4 className="font-display font-bold text-text-primary text-xs uppercase tracking-wider">👁️ Notice Live Devotee Preview</h4>
                           <button onClick={() => { setAnnPreview(null); setShowAnnPreview(false); }} className="text-text-secondary hover:text-text-primary text-xs font-bold font-display cursor-pointer">✕ Close</button>
@@ -2350,13 +2635,12 @@ export default function Admin() {
                         <div className="p-5 rounded-custom-lg bg-white border border-border-custom shadow-premium flex flex-col gap-4 text-left">
                           <div className="flex flex-col gap-3">
                             <div className="flex items-center justify-between">
-                              <span className={`text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${
-                                annPreview.priority === "high" 
-                                  ? "bg-red-50 text-red-700 border-red-500/10" 
-                                  : annPreview.priority === "low" 
-                                  ? "bg-blue-50 text-blue-700 border-blue-500/10" 
-                                  : "bg-orange-50 text-primary border-primary/10"
-                              }`}>
+                              <span className={`text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${annPreview.priority === "high"
+                                  ? "bg-red-50 text-red-700 border-red-500/10"
+                                  : annPreview.priority === "low"
+                                    ? "bg-blue-50 text-blue-700 border-blue-500/10"
+                                    : "bg-orange-50 text-primary border-primary/10"
+                                }`}>
                                 {annPreview.priority === "high" ? "PROGRAM" : annPreview.priority === "low" ? "NOTICE" : "UPDATE"}
                               </span>
                               <span className="text-[10px] text-text-secondary">
@@ -2366,7 +2650,7 @@ export default function Admin() {
                             <h3 className="font-display font-semibold text-text-primary text-base leading-snug">
                               {annPreview.title || "Announcement Title"}
                             </h3>
-                            <div 
+                            <div
                               className="text-xs text-text-secondary leading-relaxed whitespace-pre-line"
                               dangerouslySetInnerHTML={{ __html: sanitizeHTML(annPreview.content || "<i>Announcement content draft...</i>") }}
                             />
@@ -2377,7 +2661,7 @@ export default function Admin() {
                           ⚠️ This is how devotees will see the notice on the homepage and dashboard once published.
                         </div>
 
-                        <button 
+                        <button
                           onClick={() => { setAnnPreview(null); setShowAnnPreview(false); }}
                           className="w-full py-2.5 rounded bg-primary text-white text-[10px] font-bold uppercase tracking-wider hover:bg-primary/95 transition-all cursor-pointer"
                         >
@@ -2402,7 +2686,7 @@ export default function Admin() {
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-2">
                         <label htmlFor="panchang-date" className="text-[10px] uppercase font-bold text-text-secondary">Selected Date:</label>
-                        <input 
+                        <input
                           id="panchang-date"
                           type="date"
                           value={panchangDate}
@@ -2419,10 +2703,10 @@ export default function Admin() {
                     <div className="lg:col-span-2 p-5 rounded-custom-lg border border-border-custom bg-white flex flex-col gap-4 shadow-premium">
                       <div className="flex justify-between items-center">
                         <h4 className="font-display font-semibold text-text-primary text-xs uppercase tracking-wider">📅 Monthly Schedule Grid</h4>
-                        
+
                         <div className="flex items-center gap-1.5">
-                          <select 
-                            value={adminCalMonth} 
+                          <select
+                            value={adminCalMonth}
                             onChange={(e) => setAdminCalMonth(Number(e.target.value))}
                             className="px-2 py-1 text-[10px] font-semibold bg-white border border-border-custom rounded focus:outline-none"
                           >
@@ -2432,8 +2716,8 @@ export default function Admin() {
                               </option>
                             ))}
                           </select>
-                          <select 
-                            value={adminCalYear} 
+                          <select
+                            value={adminCalYear}
                             onChange={(e) => setAdminCalYear(Number(e.target.value))}
                             className="px-2 py-1 text-[10px] font-semibold bg-white border border-border-custom rounded focus:outline-none"
                           >
@@ -2499,8 +2783,8 @@ export default function Admin() {
                       <div className="flex flex-col gap-2 pt-2 border-t border-border-custom">
                         <label className="text-[8px] uppercase font-bold text-text-secondary">Bulk CSV Upload</label>
                         <div className="relative border border-dashed border-border-custom rounded p-3 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col items-center justify-center text-center">
-                          <input 
-                            type="file" 
+                          <input
+                            type="file"
                             accept=".csv"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
@@ -2531,7 +2815,7 @@ export default function Admin() {
                       {/* Tithi */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Lunar Tithi</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Sud Ekadashi"
                           value={panchangVal.tithi}
@@ -2544,7 +2828,7 @@ export default function Admin() {
                       {/* Lunar Month */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Lunar Month</label>
-                        <select 
+                        <select
                           value={panchangVal.month}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, month: e.target.value }))}
                           className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -2563,7 +2847,7 @@ export default function Admin() {
                       {/* Paksha */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Paksha</label>
-                        <select 
+                        <select
                           value={panchangVal.paksha}
                           onChange={(e) => setPanchangVal(prev => ({ ...prev, paksha: e.target.value }))}
                           className="px-3 py-2 text-xs rounded border border-border-custom text-text-primary bg-white font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -2576,7 +2860,7 @@ export default function Admin() {
                       {/* Nakshatra */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Nakshatra</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Rohini"
                           value={panchangVal.nakshatra}
@@ -2588,7 +2872,7 @@ export default function Admin() {
                       {/* Yoga */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Yoga</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Ayushman"
                           value={panchangVal.yoga}
@@ -2600,7 +2884,7 @@ export default function Admin() {
                       {/* Karana */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Karana</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Bava"
                           value={panchangVal.karana}
@@ -2612,7 +2896,7 @@ export default function Admin() {
                       {/* Moon Sign */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Moon Sign (Rashi)</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Vrishabha"
                           value={panchangVal.moonSign}
@@ -2624,7 +2908,7 @@ export default function Admin() {
                       {/* Festival Name */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Festival Title</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Mahavir Janma Kalyanak"
                           value={panchangVal.festival}
@@ -2636,7 +2920,7 @@ export default function Admin() {
                       {/* Event Banner */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Dashboard Alert banner text</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Holy Discourse today at 09:00 AM"
                           value={panchangVal.event}
@@ -2648,7 +2932,7 @@ export default function Admin() {
                       {/* Sunrise */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Sunrise Time</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. 06:12 AM"
                           value={panchangVal.sunrise}
@@ -2660,7 +2944,7 @@ export default function Admin() {
                       {/* Sunset */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Sunset Time</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. 07:18 PM"
                           value={panchangVal.sunset}
@@ -2675,7 +2959,7 @@ export default function Admin() {
                       {/* Fasting Information */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Fasting Information</label>
-                        <textarea 
+                        <textarea
                           rows={2}
                           placeholder="e.g. Upvas, Ekasana, Biyasana allowed timings..."
                           value={panchangVal.fastingInfo}
@@ -2687,7 +2971,7 @@ export default function Admin() {
                       {/* Important Timings */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Important Timings (Navkarshi, Porashi etc)</label>
-                        <textarea 
+                        <textarea
                           rows={2}
                           placeholder="e.g. Navkarshi: 07:05 AM, Porashi: 09:30 AM"
                           value={panchangVal.importantTimings}
@@ -2699,7 +2983,7 @@ export default function Admin() {
                       {/* Special Notes */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Special Spiritual Notes</label>
-                        <textarea 
+                        <textarea
                           rows={2}
                           placeholder="Write key auspicious warnings or guidelines..."
                           value={panchangVal.specialNotes}
@@ -2711,7 +2995,7 @@ export default function Admin() {
                       {/* Additional Remarks */}
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Additional Remarks</label>
-                        <textarea 
+                        <textarea
                           rows={2}
                           placeholder="Administrative or extra temple annotations..."
                           value={panchangVal.additionalRemarks}
@@ -2725,7 +3009,7 @@ export default function Admin() {
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 border-t border-neutral-100">
                       <div className="flex items-center gap-4 py-2">
                         <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                          <input 
+                          <input
                             type="checkbox"
                             checked={!!panchangVal.shubh_din}
                             onChange={(e) => setPanchangVal(prev => ({ ...prev, shubh_din: e.target.checked }))}
@@ -2734,7 +3018,7 @@ export default function Admin() {
                           <span>卐 Shubh Din Marker (Flag Swastik on devotee calendar)</span>
                         </label>
                         <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                          <input 
+                          <input
                             type="checkbox"
                             checked={!!panchangVal.samayik}
                             onChange={(e) => setPanchangVal(prev => ({ ...prev, samayik: e.target.checked }))}
@@ -2744,7 +3028,7 @@ export default function Admin() {
                         </label>
                       </div>
 
-                      <button 
+                      <button
                         onClick={handleSavePanchang}
                         className="py-2 px-6 rounded bg-primary text-white text-[10px] font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 w-full sm:w-auto cursor-pointer"
                       >
@@ -2757,7 +3041,7 @@ export default function Admin() {
                   {/* Version History List */}
                   <div className="p-5 rounded-custom-lg border border-border-custom bg-white shadow-premium flex flex-col gap-4">
                     <h4 className="font-display font-semibold text-text-primary text-xs uppercase tracking-wider">🕒 Version History & Audit Logs ({panchangDate})</h4>
-                    
+
                     <div className="border border-border-custom rounded overflow-hidden">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
@@ -2811,8 +3095,8 @@ export default function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-text-secondary uppercase font-bold">Event Title</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="e.g. Paryushan Discourse"
                           value={newEvent.title}
                           onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
@@ -2822,8 +3106,8 @@ export default function Admin() {
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-text-secondary uppercase font-bold">Date & Time</label>
-                        <input 
-                          type="datetime-local" 
+                        <input
+                          type="datetime-local"
                           value={newEvent.date}
                           onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
                           className="px-3 py-2 text-xs rounded bg-white border border-border-custom focus:outline-none focus:border-primary/50 text-text-secondary font-semibold"
@@ -2832,8 +3116,8 @@ export default function Admin() {
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-text-secondary uppercase font-bold">Location Hall</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="e.g. Pandal Hall"
                           value={newEvent.location}
                           onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
@@ -2842,8 +3126,8 @@ export default function Admin() {
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] text-text-secondary uppercase font-bold">Image URL</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="https://images.unsplash.com..."
                           value={newEvent.imageUrl}
                           onChange={(e) => setNewEvent(prev => ({ ...prev, imageUrl: e.target.value }))}
@@ -2852,8 +3136,8 @@ export default function Admin() {
                       </div>
                     </div>
 
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="px-5 py-2 rounded bg-primary text-white text-[10px] font-bold uppercase tracking-wider shadow hover:bg-primary/95 transition-all flex items-center justify-center gap-1.5 w-fit cursor-pointer ml-auto"
                     >
                       <Plus size={12} />
@@ -2889,7 +3173,7 @@ export default function Admin() {
                     </div>
 
                     <div className="relative max-w-xs w-full">
-                      <input 
+                      <input
                         type="text"
                         placeholder="Search by transaction ID..."
                         value={donationSearch}
@@ -2915,7 +3199,7 @@ export default function Admin() {
                         </thead>
                         <tbody>
                           {(() => {
-                            const filtered = donations.filter(d => 
+                            const filtered = donations.filter(d =>
                               d.txnId?.toLowerCase().includes(donationSearch.toLowerCase()) ||
                               d.donorName?.toLowerCase().includes(donationSearch.toLowerCase())
                             );
@@ -2928,17 +3212,16 @@ export default function Admin() {
                                   <td className="p-3 text-right font-bold text-text-primary">₹ {d.amount.toLocaleString("en-IN")}</td>
                                   <td className="p-3 font-mono text-text-secondary text-[10px]">{d.txnId}</td>
                                   <td className="p-3 text-center">
-                                    <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block ${
-                                      d.verified 
-                                        ? "bg-green-50 text-green-700 border-green-500/10" 
+                                    <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block ${d.verified
+                                        ? "bg-green-50 text-green-700 border-green-500/10"
                                         : "bg-orange-50 text-orange-700 border-orange-500/10"
-                                    }`}>
+                                      }`}>
                                       {d.verified ? "Verified" : "Pending"}
                                     </span>
                                   </td>
                                   <td className="p-3 text-right">
                                     {!d.verified ? (
-                                      <button 
+                                      <button
                                         onClick={() => handleApproveDonation(d.id)}
                                         className="px-2 py-1 rounded bg-green-50 hover:bg-green-100 text-green-600 font-bold text-[9px] uppercase tracking-wider cursor-pointer"
                                       >
@@ -2991,24 +3274,22 @@ export default function Admin() {
                     </div>
                     <button
                       onClick={handleToggleLeaderboardState}
-                      className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
-                        leaderboardToggle ? "bg-primary" : "bg-neutral-200"
-                      }`}
+                      className={`relative w-12 h-6 rounded-full transition-all duration-300 ${leaderboardToggle ? "bg-primary" : "bg-neutral-200"
+                        }`}
                     >
-                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${
-                        leaderboardToggle ? "left-7" : "left-1"
-                      }`} />
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${leaderboardToggle ? "left-7" : "left-1"
+                        }`} />
                     </button>
                   </div>
 
                   {/* Sadhana vow weights CRUD */}
                   <div className="flex flex-col gap-4">
                     <h4 className="font-display font-semibold text-text-primary text-sm pb-2 border-b border-neutral-100">Configure Sadhana Vows (Points Weight)</h4>
-                    
+
                     <form onSubmit={handleCreateSadhanaActivity} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-4 rounded bg-neutral-50/50 border border-neutral-150">
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Vow Activity Name</label>
-                        <input 
+                        <input
                           type="text"
                           placeholder="e.g. Swadhyay"
                           value={newSadhanaAct.name}
@@ -3019,7 +3300,7 @@ export default function Admin() {
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Points Value</label>
-                        <input 
+                        <input
                           type="number"
                           value={newSadhanaAct.points}
                           onChange={(e) => setNewSadhanaAct(prev => ({ ...prev, points: e.target.value }))}
@@ -3029,7 +3310,7 @@ export default function Admin() {
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[9px] uppercase font-bold text-text-secondary">Category</label>
-                        <select 
+                        <select
                           value={newSadhanaAct.category}
                           onChange={(e) => setNewSadhanaAct(prev => ({ ...prev, category: e.target.value }))}
                           className="px-3 py-1.5 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none font-semibold"
@@ -3067,7 +3348,7 @@ export default function Admin() {
                               <td className="p-3 text-text-secondary font-bold text-[10px] uppercase tracking-wider">{act.category}</td>
                               <td className="p-3 font-semibold text-text-primary">{act.name}</td>
                               <td className="p-3 text-right">
-                                <input 
+                                <input
                                   type="number"
                                   value={act.points}
                                   onChange={(e) => handleUpdateSadhanaPointVal(act.id, e.target.value)}
@@ -3075,7 +3356,7 @@ export default function Admin() {
                                 />
                               </td>
                               <td className="p-3 text-right">
-                                <button 
+                                <button
                                   onClick={() => handleDeleteSadhanaActivity(act.id)}
                                   className="p-1 text-text-secondary hover:text-red-600 transition-colors cursor-pointer"
                                 >
@@ -3091,454 +3372,424 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* TAB 9: SETTINGS CONSOLE (CMS - STREAM 9) */}
+              {/* TAB 9: SETTINGS CONSOLE (NON-TECHNICAL CMS) */}
               {activeTab === "settings" && (
                 <div className="flex flex-col gap-6">
                   <div>
-                    <h3 className="font-display font-semibold text-text-primary text-base">Temple Website CMS Console</h3>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Control every text, setting, and image on the portal in real-time</p>
+                    <h3 className="font-display font-bold text-text-primary text-lg">Temple Website Content Management System</h3>
+                    <p className="text-xs text-text-secondary mt-0.5">Edit content, images, timings, and contact details directly visible on the public website</p>
                   </div>
 
-                  <form onSubmit={handleSaveSettings} className="flex flex-col gap-8 bg-neutral-50/50 p-6 rounded-custom-lg border border-border-custom">
-                    {/* Section 1: General Info */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">1. General Information</h4>
+                  <form onSubmit={handleSaveSettings} className="flex flex-col gap-6">
+                    
+                    {/* CARD A: TEMPLE IDENTITY */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">📿</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card A – Temple Identity & Branding</h4>
+                          <p className="text-[10px] text-text-secondary">Primary temple identity used across navigation header, footer, and login pages</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Temple Name</label>
-                          <input type="text" value={templeSettings.templeName || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeName: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" required />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Temple Name</label>
+                          <input type="text" value={templeSettings.templeName || ""} onChange={(e) => handleSettingChange("templeName", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" required />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Subtitle</label>
-                          <input type="text" value={templeSettings.subtitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, subtitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Temple Logo URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.templeLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("templeLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Favicon URL</label>
-                          <input type="text" value={templeSettings.favicon || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, favicon: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Chaturmas Year</label>
-                          <input type="text" value={templeSettings.chaturmasYear || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, chaturmasYear: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Website Title</label>
-                          <input type="text" value={templeSettings.websiteTitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, websiteTitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">SEO Title</label>
-                          <input type="text" value={templeSettings.seoTitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, seoTitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Primary Theme Color</label>
-                          <input type="text" value={templeSettings.primaryThemeColor || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, primaryThemeColor: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Subtitle</label>
+                          <input type="text" value={templeSettings.subtitle || ""} onChange={(e) => handleSettingChange("subtitle", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. Chaturmas Festival 2026" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">SEO Description</label>
-                          <textarea rows={2} value={templeSettings.seoDescription || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, seoDescription: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Chaturmas Year</label>
+                          <input type="text" value={templeSettings.chaturmasYear || ""} onChange={(e) => handleSettingChange("chaturmasYear", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. 2026" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <ImageUpload
+                            label="Temple Logo (Primary Branding Source)"
+                            value={templeSettings.templeLogo || ""}
+                            onChange={(newLogo) => {
+                              handleSettingChange("templeLogo", newLogo);
+                              handleSettingChange("portalLogo", newLogo);
+                              handleSettingChange("footerLogo", newLogo);
+                              handleSettingChange("adminLogo", newLogo);
+                              handleSettingChange("loadingLogo", newLogo);
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 2: Contact Info */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">2. Contact Information</h4>
+                    {/* CARD B: HOMEPAGE */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">🏛️</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card B – Homepage Banner & Intro</h4>
+                          <p className="text-[10px] text-text-secondary">Main welcome banner text, hero description, and background hero image</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Phone Number</label>
-                          <input type="text" value={templeSettings.contactNumber || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, contactNumber: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Hero Title</label>
+                          <input type="text" value={templeSettings.heroTitle || ""} onChange={(e) => handleSettingChange("heroTitle", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Alternate Phone</label>
-                          <input type="text" value={templeSettings.alternatePhone || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, alternatePhone: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">WhatsApp Number</label>
-                          <input type="text" value={templeSettings.whatsappNumber || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, whatsappNumber: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Email Address</label>
-                          <input type="email" value={templeSettings.email || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, email: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Website URL</label>
-                          <input type="text" value={templeSettings.website || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, website: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex grid grid-cols-2 gap-2">
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] text-text-secondary uppercase font-bold">Latitude</label>
-                            <input type="number" step="any" value={templeSettings.latitude || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, latitude: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] text-text-secondary uppercase font-bold">Longitude</label>
-                            <input type="number" step="any" value={templeSettings.longitude || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, longitude: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                          </div>
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Hero Subtitle</label>
+                          <input type="text" value={templeSettings.heroSubtitle || ""} onChange={(e) => handleSettingChange("heroSubtitle", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Address</label>
-                          <input type="text" value={templeSettings.templeAddress || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeAddress: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Welcome Message</label>
+                          <input type="text" value={templeSettings.welcomeMessage || ""} onChange={(e) => handleSettingChange("welcomeMessage", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Google Maps Embed URL</label>
-                          <textarea rows={2} value={templeSettings.googleMapsEmbedUrl || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, googleMapsEmbedUrl: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Hero Description</label>
+                          <textarea rows={2} value={templeSettings.heroDescription || ""} onChange={(e) => handleSettingChange("heroDescription", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <ImageUpload
+                            label="Hero Banner Image"
+                            value={templeSettings.heroBanner || ""}
+                            onChange={(newBanner) => handleSettingChange("heroBanner", newBanner)}
+                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 3: Donation Info */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">3. Donation Information</h4>
+                    {/* CARD C: CONTACT INFORMATION */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">📍</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card C – Contact Information</h4>
+                          <p className="text-[10px] text-text-secondary">Office address, map embed, phone, WhatsApp, and official email</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">UPI ID</label>
-                          <input type="text" value={templeSettings.upiId || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, upiId: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">UPI QR Image URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.donationQr || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, donationQr: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("donationQr", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Account Holder</label>
-                          <input type="text" value={templeSettings.accountHolder || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, accountHolder: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Bank Name</label>
-                          <input type="text" value={templeSettings.bankName || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, bankName: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Branch</label>
-                          <input type="text" value={templeSettings.branch || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, branch: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Account Number</label>
-                          <input type="text" value={templeSettings.accountNumber || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, accountNumber: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">IFSC</label>
-                          <input type="text" value={templeSettings.ifsc || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, ifsc: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">80G Information</label>
-                          <input type="text" value={templeSettings.eightyGInfo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, eightyGInfo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Temple Address</label>
+                          <input type="text" value={templeSettings.templeAddress || ""} onChange={(e) => handleSettingChange("templeAddress", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Donation Instructions</label>
-                          <textarea rows={2} value={templeSettings.donationInstructions || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, donationInstructions: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Google Maps Embed URL</label>
+                          <textarea rows={2} value={templeSettings.googleMapsEmbedUrl || ""} onChange={(e) => handleSettingChange("googleMapsEmbedUrl", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" placeholder="https://www.google.com/maps/embed?..." />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Primary Phone</label>
+                          <input type="text" value={templeSettings.contactNumber || ""} onChange={(e) => { handleSettingChange("contactNumber", e.target.value); handleSettingChange("alternatePhone", e.target.value); }} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">WhatsApp Number</label>
+                          <input type="text" value={templeSettings.whatsappNumber || ""} onChange={(e) => handleSettingChange("whatsappNumber", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Tax Disclaimer</label>
-                          <textarea rows={2} value={templeSettings.taxDisclaimer || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, taxDisclaimer: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Email Address</label>
+                          <input type="email" value={templeSettings.email || ""} onChange={(e) => handleSettingChange("email", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 4: Homepage Content */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">4. Homepage Content</h4>
+                    {/* CARD D: DONATION */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">💖</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card D – Donation Channels</h4>
+                          <p className="text-[10px] text-text-secondary">UPI ID, bank account details for transfers, and UPI QR image upload</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Title</label>
-                          <input type="text" value={templeSettings.heroTitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroTitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">UPI ID</label>
+                          <input type="text" value={templeSettings.upiId || ""} onChange={(e) => handleSettingChange("upiId", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Subtitle</label>
-                          <input type="text" value={templeSettings.heroSubtitle || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroSubtitle: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Bank Name</label>
+                          <input type="text" value={templeSettings.bankName || ""} onChange={(e) => handleSettingChange("bankName", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Welcome Message</label>
-                          <input type="text" value={templeSettings.welcomeMessage || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, welcomeMessage: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Account Holder</label>
+                          <input type="text" value={templeSettings.accountHolder || ""} onChange={(e) => handleSettingChange("accountHolder", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Image URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.heroBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("heroBanner", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Latest Announcement Banner Text</label>
-                          <input type="text" value={templeSettings.latestAnnouncementBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, latestAnnouncementBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Account Number</label>
+                          <input type="text" value={templeSettings.accountNumber || ""} onChange={(e) => handleSettingChange("accountNumber", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Hero Description</label>
-                          <textarea rows={2} value={templeSettings.heroDescription || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, heroDescription: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">IFSC Code</label>
+                          <input type="text" value={templeSettings.ifsc || ""} onChange={(e) => handleSettingChange("ifsc", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">About Temple Summary</label>
-                          <textarea rows={2} value={templeSettings.aboutTempleSummary || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, aboutTempleSummary: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                        </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Featured Quote</label>
-                          <textarea rows={2} value={templeSettings.featuredQuote || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, featuredQuote: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                        <div className="sm:col-span-2">
+                          <ImageUpload
+                            label="UPI QR Code Image"
+                            value={templeSettings.donationQr || ""}
+                            onChange={(newQr) => handleSettingChange("donationQr", newQr)}
+                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 5: Footer Content */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">5. Footer Content</h4>
+                    {/* CARD E: FOOTER */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">📄</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card E – Footer Content</h4>
+                          <p className="text-[10px] text-text-secondary">Footer paragraph summary, copyright statement, and volunteer help text</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Copyright Text</label>
-                          <input type="text" value={templeSettings.copyrightText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, copyrightText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Footer Description</label>
+                          <textarea rows={2} value={templeSettings.footerDescription || ""} onChange={(e) => handleSettingChange("footerDescription", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Designed By Text</label>
-                          <input type="text" value={templeSettings.designedByText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, designedByText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Copyright Text</label>
+                          <input type="text" value={templeSettings.copyrightText || ""} onChange={(e) => handleSettingChange("copyrightText", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Quick Contact Text</label>
-                          <input type="text" value={templeSettings.quickContactText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, quickContactText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Footer Logo URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.footerLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, footerLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("footerLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Designed By Text</label>
+                          <input type="text" value={templeSettings.designedByText || ""} onChange={(e) => handleSettingChange("designedByText", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Footer Description</label>
-                          <textarea rows={2} value={templeSettings.footerDescription || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, footerDescription: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Volunteer Help Bar Text</label>
+                          <input type="text" value={templeSettings.volunteerHelpText || ""} onChange={(e) => handleSettingChange("volunteerHelpText", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. Connect directly with our WhatsApp coordination cell." />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 6: Social Media */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">6. Social Media Links</h4>
+                    {/* CARD F: SOCIAL MEDIA */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">🌐</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card F – Social Media Channels</h4>
+                          <p className="text-[10px] text-text-secondary">Official URLs displayed in the website footer and contact bars</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Instagram URL</label>
-                          <input type="text" value={templeSettings.instagram || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, instagram: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Instagram URL</label>
+                          <input type="text" value={templeSettings.instagram || ""} onChange={(e) => handleSettingChange("instagram", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Facebook URL</label>
-                          <input type="text" value={templeSettings.facebook || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, facebook: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Facebook URL</label>
+                          <input type="text" value={templeSettings.facebook || ""} onChange={(e) => handleSettingChange("facebook", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">YouTube URL</label>
-                          <input type="text" value={templeSettings.youtube || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, youtube: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">YouTube URL</label>
+                          <input type="text" value={templeSettings.youtube || ""} onChange={(e) => handleSettingChange("youtube", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">WhatsApp Direct URL</label>
-                          <input type="text" value={templeSettings.whatsapp || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, whatsapp: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">WhatsApp Direct URL</label>
+                          <input type="text" value={templeSettings.whatsapp || ""} onChange={(e) => handleSettingChange("whatsapp", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Telegram Invite Link</label>
-                          <input type="text" value={templeSettings.telegram || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, telegram: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">X (Twitter) URL</label>
-                          <input type="text" value={templeSettings.xTwitter || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, xTwitter: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Telegram Invite Link</label>
+                          <input type="text" value={templeSettings.telegram || ""} onChange={(e) => handleSettingChange("telegram", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 7: Temple Information */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">7. Temple Information & Timings</h4>
+                    {/* CARD G: TEMPLE TIMINGS */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">⏰</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card G – Temple Timings & Worship Hours</h4>
+                          <p className="text-[10px] text-text-secondary">Timings displayed on the About Page and daily worship schedule cards</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Daily Open Timings</label>
-                          <input type="text" value={templeSettings.dailyTimings || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, dailyTimings: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Daily Opening Hours</label>
+                          <input type="text" value={templeSettings.dailyTimings || ""} onChange={(e) => handleSettingChange("dailyTimings", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. 06:00 AM - 09:00 PM" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Aarti Timing</label>
-                          <input type="text" value={templeSettings.aartiTiming || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, aartiTiming: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Aarti Timing</label>
+                          <input type="text" value={templeSettings.aartiTiming || ""} onChange={(e) => handleSettingChange("aartiTiming", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. 07:00 PM Daily" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Puja Timing</label>
-                          <input type="text" value={templeSettings.pujaTiming || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, pujaTiming: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Puja Timing</label>
+                          <input type="text" value={templeSettings.pujaTiming || ""} onChange={(e) => handleSettingChange("pujaTiming", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. 06:30 AM - 08:30 AM" />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Office Timings</label>
-                          <input type="text" value={templeSettings.officeTiming || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, officeTiming: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">About Temple Description</label>
-                          <textarea rows={2} value={templeSettings.aboutText || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, aboutText: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                        </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Temple History Scroll</label>
-                          <textarea rows={2} value={templeSettings.templeHistory || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, templeHistory: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                        </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Trust Information</label>
-                          <textarea rows={2} value={templeSettings.trustInformation || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, trustInformation: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                        </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Mission Statement</label>
-                          <textarea rows={2} value={templeSettings.mission || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, mission: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                        </div>
-                        <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Vision Statement</label>
-                          <textarea rows={2} value={templeSettings.vision || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, vision: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Pravachan Timing</label>
+                          <input type="text" value={templeSettings.pravachanTiming || ""} onChange={(e) => handleSettingChange("pravachanTiming", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. 09:00 AM - 10:30 AM" />
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 8: Event Configuration */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">8. Event Configurations</h4>
+                    {/* CARD H: PORTAL CONTROLS */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">⚙️</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card H – Devotee Portal Controls</h4>
+                          <p className="text-[10px] text-text-secondary">Functional toggles for registrations, sadhana submissions, and maintenance lockout</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Maximum Event Participants</label>
-                          <input type="number" value={templeSettings.maxParticipants || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, maxParticipants: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Default Event Banner URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.defaultEventBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, defaultEventBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("defaultEventBanner", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+                        <div className="flex items-center justify-between p-3.5 bg-neutral-50/50 border border-neutral-200 rounded-xl">
                           <div>
-                            <span className="text-xs font-bold text-text-primary">Event Registration Open</span>
-                            <p className="text-[9px] text-text-secondary">Allow devotees to book passes and seats for Chaturmas events.</p>
+                            <span className="text-xs font-bold text-text-primary">Allow Registrations</span>
+                            <p className="text-[10px] text-text-secondary">New devotee signup access</p>
                           </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, registrationOpen: !prev.registrationOpen }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.registrationOpen ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.registrationOpen ? "left-7" : "left-1"}`} /></button>
+                          <button type="button" onClick={() => handleSettingChange("allowNewRegistration", !templeSettings.allowNewRegistration)} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowNewRegistration ? "bg-emerald-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowNewRegistration ? "left-7" : "left-1"}`} /></button>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
+
+                        <div className="flex items-center justify-between p-3.5 bg-neutral-50/50 border border-neutral-200 rounded-xl">
                           <div>
-                            <span className="text-xs font-bold text-text-primary">Force Registration Closed</span>
-                            <p className="text-[9px] text-text-secondary">Disable event registry across all templates globally.</p>
+                            <span className="text-xs font-bold text-text-primary">Allow Daily Sadhana</span>
+                            <p className="text-[10px] text-text-secondary">Enable daily vow submissions</p>
                           </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, registrationClosed: !prev.registrationClosed }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.registrationClosed ? "bg-red-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.registrationClosed ? "left-7" : "left-1"}`} /></button>
+                          <button type="button" onClick={() => handleSettingChange("allowDailyCheckIn", !templeSettings.allowDailyCheckIn)} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowDailyCheckIn ? "bg-emerald-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowDailyCheckIn ? "left-7" : "left-1"}`} /></button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3.5 bg-neutral-50/50 border border-neutral-200 rounded-xl">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Allow Donations</span>
+                            <p className="text-[10px] text-text-secondary">Enable donation form desk</p>
+                          </div>
+                          <button type="button" onClick={() => handleSettingChange("allowDonations", !templeSettings.allowDonations)} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowDonations ? "bg-emerald-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowDonations ? "left-7" : "left-1"}`} /></button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3.5 bg-neutral-50/50 border border-neutral-200 rounded-xl">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Allow Family Accounts</span>
+                            <p className="text-[10px] text-text-secondary">Family profile linkings</p>
+                          </div>
+                          <button type="button" onClick={() => handleSettingChange("allowFamilyProfiles", !templeSettings.allowFamilyProfiles)} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowFamilyProfiles ? "bg-emerald-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowFamilyProfiles ? "left-7" : "left-1"}`} /></button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3.5 bg-neutral-50/50 border border-neutral-200 rounded-xl">
+                          <div>
+                            <span className="text-xs font-bold text-text-primary">Enable Notifications</span>
+                            <p className="text-[10px] text-text-secondary">Automated portal notifications</p>
+                          </div>
+                          <button type="button" onClick={() => handleSettingChange("enableNotifications", !templeSettings.enableNotifications)} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.enableNotifications ? "bg-emerald-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.enableNotifications ? "left-7" : "left-1"}`} /></button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3.5 bg-red-50/40 border border-red-200 rounded-xl">
+                          <div>
+                            <span className="text-xs font-bold text-red-600">Maintenance Mode</span>
+                            <p className="text-[10px] text-text-secondary">Lockout portal for maintenance</p>
+                          </div>
+                          <button type="button" onClick={() => handleSettingChange("maintenanceMode", !templeSettings.maintenanceMode)} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.maintenanceMode ? "bg-red-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.maintenanceMode ? "left-7" : "left-1"}`} /></button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Section 9: Portal Configuration */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">9. Devotee Portal Configurations</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
-                          <div>
-                            <span className="text-xs font-bold text-text-primary">Allow New Devotee Registrations</span>
-                            <p className="text-[9px] text-text-secondary">Toggle toggle login onboarding forms for new devotees.</p>
-                          </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowNewRegistration: !prev.allowNewRegistration }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowNewRegistration ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowNewRegistration ? "left-7" : "left-1"}`} /></button>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
-                          <div>
-                            <span className="text-xs font-bold text-text-primary">Allow Daily Sadhana Check-ins</span>
-                            <p className="text-[9px] text-text-secondary">Enable daily vow calendar check-in list submissions.</p>
-                          </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowDailyCheckIn: !prev.allowDailyCheckIn }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowDailyCheckIn ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowDailyCheckIn ? "left-7" : "left-1"}`} /></button>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
-                          <div>
-                            <span className="text-xs font-bold text-text-primary">Allow Donations Forms</span>
-                            <p className="text-[9px] text-text-secondary">Display support desk support contributions forms globally.</p>
-                          </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowDonations: !prev.allowDonations }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowDonations ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowDonations ? "left-7" : "left-1"}`} /></button>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
-                          <div>
-                            <span className="text-xs font-bold text-text-primary">Allow Family Accounts Linkings</span>
-                            <p className="text-[9px] text-text-secondary">Toggle profiles list select panels and family profile onboarding.</p>
-                          </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, allowFamilyProfiles: !prev.allowFamilyProfiles }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.allowFamilyProfiles ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.allowFamilyProfiles ? "left-7" : "left-1"}`} /></button>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
-                          <div>
-                            <span className="text-xs font-bold text-text-primary">Enable Automated Portal Notifications</span>
-                            <p className="text-[9px] text-text-secondary">Alert devotees on submissions approvals and donations verifications.</p>
-                          </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, enableNotifications: !prev.enableNotifications }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.enableNotifications ? "bg-green-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.enableNotifications ? "left-7" : "left-1"}`} /></button>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-white border border-border-custom rounded-custom-md">
-                          <div>
-                            <span className="text-xs font-bold text-red-600">Maintenance Lockout Mode</span>
-                            <p className="text-[9px] text-text-secondary">Restrict standard devotee access to display maintenance screen.</p>
-                          </div>
-                          <button type="button" onClick={() => setTempleSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }))} className={`relative w-12 h-6 rounded-full transition-all duration-300 ${templeSettings.maintenanceMode ? "bg-red-600" : "bg-neutral-200"}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${templeSettings.maintenanceMode ? "left-7" : "left-1"}`} /></button>
+                    {/* CARD I: ABOUT TEMPLE */}
+                    <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
+                      <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                        <span className="text-lg">📖</span>
+                        <div>
+                          <h4 className="font-display font-bold text-[#1F2937] text-sm">Card I – About Temple Content</h4>
+                          <p className="text-[10px] text-text-secondary">Historical story, spiritual mission, future vision, guru lineage, and pilgrim guidelines</p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Section 10: Branding */}
-                    <div className="flex flex-col gap-4 border-b border-border-custom pb-6">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">10. Portal & System Branding</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Portal Logo URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.portalLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, portalLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("portalLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Admin Logo URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.adminLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, adminLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("adminLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Loading Logo URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.loadingLogo || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, loadingLogo: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("loadingLogo", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Login Background URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.loginBackground || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, loginBackground: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("loginBackground", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">About Temple Summary (Page Header Subtitle)</label>
+                          <textarea rows={2} value={templeSettings.aboutTempleSummary || ""} onChange={(e) => handleSettingChange("aboutTempleSummary", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Dashboard Banner URL</label>
-                          <div className="flex gap-2">
-                            <input type="text" value={templeSettings.dashboardBanner || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, dashboardBanner: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" />
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload("dashboardBanner", e.target.files[0])} className="text-xs w-28 text-text-secondary" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Section 11: Advanced */}
-                    <div className="flex flex-col gap-4">
-                      <h4 className="font-display font-semibold text-primary text-xs uppercase tracking-wider">11. Advanced Analytics & Custom Tracking</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Google Analytics measurement ID</label>
-                          <input type="text" value={templeSettings.googleAnalyticsId || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, googleAnalyticsId: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Meta Pixel ID</label>
-                          <input type="text" value={templeSettings.metaPixelId || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, metaPixelId: e.target.value }))} className="px-3 py-2 text-xs rounded border border-border-custom bg-white text-text-primary focus:outline-none" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Historical Story & Architecture Narrative</label>
+                          <textarea rows={3} value={templeSettings.templeHistory || ""} onChange={(e) => handleSettingChange("templeHistory", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Custom Head Scripts</label>
-                          <textarea rows={2} value={templeSettings.customHeadScripts || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, customHeadScripts: e.target.value }))} className="px-3 py-2 text-xs font-mono rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" placeholder="<!-- e.g. <script src='...'></script> -->" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Additional Historical Context / Temple Details</label>
+                          <textarea rows={2} value={templeSettings.aboutText || ""} onChange={(e) => handleSettingChange("aboutText", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Spiritual Mission</label>
+                          <textarea rows={2} value={templeSettings.mission || ""} onChange={(e) => handleSettingChange("mission", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Future Vision</label>
+                          <textarea rows={2} value={templeSettings.vision || ""} onChange={(e) => handleSettingChange("vision", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
                         </div>
                         <div className="flex flex-col gap-1 sm:col-span-2">
-                          <label className="text-[10px] text-text-secondary uppercase font-bold">Custom Footer HTML</label>
-                          <textarea rows={2} value={templeSettings.customFooterHtml || ""} onChange={(e) => setTempleSettings(prev => ({ ...prev, customFooterHtml: e.target.value }))} className="px-3 py-2 text-xs font-mono rounded border border-border-custom bg-white text-text-primary focus:outline-none w-full" placeholder="<!-- e.g. <div>...</div> -->" />
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">What is Chaturmas? (Sacred Explanation)</label>
+                          <textarea rows={3} value={templeSettings.chaturmasDescription || ""} onChange={(e) => handleSettingChange("chaturmasDescription", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Guru / Spiritual Leader Name</label>
+                          <input type="text" value={templeSettings.guruName || ""} onChange={(e) => handleSettingChange("guruName", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Guru Title / Role</label>
+                          <input type="text" value={templeSettings.guruTitle || ""} onChange={(e) => handleSettingChange("guruTitle", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Guru Biography & Guidance</label>
+                          <textarea rows={3} value={templeSettings.guruBio || ""} onChange={(e) => handleSettingChange("guruBio", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <ImageUpload
+                            label="Guru / Spiritual Leader Portrait"
+                            value={templeSettings.guruImage || ""}
+                            onChange={(newImg) => handleSettingChange("guruImage", newImg)}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Dress Code Guidelines</label>
+                          <textarea rows={2} value={templeSettings.dressCodeText || ""} onChange={(e) => handleSettingChange("dressCodeText", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Accommodation / Dharamshala Info</label>
+                          <textarea rows={2} value={templeSettings.lodgingText || ""} onChange={(e) => handleSettingChange("lodgingText", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Trust Information & Directory Description</label>
+                          <textarea rows={2} value={templeSettings.trustInformation || ""} onChange={(e) => handleSettingChange("trustInformation", e.target.value)} className="px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 w-full" />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Closing Spiritual Quote (Sanskrit / Hindi)</label>
+                          <input type="text" value={templeSettings.aboutEndingQuote || ""} onChange={(e) => handleSettingChange("aboutEndingQuote", e.target.value)} className="px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-neutral-200 bg-neutral-50/50 text-text-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20" placeholder="e.g. सच्चं लोगम्मि सारभूयं" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <ImageUpload
+                            label="About Page Hero / History Section Image"
+                            value={templeSettings.aboutHeroBanner || ""}
+                            onChange={(newBanner) => handleSettingChange("aboutHeroBanner", newBanner)}
+                          />
                         </div>
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="px-5 py-2.5 rounded bg-primary hover:bg-primary/95 text-white text-[10px] font-bold uppercase tracking-wider shadow transition-all flex items-center justify-center gap-1.5 w-fit ml-auto cursor-pointer"
+                      disabled={!isDirty || isSavingCms}
+                      className={`px-6 py-3 rounded-xl text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 w-full sm:w-fit ml-auto ${
+                        !isDirty || isSavingCms
+                          ? "bg-neutral-300 cursor-not-allowed opacity-70"
+                          : "bg-[#EA580C] hover:bg-[#EA580C]/90 cursor-pointer shadow-md"
+                      }`}
                     >
-                      <Save size={14} />
-                      <span>Save CMS Configuration</span>
+                      {isSavingCms ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Saving…</span>
+                        </>
+                      ) : !isDirty ? (
+                        <span>No Changes</span>
+                      ) : (
+                        <>
+                          <Save size={16} />
+                          <span>Save CMS Configuration</span>
+                        </>
+                      )}
                     </button>
                   </form>
 
@@ -3555,7 +3806,7 @@ export default function Admin() {
                       >
                         <Download size={12} /> Download DB JSON Backup
                       </button>
-                      
+
                       <div className="relative overflow-hidden w-full sm:w-fit">
                         <input
                           type="file"
