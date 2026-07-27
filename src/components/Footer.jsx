@@ -256,19 +256,19 @@ export default function Footer() {
 
           <div className="w-full h-36 sm:h-40 rounded-custom-md overflow-hidden border border-[#EA580C]/10 shadow-sm relative select-none">
             <iframe
-              src={cms.googleMapsEmbedUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14748.868779954045!2d75.05051918349503!3d22.458428589255866!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x396263595679930f%3A0xe54e60bf76d0590c!2sLabriya%2C%20Madhya%20Pradesh%20454111!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"}
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3676.3149837891706!2d75.0264296!3d22.8648199!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3963d9cd288034cb%3A0xf0e955f6fa9e0fa4!2z4KS24KWN4KSw4KWAIOCksOCkvuCknOClh-CkguCkpuCljeCksOCkuOClgeCksOClgCDgpJzgpY3gpJ7gpL7gpKgg4KSu4KSo4KWN4KSm4KS_4KSwICwg4KSy4KS-4KSs4KSw4KS_4KSv4KS-!5e0!3m2!1sen!2sin!4v1785143380203!5m2!1sen!2sin"
               width="100%"
               height="100%"
               style={{ border: 0 }}
-              allowFullScreen={false}
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
               aria-label="Google Maps Location of Shree Labriya Jain Mandir"
             />
           </div>
 
           <a
-            href="https://maps.google.com"
+            href="https://maps.app.goo.gl/aDJnaFps36MkkGm86"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs text-[#EA580C] hover:text-[#EA580C]/85 font-semibold w-fit select-none"
