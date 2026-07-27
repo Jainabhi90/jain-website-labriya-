@@ -307,12 +307,12 @@ export default function ProfileSelect() {
               </div>
 
               {/* Avatar */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-amber-600 flex items-center justify-center text-white border-4 border-secondary shadow-md relative">
-                <span className="text-3xl font-display font-medium select-none">
-                  {p.avatar_url ? (
-                    <img src={p.avatar_url} alt={p.full_name} className="w-full h-full object-cover rounded-full" />
-                  ) : "🪷"}
-                </span>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-amber-600 flex items-center justify-center text-white border-4 border-secondary shadow-md relative overflow-hidden">
+                <img
+                  src={p.avatar_url || p.avatar || "/assets/avatars/avatar_female.png"}
+                  alt={p.full_name || "Devotee Avatar"}
+                  className="w-full h-full object-cover rounded-full"
+                />
                 {isCurrent && (
                   <div className="absolute -bottom-1 -right-1 bg-primary text-white p-1 rounded-full border-2 border-white shadow-sm flex items-center justify-center">
                     <Check size={10} strokeWidth={3} />

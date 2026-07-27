@@ -10,7 +10,8 @@ import {
   Megaphone,
   ArrowRight,
   BookOpen,
-  CalendarDays
+  CalendarDays,
+  Loader2
 } from "lucide-react";
 import Countdown from "@/components/Countdown";
 import { db } from "@/services/db";
@@ -41,12 +42,14 @@ const itemVariants = {
 
 export default function Home() {
   const [schedules, setSchedules] = useState([]);
+  const [isScheduleLoading, setIsScheduleLoading] = useState(true);
   const [announcements, setAnnouncements] = useState([]);
   const [lang, setLang] = useState("en");
   const { cms } = useCMS();
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsScheduleLoading(true);
       try {
         const schedData = await db.getSchedules();
         const annData = await db.getAnnouncements();
@@ -55,6 +58,8 @@ export default function Home() {
         setAnnouncements(annData || []);
       } catch (err) {
         console.error("Error loading homepage data", err);
+      } finally {
+        setIsScheduleLoading(false);
       }
     };
 
@@ -72,8 +77,28 @@ export default function Home() {
 
   const t = translations[lang] || translations["en"];
 
-  const morningSchedules = schedules.filter(s => s.session === "morning");
-  const eveningSchedules = schedules.filter(s => s.session === "evening");
+  const translateScheduleActivity = (actName) => {
+    if (!actName) return "";
+    const clean = String(actName).trim();
+    if (lang === "en") return clean;
+
+    const lower = clean.toLowerCase();
+    if (lower.includes("bhaktamb") || lower.includes("bhaktam")) return "भक्तामर पाठ (सामूहिक)";
+    if (lower.includes("prakshal") || lower.includes("pakshal")) return "प्रक्षाल पूजा";
+    if (lower.includes("kesar")) return "केसर पूजा";
+    if (lower.includes("mangal") || lower.includes("divo")) return "मंगल आरती";
+    if (lower === "aarti" || lower.includes("aarti")) return "संध्या आरती";
+    if (lower.includes("pravachan") || lower.includes("vyakhyan")) return "पूज्य गुरुदेव द्वारा पावन प्रवचन";
+    if (lower.includes("pratik")) return "प्रतिक्रमण साधना";
+    if (lower.includes("swadhyay")) return "स्वाध्याय एवं तत्त्वचिंतन";
+    if (lower.includes("dev darshan") || lower.includes("darshan")) return "देव दर्शन";
+    if (lower.includes("bhakti")) return "भक्ति भावना व संगीत";
+
+    return clean;
+  };
+
+  const morningSchedules = schedules.filter(s => (s.session || "").toLowerCase() === "morning");
+  const eveningSchedules = schedules.filter(s => (s.session || "").toLowerCase() === "evening");
 
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
@@ -148,25 +173,29 @@ export default function Home() {
               variants={itemVariants}
               className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-[54px] tracking-tight leading-[1.1] max-w-2xl"
             >
-              {cms.heroTitle || (lang === "en" ? "Sacred Chaturmas Festival 2026" : "पावन चातुर्मास महोत्सव २०२६")}
+              {lang === "hi" 
+                ? (cms.heroTitle_hi || "पावन चातुर्मास महोत्सव २०२६")
+                : (cms.heroTitle || t.chaturmasFestival)}
             </motion.h1>
 
             {/* Hero Subtitle */}
-            {cms.heroSubtitle && (
-              <motion.p
-                variants={itemVariants}
-                className="text-[#EA580C] text-sm sm:text-base font-semibold tracking-wide uppercase leading-none"
-              >
-                {cms.heroSubtitle}
-              </motion.p>
-            )}
+            <motion.p
+              variants={itemVariants}
+              className="text-[#EA580C] text-sm sm:text-base font-semibold tracking-wide uppercase leading-none"
+            >
+              {lang === "hi" 
+                ? (cms.heroSubtitle_hi || "आत्म-शुद्धि, संयम एवं धर्म-प्रवचन का पावन काल।")
+                : (cms.heroSubtitle || "WELCOME THE SEASON OF REFLECTION, PURIFICATION, AND SPIRITUAL DISCOURSE.")}
+            </motion.p>
 
             {/* Description */}
             <motion.p
               variants={itemVariants}
               className="text-[#4B5563] text-xs sm:text-sm md:text-base max-w-xl leading-relaxed"
             >
-              {cms.heroDescription || t.welcomeDescription}
+              {lang === "hi" 
+                ? (cms.heroDescription_hi || t.welcomeDescription)
+                : (cms.heroDescription || t.welcomeDescription)}
             </motion.p>
 
             {/* CTA Buttons - Side by Side on Desktop, Stacked on Mobile */}
@@ -440,7 +469,14 @@ export default function Home() {
             <p className="text-sm text-text-secondary mt-2">{t.scheduleSubtitle}</p>
           </div>
 
-          {schedules.length > 0 ? (
+          {isScheduleLoading ? (
+            <div className="w-full flex flex-col items-center justify-center py-16 gap-3 select-none">
+              <Loader2 size={32} className="animate-spin text-primary" />
+              <span className="text-xs font-semibold text-text-secondary tracking-wider uppercase">
+                {lang === "en" ? "Loading Worship Schedule..." : "समय-सारणी लोड हो रही है..."}
+              </span>
+            </div>
+          ) : schedules.length > 0 ? (
             <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12">
 
               {/* Morning Timeline */}
@@ -465,12 +501,12 @@ export default function Home() {
                           {item.time}
                         </div>
                         <div className="text-sm font-medium text-text-primary">
-                          {item.activity}
+                          {translateScheduleActivity(item.activity)}
                         </div>
                       </motion.div>
                     ))
                   ) : (
-                    <div className="text-xs text-text-secondary italic text-center py-6">{t.noMorningSchedules}</div>
+                    <div className="text-xs text-[#6B7280] italic text-center py-6">{t.noMorningSchedules}</div>
                   )}
                 </div>
               </div>
@@ -491,32 +527,32 @@ export default function Home() {
                         whileInView={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }}
                         viewport={{ once: true, margin: "-50px" }}
-                        className="flex items-center gap-5 p-4 rounded-custom-md bg-white border border-border-custom shadow-premium"
+                        className="flex items-center gap-5 p-4 rounded-custom-md bg-[#FFFDF9] border border-border-custom shadow-premium"
                       >
                         <div className="flex flex-col items-center justify-center py-2 px-3 bg-secondary text-primary rounded-custom-sm font-semibold text-[10px] tracking-wider uppercase min-w-[90px] border border-primary/5">
                           {item.time}
                         </div>
                         <div className="text-sm font-medium text-text-primary">
-                          {item.activity}
+                          {translateScheduleActivity(item.activity)}
                         </div>
                       </motion.div>
                     ))
                   ) : (
-                    <div className="text-xs text-text-secondary italic text-center py-6">{t.noEveningSchedules}</div>
+                    <div className="text-xs text-[#6B7280] italic text-center py-6">{t.noEveningSchedules}</div>
                   )}
                 </div>
               </div>
 
             </div>
           ) : (
-            /* Illustrated empty state banner for schedule */
+            /* Empty state when no schedules exist in database */
             <div className="w-full max-w-2xl mx-auto p-8 sm:p-10 rounded-custom-lg bg-white border border-border-custom shadow-premium text-center flex flex-col items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center text-primary text-3xl border border-primary/15 animate-pulse-soft">
                 🪷
               </div>
               <div>
                 <h3 className="font-display font-semibold text-text-primary text-base">
-                  {lang === "en" ? "Daily Timetable Syncing" : "दैनिक समय-सारणी उपलब्ध होगी"}
+                  {lang === "en" ? "No scheduled programs." : "कोई अनुसूचित कार्यक्रम नहीं।"}
                 </h3>
                 <p className="text-xs text-text-secondary mt-2 max-w-md mx-auto leading-relaxed">
                   {t.programsWillBeUpdated}

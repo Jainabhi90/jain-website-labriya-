@@ -31,7 +31,7 @@ const DEFAULT_DEVOTEE_PROFILES = {
     fullName: "Temple Administrator",
     phone: "9999999000",
     city: "Labriya",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
+    avatar: "/assets/avatars/avatar_female.png",
     totalPoints: 350,
     streak: 42,
     badges: ["badge_first_upvas", "badge_10_upvas", "badge_100_points", "badge_30_streak", "badge_30_pravachans"],
@@ -42,21 +42,21 @@ const DEFAULT_DEVOTEE_PROFILES = {
     fullName: "Devendra Shah",
     phone: "9876543210",
     city: "Indore",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+    avatar: "/assets/avatars/avatar_male.png",
     totalPoints: 125,
     streak: 7,
     badges: ["badge_first_upvas", "badge_100_points"],
     totalTaps: 3
   },
-  "l1": { id: "l1", fullName: "Vardhman Jain", city: "Ujjain", totalPoints: 940, streak: 105, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop", badges: ["badge_first_upvas", "badge_10_upvas", "badge_100_points", "badge_500_points", "badge_30_streak", "badge_30_pravachans"], totalTaps: 25 },
-  "l2": { id: "l2", fullName: "Pujita Mehta", city: "Mumbai", totalPoints: 850, streak: 88, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop", badges: ["badge_first_upvas", "badge_100_points", "badge_500_points"], totalTaps: 20 },
-  "l3": { id: "l3", fullName: "Ketan Khabia", city: "Dhar", totalPoints: 720, streak: 64, avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points", "badge_500_points"], totalTaps: 15 },
-  "l4": { id: "l4", fullName: "Samyak Doshi", city: "Labriya", totalPoints: 630, streak: 30, avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points", "badge_500_points", "badge_30_streak"], totalTaps: 18 },
-  "l5": { id: "l5", fullName: "Kiran Kataria", city: "Ratlam", totalPoints: 490, streak: 28, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 10 },
-  "l6": { id: "l6", fullName: "Naveen Shah", city: "Ahmedabad", totalPoints: 420, streak: 21, avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 8 },
-  "l7": { id: "l7", fullName: "Jinal Doshi", city: "Baroda", totalPoints: 310, streak: 15, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 5 },
-  "l8": { id: "l8", fullName: "Rishabh Khabia", city: "Indore", totalPoints: 280, streak: 12, avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 6 },
-  "l9": { id: "l9", fullName: "Mangal Bhandari", city: "Labriya", totalPoints: 210, streak: 9, avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop", badges: ["badge_100_points"], totalTaps: 4 }
+  "l1": { id: "l1", fullName: "Vardhman Jain", city: "Ujjain", totalPoints: 940, streak: 105, avatar: "/assets/avatars/avatar_male.png", badges: ["badge_first_upvas", "badge_10_upvas", "badge_100_points", "badge_500_points", "badge_30_streak", "badge_30_pravachans"], totalTaps: 25 },
+  "l2": { id: "l2", fullName: "Pujita Mehta", city: "Mumbai", totalPoints: 850, streak: 88, avatar: "/assets/avatars/avatar_female.png", badges: ["badge_first_upvas", "badge_100_points", "badge_500_points"], totalTaps: 20 },
+  "l3": { id: "l3", fullName: "Ketan Khabia", city: "Dhar", totalPoints: 720, streak: 64, avatar: "/assets/avatars/avatar_male.png", badges: ["badge_100_points", "badge_500_points"], totalTaps: 15 },
+  "l4": { id: "l4", fullName: "Samyak Doshi", city: "Labriya", totalPoints: 630, streak: 30, avatar: "/assets/avatars/avatar_male.png", badges: ["badge_100_points", "badge_500_points", "badge_30_streak"], totalTaps: 18 },
+  "l5": { id: "l5", fullName: "Kiran Kataria", city: "Ratlam", totalPoints: 490, streak: 28, avatar: "/assets/avatars/avatar_female.png", badges: ["badge_100_points"], totalTaps: 10 },
+  "l6": { id: "l6", fullName: "Naveen Shah", city: "Ahmedabad", totalPoints: 420, streak: 21, avatar: "/assets/avatars/avatar_male.png", badges: ["badge_100_points"], totalTaps: 8 },
+  "l7": { id: "l7", fullName: "Jinal Doshi", city: "Baroda", totalPoints: 310, streak: 15, avatar: "/assets/avatars/avatar_female.png", badges: ["badge_100_points"], totalTaps: 5 },
+  "l8": { id: "l8", fullName: "Rishabh Khabia", city: "Indore", totalPoints: 280, streak: 12, avatar: "/assets/avatars/avatar_male.png", badges: ["badge_100_points"], totalTaps: 6 },
+  "l9": { id: "l9", fullName: "Mangal Bhandari", city: "Labriya", totalPoints: 210, streak: 9, avatar: "/assets/avatars/avatar_male.png", badges: ["badge_100_points"], totalTaps: 4 }
 };
 
 const DEFAULT_SADHANA_LOGS = [
@@ -65,13 +65,7 @@ const DEFAULT_SADHANA_LOGS = [
   { id: "log_3", userId: "usr_9876543210", dateStr: "2026-07-08", activities: ["act_ayambil", "act_pooja", "act_chaitya"], points: 12 }
 ];
 
-const DEFAULT_SCHEDULE = [
-  { id: "s1", time: "06:30 AM", activity: "Dev Darshan & Pakshal Puja", session: "morning", orderNum: 1 },
-  { id: "s2", time: "08:00 AM", activity: "Pravachan by Pujya Gurudev", session: "morning", orderNum: 2 },
-  { id: "s3", time: "10:00 AM", activity: "Swadhyay & Tattvachintan", session: "morning", orderNum: 3 },
-  { id: "s4", time: "07:00 PM", activity: "Bhakti Sangeet & Shraman Pravachan", session: "evening", orderNum: 4 },
-  { id: "s5", time: "08:00 PM", activity: "Aarti & Mangal Divo", session: "evening", orderNum: 5 },
-];
+const DEFAULT_SCHEDULE = [];
 
 const DEFAULT_ANNOUNCEMENTS = [
   {
@@ -262,26 +256,90 @@ function setLocalItem(key, value) {
 // DATABASE INTERFACE IMPLEMENTATION
 // ==========================================
 
+export function parseTimeToMinutes(timeStr = "") {
+  if (!timeStr) return 0;
+  const str = String(timeStr).trim().toUpperCase();
+  const match = str.match(/^(\d{1,2}):(\d{1,2})(?:\s*(AM|PM))?$/);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3];
+
+  if (period === "PM" && hours < 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
 export const db = {
   // --- Schedules ---
   async getSchedules() {
+    let items = [];
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("schedules")
-        .select("*")
-        .order("order_num", { ascending: true });
+        .select("*");
       if (!error && data) {
-        return data.map(item => ({
+        items = data.map(item => ({
           id: item.id,
           time: item.time,
           activity: item.activity,
-          session: item.session,
-          orderNum: item.order_num
+          session: (item.session || "morning").toLowerCase(),
+          orderNum: item.order_num || 0
         }));
       }
+    } else {
+      items = getLocalItem("temp_schedules", []);
     }
-    return getLocalItem("temp_schedules", DEFAULT_SCHEDULE)
-      .sort((a, b) => a.orderNum - b.orderNum);
+
+    return items
+      .map(item => ({
+        ...item,
+        session: (item.session || "morning").toLowerCase()
+      }))
+      .sort((a, b) => {
+        const timeA = parseTimeToMinutes(a.time);
+        const timeB = parseTimeToMinutes(b.time);
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.orderNum || 0) - (b.orderNum || 0);
+      });
+  },
+
+  async createSchedule(schedule) {
+    const rawSession = schedule.session || "Morning";
+    const sessionNormalized = rawSession.toLowerCase();
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("schedules")
+        .insert({
+          time: schedule.time,
+          activity: schedule.activity,
+          session: rawSession,
+          order_num: parseInt(schedule.orderNum) || 0
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return {
+        id: data.id,
+        time: data.time,
+        activity: data.activity,
+        session: (data.session || "morning").toLowerCase(),
+        orderNum: data.order_num
+      };
+    }
+
+    const items = getLocalItem("temp_schedules", []);
+    const newSched = {
+      id: "sched_" + Math.random().toString(36).substr(2, 9),
+      time: schedule.time,
+      activity: schedule.activity,
+      session: sessionNormalized,
+      orderNum: parseInt(schedule.orderNum) || 0
+    };
+    items.push(newSched);
+    setLocalItem("temp_schedules", items);
+    return newSched;
   },
 
   async updateSchedule(id, updates) {
@@ -298,25 +356,43 @@ export const db = {
         .eq("id", id)
         .select()
         .single();
-      if (!error && data) {
-        return {
-          id: data.id,
-          time: data.time,
-          activity: data.activity,
-          session: data.session,
-          orderNum: data.order_num
-        };
-      }
-      console.error("Supabase update error:", error);
+      if (error) throw error;
+      return {
+        id: data.id,
+        time: data.time,
+        activity: data.activity,
+        session: (data.session || "morning").toLowerCase(),
+        orderNum: data.order_num
+      };
     }
 
-    const items = getLocalItem("temp_schedules", DEFAULT_SCHEDULE);
+    const items = getLocalItem("temp_schedules", []);
     const index = items.findIndex(item => item.id === id);
     if (index === -1) throw new Error("Schedule item not found");
 
-    items[index] = { ...items[index], ...updates };
+    items[index] = {
+      ...items[index],
+      ...updates,
+      session: updates.session ? updates.session.toLowerCase() : items[index].session
+    };
     setLocalItem("temp_schedules", items);
     return items[index];
+  },
+
+  async deleteSchedule(id) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("schedules")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return true;
+    }
+
+    const items = getLocalItem("temp_schedules", []);
+    const filtered = items.filter(s => s.id !== id);
+    setLocalItem("temp_schedules", filtered);
+    return true;
   },
 
   // --- Announcements ---
@@ -1211,7 +1287,7 @@ export const db = {
         fullName: "Jain Devotee",
         phone: "Unknown",
         city: "Labriya",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
+        avatar: "/assets/avatars/avatar_female.png",
         totalPoints: 0,
         streak: 0,
         longestStreak: 0,
@@ -2109,52 +2185,7 @@ export const db = {
     return false;
   },
 
-  async createSchedule(schedule) {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("schedules")
-        .insert({
-          time: schedule.time,
-          activity: schedule.activity,
-          session: schedule.session,
-          order_num: parseInt(schedule.orderNum) || 0
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return {
-        id: data.id,
-        time: data.time,
-        activity: data.activity,
-        session: data.session,
-        orderNum: data.order_num
-      };
-    }
-    const items = getLocalItem("temp_schedules", DEFAULT_SCHEDULE);
-    const newSched = {
-      ...schedule,
-      id: "sched_" + Math.random().toString(36).substr(2, 9),
-      orderNum: parseInt(schedule.orderNum) || 0
-    };
-    items.push(newSched);
-    setLocalItem("temp_schedules", items);
-    return newSched;
-  },
 
-  async deleteSchedule(id) {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase
-        .from("schedules")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-      return true;
-    }
-    const items = getLocalItem("temp_schedules", DEFAULT_SCHEDULE);
-    const filtered = items.filter(s => s.id !== id);
-    setLocalItem("temp_schedules", filtered);
-    return true;
-  },
 
   async getAdminAnalytics() {
     if (isSupabaseConfigured && supabase) {

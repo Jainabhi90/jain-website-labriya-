@@ -25,7 +25,6 @@ import {
   Loader2,
   X,
   TrendingUp,
-  Bell,
   Megaphone,
   UserCircle,
   HelpCircle,
@@ -38,27 +37,40 @@ import { sanitizeHTML } from "@/lib/sanitize";
 import confetti from "canvas-confetti";
 import { useCMS } from "@/context/CMSContext";
 
+import { translations } from "@/services/translations";
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BADGES_DEFINITIONS = {
-  "badge_first_upvas": { name: "First Upvas", desc: "Completed your first complete day fast", icon: "🌸" },
-  "badge_10_upvas": { name: "10 Upvas", desc: "Completed 10 days of fasting", icon: "🙏" },
-  "badge_30_pravachans": { name: "30 Pravachans", desc: "Attended 30 holy pravachan discourses", icon: "📖" },
-  "badge_100_temple": { name: "100 Temple Visits", desc: "Visited the temple 100 times", icon: "🪔" },
-  "badge_30_streak": { name: "30 Day Streak", desc: "Maintained a 30-day continuous sadhana", icon: "🔥" },
-  "badge_100_points": { name: "100 Points Milestone", desc: "Earned 100 total Sadhana points", icon: "🏅" },
-  "badge_500_points": { name: "500 Points Milestone", desc: "Earned 500 total Sadhana points", icon: "🌼" },
-  "badge_1000_points": { name: "1000 Points Milestone", desc: "Earned 1000 total Sadhana points", icon: "✨" }
+  "badge_first_upvas": { nameEn: "First Upvas", nameHi: "प्रथम उपवास", descEn: "Completed your first complete day fast", descHi: "पहला पूर्ण दिन उपवास सम्पन्न किया", icon: "🌸" },
+  "badge_10_upvas": { nameEn: "10 Upvas", nameHi: "१० उपवास", descEn: "Completed 10 days of fasting", descHi: "१० दिन का उपवास पूरा किया", icon: "🙏" },
+  "badge_30_pravachans": { nameEn: "30 Pravachans", nameHi: "३० प्रवचन", descEn: "Attended 30 holy pravachan discourses", descHi: "३० पवित्र प्रवचनों का श्रवण किया", icon: "📖" },
+  "badge_100_temple": { nameEn: "100 Temple Visits", nameHi: "१०० मंदिर दर्शन", descEn: "Visited the temple 100 times", descHi: "१०० बार मंदिर जी दर्शन किए", icon: "🪔" },
+  "badge_30_streak": { nameEn: "30 Day Streak", nameHi: "३०-दिवसीय निरंतरता", descEn: "Maintained a 30-day continuous sadhana", descHi: "३० दिन निरंतर साधना बनाए रखी", icon: "🔥" },
+  "badge_100_points": { nameEn: "100 Points Milestone", nameHi: "१०० अंक उपलब्धि", descEn: "Earned 100 total Sadhana points", descHi: "कुल १०० साधना अंक अर्जित किए", icon: "🏅" },
+  "badge_500_points": { nameEn: "500 Points Milestone", nameHi: "५०० अंक उपलब्धि", descEn: "Earned 500 total Sadhana points", descHi: "कुल ५०० साधना अंक अर्जित किए", icon: "🌼" },
+  "badge_1000_points": { nameEn: "1000 Points Milestone", nameHi: "१००० अंक उपलब्धि", descEn: "Earned 1000 total Sadhana points", descHi: "कुल १००० साधना अंक अर्जित किए", icon: "✨" }
 };
 
-const MOTIVATIONAL_QUOTES = [
-  "A soul can attain liberation only by getting rid of its karmas through self-control and austerity. - Lord Mahavira",
-  "Fasting cleanses not just the physical body, but burns away negative mental impressions. - Jain Scripture",
-  "One moment of sincere meditation (Samayik) can destroy karmas accumulated over lifetimes. - Acharya Bhadrabahu",
-  "Non-violence and kindness to all living beings is the greatest form of volunteer service.",
-  "Swadhyay is the third eye of a spiritual seeker. It illuminates the inner truth.",
-  "Consistency in small daily vows builds a mountain of spiritual strength.",
-  "True victory is victory over oneself. Conquer your passions through mindfulness."
-];
+const MOTIVATIONAL_QUOTES = {
+  en: [
+    "A soul can attain liberation only by getting rid of its karmas through self-control and austerity. - Lord Mahavira",
+    "Fasting cleanses not just the physical body, but burns away negative mental impressions. - Jain Scripture",
+    "One moment of sincere meditation (Samayik) can destroy karmas accumulated over lifetimes. - Acharya Bhadrabahu",
+    "Non-violence and kindness to all living beings is the greatest form of volunteer service.",
+    "Swadhyay is the third eye of a spiritual seeker. It illuminates the inner truth.",
+    "Consistency in small daily vows builds a mountain of spiritual strength.",
+    "True victory is victory over oneself. Conquer your passions through mindfulness."
+  ],
+  hi: [
+    "आत्मा केवल संयम और तप के माध्यम से अपने कर्मों को नष्ट करके ही मोक्ष प्राप्त कर सकती है। - भगवान महावीर",
+    "उपवास न केवल शरीर को शुद्ध करता है, बल्कि नकारात्मक मानसिक विचारों को भी भस्म कर देता है। - जैन शास्त्र",
+    "सच्चे भाव से की गई एक सामायिक जन्मों-जन्मों के संचित कर्मों को क्षय कर सकती है। - आचार्य भद्रबाहु",
+    "अहिंसा और प्राणीमात्र के प्रति करुणा ही सबसे बड़ी मानव सेवा है।",
+    "स्वाध्याय साधक का तीसरा नेत्र है। यह आंतरिक सत्य को प्रकाशित करता है।",
+    "छोटे-छोटे दैनिक नियमों में निरंतरता से ही महान आत्मिक शक्ति का निर्माण होता है।",
+    "सच्ची विजय स्वयं पर विजय पाना है। अपनी कषायों पर विजय प्राप्त करें।"
+  ]
+};
 
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 function SkeletonCard({ className = "" }) {
@@ -85,30 +97,30 @@ function AnimatedCounter({ target, duration = 1000, suffix = "" }) {
 }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status }) {
+function StatusBadge({ status, t }) {
   if (status === "Approved") {
     return (
       <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-500/20">
-        <CheckCircle2 size={10} /> Approved
+        <CheckCircle2 size={10} /> {t?.approved || "Approved"}
       </span>
     );
   }
   if (status === "Rejected") {
     return (
       <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-500/20">
-        <XCircle size={10} /> Rejected
+        <XCircle size={10} /> {t?.rejected || "Rejected"}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-500/20">
-      <Clock size={10} /> Pending
+      <Clock size={10} /> {t?.pending || "Pending"}
     </span>
   );
 }
 
 // ─── Success Modal ────────────────────────────────────────────────────────────
-function SuccessModal({ isOpen, onClose, pointsEarned, totalPoints, streak, date }) {
+function SuccessModal({ isOpen, onClose, pointsEarned, totalPoints, streak, date, t }) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -145,28 +157,28 @@ function SuccessModal({ isOpen, onClose, pointsEarned, totalPoints, streak, date
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-              <h3 className="font-display font-bold text-text-primary text-lg mb-0.5">Jai Jinendra! 🙏</h3>
-              <p className="text-[10px] text-text-secondary mb-5">Your Sadhana has been recorded for {date}</p>
+              <h3 className="font-display font-bold text-text-primary text-lg mb-0.5">{t?.jaiJinendra || "Jai Jinendra"}! 🙏</h3>
+              <p className="text-[10px] text-text-secondary mb-5">{t?.sadhanaRecordedFor || "Your Sadhana has been recorded for"} {date}</p>
               
               <div className="grid grid-cols-3 gap-2.5 mb-5">
                 <div className="p-2.5 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 text-center">
                   <div className="text-sm font-extrabold text-[#EA580C]">+{pointsEarned}</div>
-                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Claimed</div>
+                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">{t?.claimed || "Claimed"}</div>
                 </div>
                 <div className="p-2.5 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 text-center">
                   <div className="text-sm font-extrabold text-[#EA580C]">{totalPoints}</div>
-                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Total Pts</div>
+                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">{t?.totalPts || "Total Pts"}</div>
                 </div>
                 <div className="p-2.5 rounded-custom-md bg-[#FFF7ED] border border-[#EA580C]/10 text-center">
                   <div className="text-sm font-extrabold text-[#EA580C]">🔥 {streak}</div>
-                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">Streak</div>
+                  <div className="text-[7.5px] uppercase tracking-wider text-text-secondary font-bold mt-0.5">{t?.streak || "Streak"}</div>
                 </div>
               </div>
 
               <div className="p-3 rounded-custom-md bg-emerald-50 border border-emerald-500/10 flex items-start gap-2 text-left mb-5">
                 <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" />
                 <p className="text-[9.5px] text-[#4B5563] leading-relaxed">
-                  Your daily sadhana has been <strong>successfully submitted and confirmed</strong>! Your stats are updated instantly.
+                  {t?.sadhanaSubmitConfirmMsg || "Your daily sadhana has been successfully submitted and confirmed! Your stats are updated instantly."}
                 </p>
               </div>
 
@@ -174,7 +186,7 @@ function SuccessModal({ isOpen, onClose, pointsEarned, totalPoints, streak, date
                 onClick={onClose}
                 className="w-full py-2.5 rounded-custom-md bg-[#EA580C] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#EA580C]/90 transition-colors cursor-pointer"
               >
-                Continue Sadhana
+                {t?.continueSadhana || "Continue Sadhana"}
               </button>
             </motion.div>
           </motion.div>
@@ -196,6 +208,84 @@ export default function Dashboard() {
   const router = useRouter();
   const { user, profile, profilesList, loading, logout, refreshProfile } = useAuth();
   const { cms } = useCMS();
+
+  const [lang, setLang] = useState("en");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("lang") || "en");
+      const syncLang = () => {
+        setLang(localStorage.getItem("lang") || "en");
+      };
+      window.addEventListener("languageChange", syncLang);
+      return () => window.removeEventListener("languageChange", syncLang);
+    }
+  }, []);
+
+  const t = translations[lang] || translations["en"];
+
+  const translateActivityName = (act) => {
+    if (!act) return "";
+    const name = typeof act === "string" ? act : act.name || "";
+    if (lang === "en") return name;
+
+    const lower = name.toLowerCase().trim();
+
+    if (lower.includes("ayambil")) return "आयंबिल तप";
+    if (lower.includes("samayik")) return "सामायिक (४८ मिनट ध्यान)";
+    if (lower.includes("swadhyay")) return "स्वाध्याय (१ घंटा)";
+    if (lower.includes("tivhar")) return "तीविहार तप";
+    if (lower.includes("biyash")) return "बियासना (दो समय भोजन)";
+    if (lower.includes("ekas")) return "एकासना (एक समय भोजन)";
+    if (lower.includes("upwas") || lower.includes("upvas")) {
+      if (lower.includes("chovihar")) return "उपवास (चौविहार)";
+      return "उपवास (पूर्ण तप)";
+    }
+    if (lower.includes("navkarshi") || lower.includes("navkarsi")) return "नवकारशी";
+    if (lower.includes("porsi")) return "पोरसी";
+    if (lower.includes("bhaktambar") || lower.includes("bhaktamar")) return "भक्तामर पाठ (सामूहिक)";
+    if (lower.includes("kesar")) return "केसर पूजा";
+    if (lower.includes("asth") || lower.includes("asht")) return "अष्ट प्रकारी पूजा";
+    if (lower.includes("dev darshan") || lower.includes("temple")) {
+      if (lower.includes("2")) return "देव दर्शन (२ मंदिर)";
+      return "देव दर्शन (१ मंदिर)";
+    }
+    if (lower.includes("vyakhyan") || lower.includes("pravachan")) return "व्याख्यान / प्रवचन श्रवण";
+    if (lower.includes("pratik")) {
+      if (lower.includes("subh") || lower.includes("morning")) return "प्रतिक्रमण (सुबह)";
+      if (lower.includes("sham") || lower.includes("evening")) return "प्रतिक्रमण (शाम)";
+      return "प्रतिक्रमण साधना";
+    }
+    if (lower.includes("vandan") || lower.includes("chaitya")) return "देव वंदन / चैत्य वंदन";
+    if (lower.includes("chovihar") || lower.includes("chauvihar")) return "चौविहार नियम";
+    if (lower.includes("jivdaya") || lower.includes("seva")) return "जीवदया / सेवा";
+    if (lower.includes("navkar")) return "नवकार माला (१०८ जाप)";
+    if (lower.includes("pooja") || lower.includes("puja")) return "पूजा साधना";
+    if (lower.includes("guru")) return "गुरु भक्ति";
+
+    return name;
+  };
+
+  const translateCategory = (cat) => {
+    if (!cat) return "";
+    if (lang === "en") return cat;
+    const lower = (cat || "").toLowerCase();
+    if (lower.includes("fast") || lower.includes("tap")) return "तप / व्रत";
+    if (lower.includes("pray") || lower.includes("bhakti")) return "प्रार्थना";
+    if (lower.includes("meditat")) return "ध्यान";
+    if (lower.includes("temp") || lower.includes("darshan")) return "दर्शन";
+    if (lower.includes("learn") || lower.includes("gyan")) return "ज्ञान";
+    if (lower.includes("self") || lower.includes("swadhyay")) return "स्वाध्याय";
+    if (lower.includes("serv") || lower.includes("seva")) return "सेवा";
+    const map = {
+      "Fasting": "तप / व्रत",
+      "Prayer": "प्रार्थना",
+      "Meditation": "ध्यान",
+      "Temple": "दर्शन",
+      "Learning": "ज्ञान",
+      "Self Study": "स्वाध्याय"
+    };
+    return map[cat] || cat;
+  };
 
   const [activeTab, setActiveTab] = useState("sadhana");
   const [isLoading, setIsLoading] = useState(true);
@@ -226,35 +316,10 @@ export default function Dashboard() {
   const [unreadAnnCount, setUnreadAnnCount] = useState(0);
   const [lastViewedTime, setLastViewedTime] = useState("1970-01-01T00:00:00.000Z");
 
-  // Notification center states
-  const [notifications, setNotifications] = useState([]);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [showNotifMenu, setShowNotifMenu] = useState(false);
-
   const [editName, setEditName] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
   const [editPhone, setEditPhone] = useState("");
-
-  useEffect(() => {
-    setQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
-  }, []);
-
-  useEffect(() => {
-    if (profile) {
-      setEditName(profile.fullName || profile.full_name || "");
-      setEditCity(profile.city || "Labriya");
-      setEditAvatar(profile.avatar || profile.avatar_url || "");
-      const rawMobile = profile.phone || profile.mobile || "";
-      setEditPhone(rawMobile.replace(/^\+91/, ""));
-    }
-  }, [profile]);
-
-  const handleMarkNotifRead = async (notifId) => {
-    await db.markNotificationRead(notifId);
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
-    setUnreadNotifCount(prev => Math.max(0, prev - 1));
-  };
 
   useEffect(() => {
     if (loading) return;
@@ -299,11 +364,6 @@ export default function Dashboard() {
           (d.profileId && d.profileId === profile.id)
         ));
 
-        // Load notifications
-        const notifList = await db.getNotifications(profile.id);
-        setNotifications(notifList);
-        setUnreadNotifCount(notifList.filter(n => !n.read).length);
-
         // Load active announcements
         const activeAnn = await db.getAnnouncements();
         setAnnouncements(activeAnn);
@@ -314,7 +374,7 @@ export default function Dashboard() {
 
         // Maintenance mode is handled via CMS context (no extra DB call needed)
       } catch {
-        showNotification("Failed to load dashboard data.", "error");
+        showNotification(t.failedLoadDashboard, "error");
       } finally {
         setIsLoading(false);
       }
@@ -369,8 +429,8 @@ export default function Dashboard() {
       if (count > maxCount) { maxCount = count; mostPerformedId = id; }
     }
     const mostPerformedAct = activities.find(a => a.id === mostPerformedId);
-    return { count: logs.length, points: totalPoints, mostPerformed: mostPerformedAct?.name || "None" };
-  }, [logs, activities]);
+    return { count: logs.length, points: totalPoints, mostPerformed: translateActivityName(mostPerformedAct) || "None" };
+  }, [logs, activities, lang]);
 
   const monthlySummary = getMonthlySummary();
 
@@ -388,7 +448,7 @@ export default function Dashboard() {
   const handleSaveSadhana = async () => {
     if (!profile || isSubmitting || isLocked) return;
     if (checkedActivities.length === 0) {
-      showNotification("Please select at least one activity before submitting.", "error");
+      showNotification(t.selectActivityAlert, "error");
       return;
     }
     setIsSubmitting(true);
@@ -434,8 +494,10 @@ export default function Dashboard() {
       setShowSuccessModal(true);
 
       // Create notifications
-      const title = "Sadhana Log Submitted 📝";
-      const message = `You checked in ${checkedActivities.length} vows for ${checkInDate} (+${pointsCalculated} claimed pts).`;
+      const title = lang === "hi" ? "साधना प्रविष्टि सबमिट हुई 📝" : "Sadhana Log Submitted 📝";
+      const message = lang === "hi"
+        ? `आपने ${checkInDate} हेतु ${checkedActivities.length} नियम सबमिट किए (+${pointsCalculated} अंक)।`
+        : `You checked in ${checkedActivities.length} vows for ${checkInDate} (+${pointsCalculated} claimed pts).`;
       await db.createNotification(profile.id, title, message, "submission_received");
 
       // Notify admins
@@ -445,11 +507,6 @@ export default function Dashboard() {
         `${profile.fullName} submitted logs for ${checkInDate} (${pointsCalculated} pts).`,
         "admin_new_submission"
       );
-
-      // Reload notifications list
-      const notifList = await db.getNotifications(profile.id);
-      setNotifications(notifList);
-      setUnreadNotifCount(notifList.filter(n => !n.read).length);
 
       // Scroll to status card
       setTimeout(() => {
@@ -461,8 +518,8 @@ export default function Dashboard() {
 
     } catch (err) {
       const msg = err.message?.includes("approved")
-        ? "This entry was approved by admin and cannot be modified."
-        : `Failed to save: ${err.message}`;
+        ? (t.vowsLockedDesc || "This entry was approved by admin and cannot be modified.")
+        : `${t.profileUpdateError}: ${err.message}`;
       showNotification(msg, "error");
     } finally {
       setIsSubmitting(false);
@@ -474,7 +531,7 @@ export default function Dashboard() {
     if (!profile) return;
     const trimmedPhone = editPhone.trim().replace(/\D/g, "");
     if (trimmedPhone && trimmedPhone.length < 10) {
-      showNotification("Please enter a valid 10-digit mobile number.", "error");
+      showNotification(t.validPhoneAlert, "error");
       return;
     }
     const formattedPhone = trimmedPhone ? `+91${trimmedPhone}` : null;
@@ -482,12 +539,12 @@ export default function Dashboard() {
       await db.updateDevoteeProfile(profile.id, { fullName: editName, city: editCity, avatar: editAvatar, phone: formattedPhone });
       await profileService.updateProfile(profile.id, { fullName: editName, city: editCity, avatar: editAvatar, phone: formattedPhone });
       await refreshProfile(profile.id);
-      showNotification("🌸 Profile details updated successfully.", "success");
+      showNotification(`🌸 ${t.profileUpdateSuccess}`, "success");
     } catch (err) {
       if (err.message?.includes("unique_active_mobile") || err.code === "23505") {
-        showNotification("This phone number is already registered to another devotee.", "error");
+        showNotification(t.phoneInUseAlert, "error");
       } else {
-        showNotification("Failed to update profile details.", "error");
+        showNotification(t.profileUpdateError, "error");
       }
     }
   };
@@ -499,22 +556,22 @@ export default function Dashboard() {
     const taxDisclaimer = cms.taxDisclaimer || "All contributions are exempt under Section 80G of the Income Tax Act.";
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Donation Receipt - ${trustName}</title>
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${t.receiptTitle} - ${trustName}</title>
       <style>body{font-family:Inter,sans-serif;color:#1F2937;padding:40px;line-height:1.6}.receipt-box{max-width:700px;margin:0 auto;border:1px solid #ECECEC;border-radius:12px;padding:40px;box-shadow:0 4px 12px rgba(0,0,0,.02)}.header{text-align:center;border-bottom:2px solid #EA580C;padding-bottom:20px;margin-bottom:30px}.header h1{font-size:24px;margin:0;color:#C28A3E}.header p{font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:5px 0 0;color:#6B7280}.title{text-align:center;font-size:18px;font-weight:700;text-decoration:underline;margin-bottom:30px}.details-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}.detail-item{font-size:14px}.detail-item strong{display:block;color:#6B7280;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.amount-word{font-size:15px;font-weight:600;background:#FFF7ED;padding:15px;border-radius:6px;border:1px solid #FFE3C3;margin-bottom:40px}.footer-notes{font-size:11px;color:#6B7280;border-top:1px solid #ECECEC;padding-top:20px;text-align:center}.signatures{display:flex;justify-content:space-between;margin-top:50px;margin-bottom:30px}.sig-line{width:180px;border-top:1px solid #6B7280;text-align:center;font-size:12px;padding-top:5px}@media print{.no-print{display:none}body{padding:0}.receipt-box{border:none;box-shadow:none;padding:0}}</style>
       </head><body>
-      <div class="no-print" style="max-width:700px;margin:0 auto 20px auto;text-align:right"><button onclick="window.print()" style="background:#EA580C;color:#fff;border:none;padding:10px 20px;font-weight:700;border-radius:6px;cursor:pointer">Print Receipt</button></div>
+      <div class="no-print" style="max-width:700px;margin:0 auto 20px auto;text-align:right"><button onclick="window.print()" style="background:#EA580C;color:#fff;border:none;padding:10px 20px;font-weight:700;border-radius:6px;cursor:pointer">${t.printReceiptBtn}</button></div>
       <div class="receipt-box"><div class="header"><h1>${trustName}</h1><p>${templeAddress}</p></div>
-      <div class="title">DONATION RECEIPT VOUCHER</div>
+      <div class="title">${t.receiptVoucherHeader}</div>
       <div class="details-grid">
-      <div class="detail-item"><strong>Receipt Number</strong>#LAB-REC-${donation.id.toUpperCase()}</div>
-      <div class="detail-item"><strong>Date &amp; Time</strong>${new Date(donation.createdAt).toLocaleString()}</div>
-      <div class="detail-item"><strong>Donor Name</strong>${donation.donorName}</div>
-      <div class="detail-item"><strong>Contact Number</strong>+91 ${donation.phone}</div>
-      <div class="detail-item"><strong>Transaction ID</strong>${donation.txnId}</div>
-      <div class="detail-item"><strong>Donation Status</strong>${donation.verified ? "Verified &amp; Cleared" : "Pending Verification"}</div>
+      <div class="detail-item"><strong>${t.receiptNumber}</strong>#LAB-REC-${donation.id.toUpperCase()}</div>
+      <div class="detail-item"><strong>${t.receiptDateTime}</strong>${new Date(donation.createdAt).toLocaleString()}</div>
+      <div class="detail-item"><strong>${t.donorName}</strong>${donation.donorName}</div>
+      <div class="detail-item"><strong>${t.contactNumber}</strong>+91 ${donation.phone}</div>
+      <div class="detail-item"><strong>${t.transactionId}</strong>${donation.txnId}</div>
+      <div class="detail-item"><strong>${t.donationStatus}</strong>${donation.verified ? t.verifiedAndCleared : t.pendingVerification}</div>
       </div>
-      <div class="amount-word"><strong style="display:block;font-size:11px;text-transform:uppercase;color:#EA580C;margin-bottom:5px">Amount Donated</strong>INR ${donation.amount.toLocaleString("en-IN")}.00</div>
-      <div class="signatures"><div class="sig-line">Donor Signature</div><div class="sig-line" style="color:#EA580C;font-weight:700"><span style="font-family:'Brush Script MT',cursive;font-size:20px;display:block;height:24px;margin-top:-15px">Trust Office</span>Authorized Signatory</div></div>
+      <div class="amount-word"><strong style="display:block;font-size:11px;text-transform:uppercase;color:#EA580C;margin-bottom:5px">${t.amountDonated}</strong>INR ${donation.amount.toLocaleString("en-IN")}.00</div>
+      <div class="signatures"><div class="sig-line">${t.donorSignature}</div><div class="sig-line" style="color:#EA580C;font-weight:700"><span style="font-family:'Brush Script MT',cursive;font-size:20px;display:block;height:24px;margin-top:-15px">Trust Office</span>${t.authorizedSignatory}</div></div>
       <div class="footer-notes">Thank you for your generous contribution towards the ${cms.subtitle || "Chaturmas"} ${cms.chaturmasYear || ""} arrangements.<br>This is a computer-generated voucher and does not require a physical stamp.<br>${taxDisclaimer}</div>
       </div></body></html>`);
     printWindow.document.close();
@@ -526,16 +583,15 @@ export default function Dashboard() {
       <div className="w-full min-h-screen bg-[#FCFBF7] flex items-center justify-center px-4">
         <div className="max-w-md w-full p-8 bg-white border border-[#EA580C]/10 shadow-premium rounded-custom-lg text-center flex flex-col items-center gap-4">
           <span className="text-4xl animate-pulse">🛠️</span>
-          <h2 className="font-display font-bold text-lg text-text-primary">Maintenance Mode Active</h2>
+          <h2 className="font-display font-bold text-lg text-text-primary">{t.maintenanceActive}</h2>
           <p className="text-xs text-text-secondary leading-relaxed">
-            {cms.templeName || "Shree Labriya Jain Shwetambar Mandir"} devotee portal is currently undergoing scheduled maintenance. 
-            Please check back in a few hours.
+            {cms.templeName || "Shree Labriya Jain Shwetambar Mandir"} {t.maintenanceDesc}
           </p>
           <button
             onClick={handleLogout}
             className="w-full py-2.5 rounded bg-[#EA580C] text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer hover:bg-[#EA580C]/90"
           >
-            Sign Out
+            {t.signOut}
           </button>
         </div>
       </div>
@@ -593,6 +649,7 @@ export default function Dashboard() {
         totalPoints={successData.totalPoints}
         streak={successData.streak}
         date={successData.date}
+        t={t}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -603,13 +660,13 @@ export default function Dashboard() {
           
           <div className="flex flex-col sm:flex-row items-center gap-5 w-full lg:w-auto text-center sm:text-left">
             <img
-              src={profile.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"}
+              src={profile.avatar || "/assets/avatars/avatar_female.png"}
               alt="Profile Avatar Preset"
               className="w-16 h-16 rounded-full object-cover border border-[#C28A3E]/20 bg-[#FCFBF7] shadow-sm select-none"
             />
             <div>
               <span className="text-[9.5px] uppercase tracking-widest font-bold text-[#C28A3E] px-2.5 py-0.5 rounded bg-[#FFF7ED] border border-[#EA580C]/10 select-none">
-                Jai Jinendra 🙏
+                {t.jaiJinendra} 🙏
               </span>
               <h1 className="font-display font-semibold text-text-primary text-xl sm:text-2xl mt-2 leading-tight">
                 {profile.fullName}
@@ -626,16 +683,16 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 bg-[#FCFBF7] px-4 py-2.5 rounded-custom-md border border-[#C28A3E]/10 select-none">
               <span className="text-xl">🪷</span>
               <div className="flex flex-col">
-                <span className="text-[8px] text-text-secondary font-bold uppercase tracking-wider">Total Sadhana</span>
-                <span className="text-xs font-bold text-[#EA580C]">{profile.totalPoints || 0} Points</span>
+                <span className="text-[8px] text-text-secondary font-bold uppercase tracking-wider">{t.totalSadhana}</span>
+                <span className="text-xs font-bold text-[#EA580C]">{profile.totalPoints || 0} {t.pts}</span>
               </div>
             </div>
 
             <div className="flex items-center gap-3 bg-[#FFF7ED] px-4 py-2.5 rounded-custom-md border border-[#EA580C]/10 select-none">
               <Flame size={18} className="text-[#EA580C]" />
               <div className="flex flex-col">
-                <span className="text-[8px] text-text-secondary font-bold uppercase tracking-wider">Day Streak</span>
-                <span className="text-xs font-bold text-[#EA580C]">{profile.streak || 0} Days</span>
+                <span className="text-[8px] text-text-secondary font-bold uppercase tracking-wider">{t.dayStreak}</span>
+                <span className="text-xs font-bold text-[#EA580C]">{profile.streak || 0} {t.daysActive?.includes("दिन") ? "दिन" : "Days"}</span>
               </div>
             </div>
 
@@ -645,7 +702,7 @@ export default function Dashboard() {
                 className="px-4 py-2.5 rounded-custom-md bg-white hover:bg-[#FCFBF7] text-text-secondary hover:text-[#EA580C] flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 border border-[#C28A3E]/10 shadow-sm cursor-pointer"
               >
                 <UserPlus size={14} />
-                <span>Add Family</span>
+                <span>{t.addFamily}</span>
               </button>
             ) : (
               <button 
@@ -653,120 +710,16 @@ export default function Dashboard() {
                 className="px-4 py-2.5 rounded-custom-md bg-white hover:bg-[#FCFBF7] text-text-secondary hover:text-[#EA580C] flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 border border-[#C28A3E]/10 shadow-sm cursor-pointer"
               >
                 <User size={14} />
-                <span>Switch Profile</span>
+                <span>{t.switchProfile}</span>
               </button>
             )}
-
-            {/* Bell Icon Notification Center Popover */}
-            <div className="relative">
-              <button
-                onClick={() => setShowNotifMenu(!showNotifMenu)}
-                className="p-2.5 rounded-custom-md bg-white text-text-secondary hover:text-[#EA580C] transition-colors cursor-pointer border border-[#C28A3E]/10 relative flex items-center justify-center shrink-0 shadow-sm"
-                title="Notifications"
-                aria-label="Notification center"
-              >
-                <Bell size={14} />
-                {unreadNotifCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EA580C] rounded-full text-white text-[8px] font-bold flex items-center justify-center shadow-sm">
-                    {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
-                  </span>
-                )}
-              </button>
-
-              <AnimatePresence>
-                {showNotifMenu && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setShowNotifMenu(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-80 bg-white border border-[#EA580C]/10 rounded-custom-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-45 overflow-hidden"
-                    >
-                      {/* Header */}
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#FFF7ED] border-b border-[#EA580C]/10">
-                        <div className="flex items-center gap-2">
-                          <Bell size={13} className="text-[#EA580C]" />
-                          <span className="text-xs font-bold text-[#1F2937]">Notifications</span>
-                          {unreadNotifCount > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-[#EA580C] text-white text-[8px] font-bold">{unreadNotifCount} new</span>
-                          )}
-                        </div>
-                        {unreadNotifCount > 0 && (
-                          <button
-                            onClick={async () => {
-                              for (const n of notifications) {
-                                if (!n.read) await handleMarkNotifRead(n.id);
-                              }
-                            }}
-                            className="text-[9px] font-bold text-[#EA580C] cursor-pointer hover:underline"
-                          >
-                            Mark all read
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Notification list */}
-                      <div className="max-h-72 overflow-y-auto">
-                        {notifications.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center select-none">
-                            <span className="text-2xl">🔔</span>
-                            <p className="text-xs font-semibold text-text-primary">All caught up!</p>
-                            <p className="text-[10px] text-text-secondary">No notifications yet. Submit your daily Sadhana to receive updates.</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col divide-y divide-neutral-100">
-                            {notifications.map(n => (
-                              <div
-                                key={n.id}
-                                onClick={() => handleMarkNotifRead(n.id)}
-                                className={`px-4 py-3 cursor-pointer transition-colors hover:bg-[#FCFBF7] ${n.read ? "opacity-60" : "bg-white"}`}
-                              >
-                                <div className="flex items-start gap-2.5">
-                                  {/* Type icon dot */}
-                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${n.read ? "bg-neutral-100" : "bg-[#FFF7ED]"}`}>
-                                    <span className="text-sm">
-                                      {n.type === "submission_received" ? "✅" : n.type === "streak_milestone" ? "🔥" : n.type === "badge_earned" ? "🏅" : "🪷"}
-                                    </span>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-1">
-                                      <p className={`text-[11px] font-bold truncate ${n.read ? "text-text-secondary" : "text-text-primary"}`}>
-                                        {n.title}
-                                      </p>
-                                      {!n.read && <span className="w-2 h-2 rounded-full bg-[#EA580C] shrink-0" />}
-                                    </div>
-                                    <p className="text-[10px] text-text-secondary mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
-                                    <span className="text-[9px] text-[#C28A3E] font-semibold mt-1 block">
-                                      {new Date(n.created_at || n.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Footer */}
-                      {notifications.length > 0 && (
-                        <div className="px-4 py-2.5 border-t border-neutral-100 bg-[#FCFBF7] text-center">
-                          <p className="text-[9px] text-text-secondary">Click a notification to mark it as read</p>
-                        </div>
-                      )}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
 
             <button 
               onClick={handleLogout} 
               className="px-4 py-2.5 rounded-custom-md bg-neutral-50 hover:bg-red-50 text-text-secondary hover:text-red-600 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 border border-[#C28A3E]/10 shadow-sm cursor-pointer"
             >
               <LogOut size={14} />
-              <span>Sign Out</span>
+              <span>{t.signOut}</span>
             </button>
           </div>
         </div>
@@ -787,7 +740,7 @@ export default function Dashboard() {
                 onClick={() => setStatusMessage("")} 
                 className="text-[10px] uppercase font-bold shrink-0 ml-4 hover:opacity-75 cursor-pointer select-none"
               >
-                Dismiss
+                {t.dismiss}
               </button>
             </motion.div>
           )}
@@ -799,13 +752,13 @@ export default function Dashboard() {
           {/* Sidebar Menu Panel */}
           <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-3 lg:pb-0 scrollbar-thin select-none">
             {[
-              { id: "sadhana", label: "Daily Check-In", icon: CheckSquare },
-              { id: "notices", label: "Temple Notices", icon: Megaphone, count: unreadAnnCount },
-              { id: "badges", label: "Earned Badges", icon: Award },
-              { id: "history", label: "History & Summary", icon: History },
-              ...(leaderboardEnabled ? [{ id: "leaderboard", label: "Inspiring Leaderboard", icon: Trophy }] : []),
-              { id: "donations", label: "Tax Receipts (80G)", icon: Heart },
-              { id: "profile", label: "Edit Profile", icon: UserCheck },
+              { id: "sadhana", label: t.dailyCheckIn, icon: CheckSquare },
+              { id: "notices", label: t.templeNotices, icon: Megaphone, count: unreadAnnCount },
+              { id: "badges", label: t.earnedBadges, icon: Award },
+              { id: "history", label: t.historySummary, icon: History },
+              ...(leaderboardEnabled ? [{ id: "leaderboard", label: t.inspiringLeaderboard, icon: Trophy }] : []),
+              { id: "donations", label: t.taxReceipts80G, icon: Heart },
+              { id: "profile", label: t.editProfileTab, icon: UserCheck },
             ].map((tab) => {
               const Icon = tab.icon;
               const isTabActive = activeTab === tab.id;
@@ -854,11 +807,11 @@ export default function Dashboard() {
                 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#EA580C]/5 text-left">
                   <div>
-                    <h3 className="font-display font-bold text-text-primary text-base">Daily Sadhana Check-In</h3>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Submit vows & self-improvement routines</p>
+                    <h3 className="font-display font-bold text-text-primary text-base">{t.dailySadhanaCheckIn}</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.submitVowsSubtitle}</p>
                   </div>
                   <div className="flex items-center gap-2 select-none">
-                    <label htmlFor="check-in-date" className="text-[9.5px] uppercase font-bold text-text-secondary shrink-0">Target Date:</label>
+                    <label htmlFor="check-in-date" className="text-[9.5px] uppercase font-bold text-text-secondary shrink-0">{t.targetDate}</label>
                     <input
                       id="check-in-date"
                       type="date"
@@ -877,23 +830,23 @@ export default function Dashboard() {
                         <Lock size={14} className="text-[#EA580C]" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[#EA580C]">Today&apos;s check-in has been submitted</p>
-                        <p className="text-[9.5px] text-text-secondary mt-0.5">Vows locked. Contact admin desk if alterations are required.</p>
+                        <p className="text-xs font-bold text-[#EA580C]">{t.todayCheckinSubmitted}</p>
+                        <p className="text-[9.5px] text-text-secondary mt-0.5">{t.vowsLockedContactAdmin}</p>
                       </div>
                     </div>
-                    <StatusBadge status={todayStatus} />
+                    <StatusBadge status={todayStatus} t={t} />
                   </div>
                 )}
 
                 {/* Stats summary grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 select-none">
                   {[
-                    { icon: "🔥", label: "Current Streak", value: profile.streak || 0, suffix: " Days", bg: "bg-[#FFF7ED]/35", border: "border-[#EA580C]/10" },
-                    { icon: "🏆", label: "Longest Streak", value: profile.longestStreak || 0, suffix: " Days", bg: "bg-[#FFF7ED]/35", border: "border-[#EA580C]/10" },
-                    { icon: "🪷", label: "Total Points", value: profile.totalPoints || 0, suffix: " pts", bg: "bg-[#FCFBF7]", border: "border-[#C28A3E]/10" },
-                    { icon: "📝", label: "Submissions", value: totalSubmissions, suffix: " Days", bg: "bg-white", border: "border-[#EA580C]/5" },
-                    { icon: "⚡", label: "Completion Rate", value: completionPercentage, suffix: "%", bg: "bg-white", border: "border-[#EA580C]/5" },
-                    { icon: "📅", label: "Today's Status", isStatus: true, status: isTodaySubmitted ? "submitted" : "pending", bg: isTodaySubmitted ? "bg-emerald-50/40" : "bg-white", border: isTodaySubmitted ? "border-emerald-500/10" : "border-[#EA580C]/5" }
+                    { icon: "🔥", label: t.currentStreak, value: profile.streak || 0, suffix: lang === "hi" ? " दिन" : " Days", bg: "bg-[#FFF7ED]/35", border: "border-[#EA580C]/10" },
+                    { icon: "🏆", label: t.longestStreak, value: profile.longestStreak || 0, suffix: lang === "hi" ? " दिन" : " Days", bg: "bg-[#FFF7ED]/35", border: "border-[#EA580C]/10" },
+                    { icon: "🪷", label: t.totalPoints, value: profile.totalPoints || 0, suffix: ` ${t.pts}`, bg: "bg-[#FCFBF7]", border: "border-[#C28A3E]/10" },
+                    { icon: "📝", label: t.totalSubmissions, value: totalSubmissions, suffix: lang === "hi" ? " दिन" : " Days", bg: "bg-white", border: "border-[#EA580C]/5" },
+                    { icon: "⚡", label: t.completionRate, value: completionPercentage, suffix: "%", bg: "bg-white", border: "border-[#EA580C]/5" },
+                    { icon: "📅", label: t.todayStatus, isStatus: true, status: isTodaySubmitted ? "submitted" : "pending", bg: isTodaySubmitted ? "bg-emerald-50/40" : "bg-white", border: isTodaySubmitted ? "border-emerald-500/10" : "border-[#EA580C]/5" }
                   ].map((stat, i) => (
                     <div key={i} className={`p-4 rounded-custom-md ${stat.bg} border ${stat.border} flex items-center gap-3 text-left`}>
                       <span className="text-xl">{stat.icon}</span>
@@ -903,7 +856,7 @@ export default function Dashboard() {
                           <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded border inline-block mt-0.5 w-fit ${
                             stat.status === "submitted" ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" : "bg-orange-50 text-orange-700 border-orange-200"
                           }`}>
-                            {stat.status === "submitted" ? "✓ Submitted" : "⏰ Pending"}
+                            {stat.status === "submitted" ? t.statusSubmitted : t.statusPending}
                           </span>
                         ) : (
                           <span className="text-sm font-bold text-text-primary">
@@ -918,13 +871,13 @@ export default function Dashboard() {
                 {/* Claim preview panel */}
                 <div className="p-4 rounded bg-[#FCFBF7] border border-[#C28A3E]/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left select-none">
                   <div>
-                    <h4 className="text-xs font-bold text-[#EA580C]">Sadhana Check-in Preview</h4>
-                    <p className="text-[9.5px] text-text-secondary">Checking completed routines updates streak counts and unlocks digital badges.</p>
+                    <h4 className="text-xs font-bold text-[#EA580C]">{t.checkinPreview}</h4>
+                    <p className="text-[9.5px] text-text-secondary">{t.checkinPreviewDesc}</p>
                   </div>
                   <div className="flex items-center gap-1.5 bg-white border border-[#EA580C]/10 px-3 py-1.5 rounded font-bold text-xs text-[#EA580C] shrink-0 shadow-sm">
                     <TrendingUp size={12} />
-                    <span>Earn Today:</span>
-                    <span className="text-sm font-extrabold">{getTodayPointsPreview()} Points</span>
+                    <span>{t.earnToday}</span>
+                    <span className="text-sm font-extrabold">{getTodayPointsPreview()} {t.points}</span>
                   </div>
                 </div>
 
@@ -955,11 +908,11 @@ export default function Dashboard() {
                             className="w-4 h-4 rounded text-[#EA580C] border-neutral-300 focus:ring-[#EA580C] cursor-pointer shrink-0"
                           />
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-[#1F2937]">{act.name}</span>
-                            <span className="text-[9px] text-[#4B5563] mt-0.5">{act.category}</span>
+                            <span className="text-xs font-semibold text-[#1F2937]">{translateActivityName(act)}</span>
+                            <span className="text-[9px] text-[#4B5563] mt-0.5">{translateCategory(act.category)}</span>
                           </div>
                         </div>
-                        <span className="text-[9px] font-bold text-[#EA580C] bg-white border border-[#EA580C]/10 px-2 py-0.5 rounded">+{act.points} pts</span>
+                        <span className="text-[9px] font-bold text-[#EA580C] bg-white border border-[#EA580C]/10 px-2 py-0.5 rounded">+{act.points} {t.pts}</span>
                       </div>
                     );
                   })}
@@ -973,34 +926,34 @@ export default function Dashboard() {
                         <CheckCircle2 size={18} className="text-emerald-600" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-text-primary">✓ Logs Registered</h4>
-                        <p className="text-[9px] text-text-secondary">Your spiritual check-in has been filed and locked for today.</p>
+                        <h4 className="text-xs font-bold text-text-primary">{t.logsRegistered}</h4>
+                        <p className="text-[9px] text-text-secondary">{t.logsRegisteredDesc}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-4 rounded-custom-md border border-[#EA580C]/10 text-xs">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase font-bold text-text-secondary">Submission ID</span>
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">{t.submissionId}</span>
                         <span className="font-mono font-bold text-text-primary">
                           {toReadableId(selectedDateLog.submissionId || selectedDateLog.id, "S")}
                         </span>
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase font-bold text-text-secondary">Date</span>
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">{t.date}</span>
                         <span className="font-semibold text-text-primary">
                           {selectedDateLog.createdAt ? new Date(selectedDateLog.createdAt).toLocaleDateString() : checkInDate}
                         </span>
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase font-bold text-text-secondary">Time</span>
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">{t.time}</span>
                         <span className="font-semibold text-text-primary">
                           {selectedDateLog.createdAt ? new Date(selectedDateLog.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "12:00 PM"}
                         </span>
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase font-bold text-text-secondary">Claimed Points</span>
+                        <span className="text-[9px] uppercase font-bold text-text-secondary">{t.claimedPoints}</span>
                         <span className="font-extrabold text-[#EA580C]">
-                          +{selectedDateLog.points || 0} Points
+                          +{selectedDateLog.points || 0} {t.points}
                         </span>
                       </div>
                     </div>
@@ -1008,14 +961,14 @@ export default function Dashboard() {
                     {/* Status timeline visual details */}
                     <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-500/10 rounded-custom-md select-none text-xs text-emerald-800">
                       <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-                      <span>Your daily score is submitted and credited to your account profile immediately.</span>
+                      <span>{t.scoreCreditedNotice}</span>
                     </div>
 
                     {selectedDateLog.adminNote && (
                       <div className={`p-4 rounded-custom-md border flex flex-col gap-1 ${
                         todayStatus === "Rejected" ? "bg-red-50 border-red-200/50 text-red-800" : "bg-green-50 border-green-200/50 text-green-800"
                       }`}>
-                        <span className="text-[9px] uppercase font-bold">Admin Remarks</span>
+                        <span className="text-[9px] uppercase font-bold">{t.adminRemarks}</span>
                         <p className="text-xs font-semibold">{selectedDateLog.adminNote}</p>
                       </div>
                     )}
@@ -1031,9 +984,9 @@ export default function Dashboard() {
                       className="px-8 py-3 rounded bg-[#EA580C] hover:bg-[#EA580C]/90 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
-                        <><Loader2 size={14} className="animate-spin" /><span>Saving...</span></>
+                        <><Loader2 size={14} className="animate-spin" /><span>{t.saving}</span></>
                       ) : (
-                        <><Save size={14} /><span>Submit Daily Logs</span></>
+                        <><Save size={14} /><span>{t.submitDailyLogs}</span></>
                       )}
                     </button>
                   </div>
@@ -1046,8 +999,8 @@ export default function Dashboard() {
             {activeTab === "notices" && (
               <div className="flex flex-col gap-6 text-left">
                 <div className="pb-3 border-b border-[#EA580C]/5">
-                  <h3 className="font-display font-semibold text-text-primary text-base">Temple Announcements</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Stay updated with official bulletins, programs, and notice updates</p>
+                  <h3 className="font-display font-semibold text-text-primary text-base">{t.templeAnnouncements}</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.templeAnnouncementsSub}</p>
                 </div>
 
                 {announcements.length > 0 ? (
@@ -1058,7 +1011,7 @@ export default function Dashboard() {
                         <div key={ann.id} className="p-5 rounded-custom-md border border-[#EA580C]/10 bg-[#FCFBF7]/35 flex flex-col gap-3 relative overflow-hidden">
                           {isNew && (
                             <span className="absolute top-0 right-0 bg-[#EA580C] text-white text-[7.5px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-bl select-none">
-                              New
+                              {t.newNotice}
                             </span>
                           )}
                           <div className="flex items-center justify-between gap-4 select-none">
@@ -1071,16 +1024,16 @@ export default function Dashboard() {
                                   ? "bg-blue-50 text-blue-600 border-blue-500/10"
                                   : "bg-orange-50 text-primary border-primary/10"
                               }`}>
-                                {ann.priority || "normal"}
+                                {ann.priority === "high" ? t.highPriority : ann.priority === "low" ? t.lowPriority : t.mediumPriority}
                               </span>
                               {ann.pinned && (
                                 <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-500/10 flex items-center gap-1">
-                                  📌 Pinned
+                                  📌 {t.pinned}
                                 </span>
                               )}
                             </div>
                             <span className="text-[10px] text-text-secondary font-medium">
-                              {new Date(ann.createdAt).toLocaleDateString()}
+                              {new Date(ann.createdAt).toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN")}
                             </span>
                           </div>
                           <div 
@@ -1094,7 +1047,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-center py-16 border border-dashed border-[#C28A3E]/20 rounded-custom-md bg-[#FCFBF7]/10 select-none">
                     <span className="text-3xl">🪷</span>
-                    <p className="text-xs text-text-secondary mt-2">No announcements posted at this time. Check back later.</p>
+                    <p className="text-xs text-text-secondary mt-2">{t.noAnnouncementsDesc}</p>
                   </div>
                 )}
               </div>
@@ -1104,21 +1057,23 @@ export default function Dashboard() {
             {activeTab === "badges" && (
               <div className="flex flex-col gap-6 text-left">
                 <div className="pb-3 border-b border-[#EA580C]/5">
-                  <h3 className="font-display font-semibold text-text-primary text-base">Devotional Achievements</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Spiritual milestone badges</p>
+                  <h3 className="font-display font-semibold text-text-primary text-base">{t.devotionalAchievements}</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.milestoneBadgesSub}</p>
                 </div>
                 
                 {unlockedBadges.length === 0 && (
                   <div className="py-12 flex flex-col items-center justify-center gap-3 border border-dashed border-[#C28A3E]/20 rounded-custom-md select-none bg-[#FCFBF7]/10">
                     <span className="text-4xl">🏅</span>
-                    <p className="text-sm font-semibold text-[#4B5563]">No badges earned yet</p>
-                    <p className="text-xs text-text-secondary text-center max-w-xs leading-relaxed">Complete daily activities consistently to unlock spiritual achievement badges.</p>
+                    <p className="text-sm font-semibold text-[#4B5563]">{t.noBadgesYet}</p>
+                    <p className="text-xs text-text-secondary text-center max-w-xs leading-relaxed">{t.noBadgesDesc}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {Object.entries(BADGES_DEFINITIONS).map(([badgeId, val]) => {
                     const isUnlocked = unlockedBadges.includes(badgeId);
+                    const name = lang === "hi" ? val.nameHi : val.nameEn;
+                    const desc = lang === "hi" ? val.descHi : val.descEn;
                     return (
                       <div key={badgeId} className={`p-5 rounded-custom-lg border text-center flex flex-col items-center justify-center gap-3 transition-all select-none ${
                         isUnlocked 
@@ -1131,13 +1086,13 @@ export default function Dashboard() {
                           {val.icon}
                         </div>
                         <div>
-                          <h4 className={`text-xs font-bold ${isUnlocked ? "text-text-primary" : "text-text-secondary"}`}>{val.name}</h4>
-                          <p className="text-[9px] text-text-secondary mt-1 leading-normal">{val.desc}</p>
+                          <h4 className={`text-xs font-bold ${isUnlocked ? "text-text-primary" : "text-text-secondary"}`}>{name}</h4>
+                          <p className="text-[9px] text-text-secondary mt-1 leading-normal">{desc}</p>
                         </div>
                         {isUnlocked ? (
-                          <span className="text-[8.5px] uppercase tracking-wider font-extrabold text-[#EA580C] bg-[#FFF7ED] px-2 py-0.5 rounded border border-[#EA580C]/10">Unlocked</span>
+                          <span className="text-[8.5px] uppercase tracking-wider font-extrabold text-[#EA580C] bg-[#FFF7ED] px-2 py-0.5 rounded border border-[#EA580C]/10">{t.unlocked}</span>
                         ) : (
-                          <span className="text-[8.5px] uppercase tracking-wider font-bold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">Locked</span>
+                          <span className="text-[8.5px] uppercase tracking-wider font-bold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">{t.locked}</span>
                         )}
                       </div>
                     );
@@ -1150,15 +1105,15 @@ export default function Dashboard() {
             {activeTab === "history" && (
               <div className="flex flex-col gap-6 text-left">
                 <div className="pb-3 border-b border-[#EA580C]/5">
-                  <h3 className="font-display font-semibold text-text-primary text-base">Spiritual Logs & Metrics</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Summary analyses of monthly routines</p>
+                  <h3 className="font-display font-semibold text-text-primary text-base">{t.spiritualLogsMetrics}</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.historySub}</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 select-none">
                   {[
-                    { icon: "📅", label: "Days Active", value: `${monthlySummary.count} Days` },
-                    { icon: "🔥", label: "Most Performed", value: monthlySummary.mostPerformed },
-                    { icon: "🏅", label: "Monthly Points", value: `${monthlySummary.points} Points` }
+                    { icon: "📅", label: t.daysActive, value: `${monthlySummary.count} ${lang === "hi" ? "दिन" : "Days"}` },
+                    { icon: "🔥", label: t.mostPerformed, value: monthlySummary.mostPerformed },
+                    { icon: "🏅", label: t.monthlyPoints, value: `${monthlySummary.points} ${t.pts}` }
                   ].map((item, i) => (
                     <div key={i} className="p-4 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 flex items-center gap-3">
                       <span className="text-xl">{item.icon}</span>
@@ -1175,10 +1130,10 @@ export default function Dashboard() {
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-[#FCFBF7] border-b border-[#EA580C]/10 text-[9.5px] text-[#C28A3E] font-bold uppercase tracking-widest select-none">
-                          <th className="p-4">Date</th>
-                          <th className="p-4">Activities Completed</th>
-                          <th className="p-4 text-center">Status</th>
-                          <th className="p-4 text-right">Points</th>
+                          <th className="p-4">{t.tableDate}</th>
+                          <th className="p-4">{t.activitiesCompleted}</th>
+                          <th className="p-4 text-center">{t.status}</th>
+                          <th className="p-4 text-right">{t.pointsHeader}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1189,7 +1144,8 @@ export default function Dashboard() {
                               <td className="p-4">
                                 <div className="flex flex-wrap gap-1.5">
                                   {log.activities.map((actId) => {
-                                    const name = activities.find(a => a.id === actId)?.name || actId;
+                                    const actObj = activities.find(a => a.id === actId);
+                                    const name = translateActivityName(actObj) || actId;
                                     return (
                                       <span key={actId} className="px-2 py-0.5 rounded bg-white text-text-secondary text-[9.5px] font-medium border border-[#C28A3E]/10">
                                         {name}
@@ -1198,8 +1154,8 @@ export default function Dashboard() {
                                   })}
                                 </div>
                               </td>
-                              <td className="p-4 text-center"><StatusBadge status={log.status || "Pending"} /></td>
-                              <td className="p-4 text-right font-extrabold text-[#EA580C]">+{log.points} pts</td>
+                              <td className="p-4 text-center"><StatusBadge status={log.status || "Pending"} t={t} /></td>
+                              <td className="p-4 text-right font-extrabold text-[#EA580C]">+{log.points} {t.pts}</td>
                             </tr>
                           ))
                         ) : (
@@ -1207,8 +1163,8 @@ export default function Dashboard() {
                             <td colSpan={4} className="p-12 text-center">
                               <div className="flex flex-col items-center gap-3 select-none">
                                 <span className="text-4xl">📋</span>
-                                <p className="text-sm font-semibold text-[#4B5563]">No logs submitted yet</p>
-                                <p className="text-xs text-text-secondary">Check in daily to build your spiritual record.</p>
+                                <p className="text-sm font-semibold text-[#4B5563]">{t.noLogsSubmitted}</p>
+                                <p className="text-xs text-text-secondary">{t.noLogsSubmittedDesc}</p>
                               </div>
                             </td>
                           </tr>
@@ -1224,19 +1180,19 @@ export default function Dashboard() {
             {activeTab === "leaderboard" && leaderboardEnabled && (
               <div className="flex flex-col gap-6 text-left">
                 <div className="pb-3 border-b border-[#EA580C]/5">
-                  <h3 className="font-display font-semibold text-text-primary text-base">Participant Inspiration</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Top 10 devotees consistency board</p>
+                  <h3 className="font-display font-semibold text-text-primary text-base">{t.participantInspiration}</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.leaderboardSub}</p>
                 </div>
                 
                 <div className="p-4 rounded-custom-md bg-[#FCFBF7] border border-[#C28A3E]/10 text-xs text-text-secondary leading-relaxed flex items-start gap-2.5 select-none">
                   <Compass size={16} className="text-[#EA580C] shrink-0 mt-0.5" />
-                  <span>This board serves to inspire consistency and devotion. We encourage devotees to maintain their daily vows. Top participants represent consistency in their daily check-ins.</span>
+                  <span>{t.leaderboardDisclaimer}</span>
                 </div>
 
                 {leaderboard.length === 0 ? (
                   <div className="py-10 flex flex-col items-center gap-3 select-none">
                     <span className="text-4xl">🏆</span>
-                    <p className="text-sm font-semibold text-text-secondary">Leaderboard is empty</p>
+                    <p className="text-sm font-semibold text-text-secondary">{t.leaderboardEmpty}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3.5 mt-2">
@@ -1257,7 +1213,7 @@ export default function Dashboard() {
                               {medal || `${index + 1}`}
                             </span>
                             <img 
-                              src={item.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"} 
+                              src={item.avatar || "/assets/avatars/avatar_male.png"} 
                               alt={item.fullName} 
                               className="w-10 h-10 rounded-full object-cover shrink-0 border border-neutral-100 select-none" 
                             />
@@ -1266,15 +1222,15 @@ export default function Dashboard() {
                                 {item.fullName}
                                 {isCurrentUser && (
                                   <span className="text-[8px] uppercase tracking-wider font-extrabold bg-[#EA580C] text-white px-2 py-0.5 rounded select-none">
-                                    You
+                                    {t.youTag}
                                   </span>
                                 )}
                               </span>
-                              <span className="text-[9.5px] text-text-secondary mt-0.5">{item.city} • 🔥 {item.streak || 0} Day Streak</span>
+                              <span className="text-[9.5px] text-text-secondary mt-0.5">{item.city} • 🔥 {item.streak || 0} {t.dayStreak}</span>
                             </div>
                           </div>
                           <span className="text-xs font-bold text-[#EA580C] bg-[#FFF7ED] px-3.5 py-1 rounded-full border border-[#EA580C]/10 shrink-0 select-none">
-                            {item.totalPoints} Points
+                            {item.totalPoints} {t.points}
                           </span>
                         </div>
                       );
@@ -1290,8 +1246,8 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3 pb-3 border-b border-[#EA580C]/5">
                   <Heart size={18} className="text-[#EA580C]" />
                   <div>
-                    <h2 className="font-display font-semibold text-text-primary text-base">Your Donation Tax Receipts</h2>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Download 80G tax certificates</p>
+                    <h2 className="font-display font-semibold text-text-primary text-base">{t.yourDonationReceipts}</h2>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.download80GSub}</p>
                   </div>
                 </div>
 
@@ -1309,10 +1265,10 @@ export default function Dashboard() {
                               <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border select-none ${
                                 donation.verified ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" : "bg-amber-50 text-amber-700 border-amber-500/10"
                               }`}>
-                                {donation.verified ? "Verified" : "Pending"}
+                                {donation.verified ? t.verified : t.pending}
                               </span>
                             </div>
-                            <p className="text-[10px] text-text-secondary mt-1">Txn ID: {donation.txnId} • {new Date(donation.createdAt).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-text-secondary mt-1">{t.txnIdLabel} {donation.txnId} • {new Date(donation.createdAt).toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN")}</p>
                           </div>
                         </div>
                         <button 
@@ -1320,7 +1276,7 @@ export default function Dashboard() {
                           className="px-4 py-2.5 rounded-custom-md bg-white border border-[#C28A3E]/20 hover:border-[#EA580C]/40 text-[#C28A3E] hover:text-[#EA580C] text-xs font-bold uppercase tracking-wider shadow flex items-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto justify-center"
                         >
                           <Download size={14} />
-                          <span>Print 80G Receipt</span>
+                          <span>{t.print80GReceipt}</span>
                         </button>
                       </div>
                     ))}
@@ -1329,8 +1285,8 @@ export default function Dashboard() {
                   <div className="text-center py-12 border border-dashed border-[#C28A3E]/20 rounded-custom-md flex flex-col items-center justify-center gap-3 select-none bg-[#FCFBF7]/10">
                     <span className="text-4xl">💝</span>
                     <div>
-                      <p className="text-sm text-text-primary font-semibold">No donations registered under {profile.phone || profile.mobile || user.phone || "your account"}</p>
-                      <p className="text-xs text-text-secondary max-w-sm mt-1.5 leading-relaxed">If you have made a transfer via QR/UPI, please report it at the Donation desk to link the receipt here.</p>
+                      <p className="text-sm text-text-primary font-semibold">{t.noDonationsUnder} {profile.phone || profile.mobile || user.phone || "your account"}</p>
+                      <p className="text-xs text-text-secondary max-w-sm mt-1.5 leading-relaxed">{t.noDonationsDesc}</p>
                     </div>
                   </div>
                 )}
@@ -1341,14 +1297,14 @@ export default function Dashboard() {
             {activeTab === "profile" && (
               <div className="flex flex-col gap-6 text-left">
                 <div className="pb-3 border-b border-[#EA580C]/5">
-                  <h3 className="font-display font-semibold text-text-primary text-base">Edit Devotee Profile</h3>
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Personalize your sadhana identity</p>
+                  <h3 className="font-display font-semibold text-text-primary text-base">{t.editDevoteeProfileTitle}</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{t.editProfileSub}</p>
                 </div>
                 
                 <form onSubmit={handleUpdateProfile} className="p-5 sm:p-6 rounded-custom-lg bg-[#FCFBF7]/40 border border-[#EA580C]/10 flex flex-col gap-4 max-w-xl shadow-sm">
                   
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="edit-name" className="text-[9.5px] text-text-secondary uppercase font-bold">Full Name</label>
+                    <label htmlFor="edit-name" className="text-[9.5px] text-text-secondary uppercase font-bold">{t.fullNameLabel}</label>
                     <input 
                       id="edit-name"
                       type="text" 
@@ -1360,7 +1316,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="edit-city" className="text-[9.5px] text-text-secondary uppercase font-bold">City / Residence</label>
+                    <label htmlFor="edit-city" className="text-[9.5px] text-text-secondary uppercase font-bold">{t.cityResidenceLabel}</label>
                     <input 
                       id="edit-city"
                       type="text" 
@@ -1372,7 +1328,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="edit-phone" className="text-[9.5px] text-text-secondary uppercase font-bold">Mobile Number (Optional)</label>
+                    <label htmlFor="edit-phone" className="text-[9.5px] text-text-secondary uppercase font-bold">{t.mobileNumberOptional}</label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs text-text-secondary font-bold select-none">+91</span>
                       <input 
@@ -1382,38 +1338,37 @@ export default function Dashboard() {
                         value={editPhone} 
                         onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ""))} 
                         className="w-full pl-10 pr-3 py-2.5 text-xs sm:text-sm rounded bg-white border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold" 
-                        placeholder="10-digit number" 
+                        placeholder={t.tenDigitPlaceholder} 
                       />
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label htmlFor="edit-avatar" className="text-[9.5px] text-text-secondary uppercase font-bold">Avatar Image URL</label>
+                    <label htmlFor="edit-avatar" className="text-[9.5px] text-text-secondary uppercase font-bold">{t.avatarImageUrl}</label>
                     <input 
                       id="edit-avatar"
                       type="text" 
                       value={editAvatar} 
                       onChange={(e) => setEditAvatar(e.target.value)} 
-                      placeholder="https://images.unsplash.com..." 
+                      placeholder="https://..." 
                       className="px-3 py-2.5 text-xs sm:text-sm rounded bg-white border border-[#EA580C]/10 focus:outline-none focus:border-[#EA580C]/40 text-text-primary font-semibold" 
                     />
                     
                     <div className="flex items-center gap-3.5 mt-2.5 bg-white p-3.5 rounded border border-[#EA580C]/10 select-none">
-                      <span className="text-[9px] uppercase font-bold text-text-secondary shrink-0">Presets:</span>
+                      <span className="text-[9px] uppercase font-bold text-text-secondary shrink-0">{t.presetsLabel}</span>
                       <div className="flex gap-2.5">
                         {[
-                          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150",
-                          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
-                          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150",
-                          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150"
-                        ].map((presetUrl, idx) => (
+                          { label: t.femaleAvatar, url: "/assets/avatars/avatar_female.png" },
+                          { label: t.maleAvatar, url: "/assets/avatars/avatar_male.png" }
+                        ].map((preset, idx) => (
                           <img 
                             key={idx} 
-                            src={presetUrl} 
-                            alt="Preset Avatar option" 
-                            onClick={() => setEditAvatar(presetUrl)} 
-                            className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition-all ${
-                              editAvatar === presetUrl ? "border-[#EA580C] scale-110 shadow-sm" : "border-transparent hover:border-[#EA580C]/40"
+                            src={preset.url} 
+                            alt={preset.label} 
+                            title={preset.label}
+                            onClick={() => setEditAvatar(preset.url)} 
+                            className={`w-10 h-10 rounded-full object-cover cursor-pointer border-2 transition-all ${
+                              editAvatar === preset.url ? "border-[#EA580C] scale-110 shadow-sm" : "border-transparent hover:border-[#EA580C]/40"
                             }`} 
                           />
                         ))}
@@ -1426,7 +1381,7 @@ export default function Dashboard() {
                     className="px-6 py-2.5 rounded bg-[#EA580C] hover:bg-[#EA580C]/90 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors flex items-center justify-center gap-1.5 w-fit cursor-pointer ml-auto mt-2 select-none"
                   >
                     <Save size={14} />
-                    <span>Update Profile</span>
+                    <span>{t.updateProfileBtn}</span>
                   </button>
 
                 </form>

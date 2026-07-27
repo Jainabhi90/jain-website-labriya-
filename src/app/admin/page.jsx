@@ -1683,7 +1683,7 @@ export default function Admin() {
                             >
                               <span className="text-xs font-bold text-text-secondary w-4 shrink-0">{i + 1}</span>
                               <div className="w-7 h-7 rounded-full bg-secondary overflow-hidden shrink-0 border border-primary/10 flex items-center justify-center text-xs">
-                                {d.avatar ? <img src={d.avatar} alt="avatar" className="w-full h-full object-cover" /> : "🪷"}
+                                <img src={d.avatar || "/assets/avatars/avatar_male.png"} alt="avatar" className="w-full h-full object-cover" />
                               </div>
                               <div className="flex flex-col min-w-0 flex-1">
                                 <span className="text-xs font-semibold text-text-primary truncate">{d.fullName}</span>
@@ -1886,7 +1886,7 @@ export default function Admin() {
                       {/* Header profile info */}
                       <div className="flex flex-col sm:flex-row items-center gap-5">
                         <div className="w-16 h-16 rounded-full bg-secondary overflow-hidden shrink-0 border-2 border-primary/20 flex items-center justify-center text-2xl font-bold">
-                          {selectedProfileDetail?.avatar ? <img src={selectedProfileDetail.avatar} alt="avatar" className="w-full h-full object-cover" /> : "🪷"}
+                          <img src={selectedProfileDetail?.avatar || "/assets/avatars/avatar_female.png"} alt="avatar" className="w-full h-full object-cover" />
                         </div>
                         <div className="text-center sm:text-left">
                           <h4 className="font-display font-semibold text-text-primary text-lg leading-snug">{selectedProfileDetail?.fullName}</h4>
@@ -2084,10 +2084,7 @@ export default function Admin() {
                                         <div className="flex items-center gap-3 min-w-0">
                                           <div className="relative shrink-0">
                                             <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden border border-primary/10 flex items-center justify-center text-xs">
-                                              {member.avatar
-                                                ? <img src={member.avatar} alt={member.fullName} className="w-full h-full object-cover" />
-                                                : <span className="flex items-center justify-center w-full h-full text-xs">🪷</span>
-                                              }
+                                              <img src={member.avatar || "/assets/avatars/avatar_male.png"} alt={member.fullName} className="w-full h-full object-cover" />
                                             </div>
                                           </div>
                                           <div className="flex flex-col min-w-0">

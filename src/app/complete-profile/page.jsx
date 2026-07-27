@@ -165,8 +165,8 @@ export default function CompleteProfile() {
         {/* Card Header & Avatar section */}
         <div className="flex flex-col items-center text-center gap-4 mb-8">
           {/* Default Avatar Design: Premium Saffron Circle with Lotus */}
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-amber-600 flex items-center justify-center text-white border-4 border-secondary shadow-md relative group">
-            <span className="text-3xl font-display font-medium select-none">🪷</span>
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-amber-600 flex items-center justify-center text-white border-4 border-secondary shadow-md relative group overflow-hidden">
+            <img src="/assets/avatars/avatar_male.png" alt="Devotee Avatar" className="w-full h-full object-cover rounded-full" />
             <div className="absolute -bottom-1 -right-1 bg-white border border-border-custom text-[10px] px-2 py-0.5 rounded-full shadow-sm text-text-secondary font-semibold">
               Devotee
             </div>
