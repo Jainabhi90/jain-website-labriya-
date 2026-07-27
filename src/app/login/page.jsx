@@ -45,9 +45,9 @@ export default function Login() {
     } catch (err) {
       setErrorMsg(
         err.message ||
-          (lang === "en"
-            ? "Google Sign-In failed. Please try again."
-            : "गूगल साइन-इन विफल रहा। कृपया पुनः प्रयास करें।")
+        (lang === "en"
+          ? "Google Sign-In failed. Please try again."
+          : "गूगल साइन-इन विफल रहा। कृपया पुनः प्रयास करें।")
       );
       setIsLoading(false);
     }
@@ -56,7 +56,7 @@ export default function Login() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-16 md:py-28 flex flex-col items-center justify-center min-h-[75vh]">
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-        
+
         {/* Left Column: Benefits Explanation Card */}
         <div className="flex flex-col justify-between p-6 sm:p-8 rounded-custom-lg bg-gradient-to-br from-primary/5 via-secondary/40 to-white border border-primary/10 shadow-premium">
           <div className="flex flex-col gap-6">
@@ -143,7 +143,7 @@ export default function Login() {
 
         {/* Right Column: Auth Card */}
         <div className="w-full bg-white border border-border-custom shadow-premium rounded-custom-lg overflow-hidden flex flex-col p-6 sm:p-8 relative justify-center">
-          
+
           {/* Decorative Top Accent */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary" />
 

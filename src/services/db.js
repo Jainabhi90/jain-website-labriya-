@@ -102,16 +102,16 @@ const DEFAULT_ANNOUNCEMENTS = [
 
 const generatePanchangData = () => {
   const panchang = {};
-  
+
   const addMonth = (year, monthNum, monthStr, tithis, sunrises, sunsets, shubhIndices, samayikIndices, customEvents = {}) => {
     for (let day = 1; day <= tithis.length; day++) {
       const dateStr = `${year}-${monthNum.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
       const tithi = tithis[day - 1];
-      
+
       const parts = tithi.split(" ");
       const monthName = parts[0];
       const pakshaName = parts[1];
-      
+
       panchang[dateStr] = {
         dateStr,
         tithi,
@@ -128,7 +128,7 @@ const generatePanchangData = () => {
   };
 
   // July 2026
-  addMonth("2026", 7, "July", 
+  addMonth("2026", 7, "July",
     ["Jeth Vad 1", "Jeth Vad 2", "Jeth Vad 3", "Jeth Vad 4", "Jeth Vad 5", "Jeth Vad 6", "Jeth Vad 7", "Jeth Vad 8", "Jeth Vad 9", "Jeth Vad 11", "Jeth Vad 12", "Jeth Vad 13", "Jeth Vad 14", "Jeth Vad 30", "Ashadh Sud 1", "Ashadh Sud 2", "Ashadh Sud 3", "Ashadh Sud 5", "Ashadh Sud 6", "Ashadh Sud 7", "Ashadh Sud 8", "Ashadh Sud 9", "Ashadh Sud 9", "Ashadh Sud 10", "Ashadh Sud 11", "Ashadh Sud 12", "Ashadh Sud 13", "Ashadh Sud 14", "Ashadh Sud 15", "Ashadh Vad 1", "Ashadh Vad 2"],
     ["07:39", "07:39", "07:39", "07:38", "07:38", "07:38", "07:38", "07:38", "07:37", "07:37", "07:37", "07:36", "07:36", "07:36", "07:35", "07:35", "07:34", "07:34", "07:33", "07:32", "07:32", "07:31", "07:30", "07:30", "07:29", "07:28", "07:27", "07:27", "07:26", "07:25", "07:24"],
     ["17:08", "17:09", "17:09", "17:10", "17:10", "17:11", "17:11", "17:12", "17:13", "17:13", "17:14", "17:14", "17:15", "17:16", "17:16", "17:17", "17:18", "17:19", "17:19", "17:20", "17:21", "17:21", "17:22", "17:23", "17:24", "17:25", "17:25", "17:26", "17:27", "17:28", "17:29"],
@@ -231,7 +231,7 @@ export function initializeLocalDefaults(force = false) {
     { key: "temp_sadhana_profiles", val: DEFAULT_DEVOTEE_PROFILES },
     { key: "temp_sadhana_logs", val: DEFAULT_SADHANA_LOGS }
   ];
-  
+
   keys.forEach(({ key, val }) => {
     try {
       const existing = localStorage.getItem(key);
@@ -313,7 +313,7 @@ export const db = {
     const items = getLocalItem("temp_schedules", DEFAULT_SCHEDULE);
     const index = items.findIndex(item => item.id === id);
     if (index === -1) throw new Error("Schedule item not found");
-    
+
     items[index] = { ...items[index], ...updates };
     setLocalItem("temp_schedules", items);
     return items[index];
@@ -617,7 +617,7 @@ export const db = {
       const monthStr = month.toString().padStart(2, "0");
       const startDate = `${year}-${monthStr}-01`;
       const endDate = `${year}-${monthStr}-31`;
-      
+
       const { data, error } = await supabase
         .from("panchang")
         .select("*")
@@ -705,12 +705,12 @@ export const db = {
       let upserted = null;
       try {
         const { data, error } = await supabase
-  .from("panchang")
-  .upsert(payload, {
-    onConflict: "date_str"
-  })
-  .select()
-  .single();
+          .from("panchang")
+          .upsert(payload, {
+            onConflict: "date_str"
+          })
+          .select()
+          .single();
 
         if (error) {
           console.error("Error upserting panchang:", error);
@@ -753,9 +753,9 @@ export const db = {
             .eq("panchang_id", upserted.id)
             .order("version_number", { ascending: false })
             .limit(1);
-          
+
           const nextVersion = (versions && versions[0] ? versions[0].version_number : 0) + 1;
-          
+
           await supabase
             .from("panchang_versions")
             .insert({
@@ -920,6 +920,16 @@ export const db = {
     return newEvent;
   },
 
+  async deleteEvent(eventId) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("events").delete().eq("id", eventId);
+      if (!error) return true;
+    }
+    const items = getLocalItem("temp_events", DEFAULT_EVENTS).filter(e => e.id !== eventId);
+    setLocalItem("temp_events", items);
+    return true;
+  },
+
   async subscribeWaitlist(name, phone, eventTitle) {
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase
@@ -927,7 +937,7 @@ export const db = {
         .insert({ name, phone, event_title: eventTitle });
       if (!error) return true;
     }
-    
+
     const list = getLocalItem("temp_subscriptions", []);
     list.push({ name, phone, eventTitle, date: new Date().toISOString() });
     setLocalItem("temp_subscriptions", list);
@@ -1082,7 +1092,7 @@ export const db = {
 
         let actId = a.id;
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actId);
-        
+
         let existingMatch = null;
         if (isUUID) {
           existingMatch = dbActivities.find(dbA => dbA.id === actId);
@@ -1113,7 +1123,7 @@ export const db = {
               active: a.active !== false
             })
             .eq("id", existingMatch.id);
-          
+
           if (error) {
             console.error("Error updating activity " + a.name + ":", error);
             throw error;
@@ -1227,7 +1237,7 @@ export const db = {
         .eq("id", userId)
         .select()
         .single();
-      
+
       if (!error && data) {
         return {
           id: data.id,
@@ -1390,7 +1400,7 @@ export const db = {
 
     const activities = await this.getSadhanaActivities();
     const logs = getLocalItem("temp_sadhana_logs", DEFAULT_SADHANA_LOGS);
-    
+
     let pointsEarned = 0;
     activityIds.forEach(id => {
       const act = activities.find(a => a.id === id);
@@ -1400,7 +1410,7 @@ export const db = {
     });
 
     const existingIdx = logs.findIndex(l => l.userId === userId && l.dateStr === dateStr);
-    
+
     let previousPoints = 0;
     if (existingIdx !== -1) {
       previousPoints = logs[existingIdx].points;
@@ -1432,7 +1442,7 @@ export const db = {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split("T")[0];
-      
+
       const hadYesterdayLog = logs.some(l => l.userId === userId && l.dateStr === yesterdayStr);
       if (hadYesterdayLog || newStreak === 0) {
         newStreak += 1;
@@ -1464,7 +1474,7 @@ export const db = {
     if (pravachanTotalCount >= 30) checkAndAddBadge("badge_30_pravachans");
     if (templeTotalCount >= 100) checkAndAddBadge("badge_100_temple");
     if (newStreak >= 30) checkAndAddBadge("badge_30_streak");
-    
+
     if (newTotalPoints >= 100) checkAndAddBadge("badge_100_points");
     if (newTotalPoints >= 500) checkAndAddBadge("badge_500_points");
     if (newTotalPoints >= 1000) checkAndAddBadge("badge_1000_points");
@@ -1492,7 +1502,7 @@ export const db = {
         .select("id, full_name, city, total_points, current_streak, avatar_url")
         .order("total_points", { ascending: false })
         .limit(10);
-      
+
       if (!error && data) {
         return data.map(p => ({
           id: p.id,
@@ -1520,7 +1530,7 @@ export const db = {
         .from("profiles")
         .select("*")
         .order("total_points", { ascending: false });
-      
+
       if (!error && data) {
         return data.map(p => ({
           id: p.id,
@@ -1605,7 +1615,7 @@ export const db = {
           )
         `)
         .order("created_at", { ascending: false });
-      
+
       if (filterStatus) {
         query = query.eq("status", filterStatus);
       }
@@ -1689,13 +1699,13 @@ export const db = {
           .select("activity_id")
           .eq("profile_id", profileId)
           .eq("activity_date", dateStr);
-        
+
         const activityIds = rows?.map(r => r.activity_id) || [];
         await this.submitDailySadhana(profileId, dateStr, activityIds);
       }
       return true;
     }
-    
+
     // Local storage fallback
     const logs = getLocalItem("temp_sadhana_logs", []);
     const matching = logs.find(l => l.userId === profileId && l.dateStr === dateStr);
@@ -2480,4 +2490,5 @@ export const db = {
     return true;
   }
 };
+
 

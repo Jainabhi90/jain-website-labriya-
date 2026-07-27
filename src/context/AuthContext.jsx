@@ -12,13 +12,13 @@ const AuthContext = createContext({
   loading: true,
   isAdmin: false,
   isAuthenticated: false,
-  loginWithGoogle: async () => {},
-  logout: async () => {},
-  selectProfile: async () => {},
-  createSecondaryProfile: async () => {},
-  deleteSecondaryProfile: async () => {},
-  refreshProfile: async () => {},
-  refreshSession: async () => {}
+  loginWithGoogle: async () => { },
+  logout: async () => { },
+  selectProfile: async () => { },
+  createSecondaryProfile: async () => { },
+  deleteSecondaryProfile: async () => { },
+  refreshProfile: async () => { },
+  refreshSession: async () => { }
 });
 
 // Helper for deep comparison of profile states to avoid duplicate state sets
@@ -86,14 +86,14 @@ export function AuthProvider({ children }) {
   // Create secondary family profile (max 2)
   const createSecondaryProfile = useCallback(async (details) => {
     if (!user) throw new Error("No active authenticated session found.");
-    
+
     // Safety check: ensure at most 2 profiles
     if (profilesList.length >= 2) {
       throw new Error("Maximum of two family members is allowed per account.");
     }
 
     const newProfile = await profileService.createSecondaryProfile(user.id, details);
-    
+
     // Refresh user profiles list
     const updatedList = await profileService.getUserProfiles(user.id);
     setProfilesList(updatedList);
@@ -172,11 +172,11 @@ export function AuthProvider({ children }) {
     try {
       const { data: { session: currentSession }, error } = await supabase.auth.getSession();
       if (error) throw error;
-      
+
       setSession(currentSession);
       const currentUser = currentSession?.user || null;
       setUser(currentUser);
-      
+
       if (currentUser) {
         let list = await profileService.getUserProfiles(currentUser.id);
         setProfilesList(list);
@@ -317,7 +317,7 @@ export function AuthProvider({ children }) {
             const normalized = normalizeProfile(list[0]);
             updateProfileState(normalized);
             localStorage.setItem(`last_profile_id_${currentUser.id}`, list[0].id);
-            
+
             if (event === "SIGNED_IN") {
               await profileService.updateLastLogin(list[0].id);
             }

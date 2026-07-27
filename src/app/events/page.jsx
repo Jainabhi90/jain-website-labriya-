@@ -3,11 +3,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Calendar as CalendarIcon, 
-  MapPin, 
-  Sparkles, 
-  Bell, 
+import {
+  Calendar as CalendarIcon,
+  MapPin,
+  Sparkles,
+  Bell,
   CheckCircle,
   AlertCircle,
   Search,
@@ -29,7 +29,7 @@ export default function Events() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [validationError, setValidationError] = useState("");
   const [lang, setLang] = useState("en");
-  
+
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -59,14 +59,14 @@ export default function Events() {
   // Helper: Calculate event status dynamically
   const getEventStatus = (event) => {
     if (event.status === "Cancelled") return "Cancelled";
-    
+
     const eventDate = new Date(event.date);
     const today = new Date();
-    
+
     // Compare date strings
     const eventDateStr = eventDate.toDateString();
     const todayDateStr = today.toDateString();
-    
+
     if (eventDateStr === todayDateStr) {
       return "Live";
     } else if (eventDate < today) {
@@ -81,7 +81,7 @@ export default function Events() {
     if (!event.registration_required) return false;
     const status = getEventStatus(event);
     if (status === "Cancelled" || status === "Completed") return false;
-    
+
     // If deadline is set, compare deadline
     if (event.registration_deadline) {
       return new Date(event.registration_deadline) >= new Date();
@@ -246,7 +246,7 @@ export default function Events() {
 
   return (
     <div className="w-full min-h-screen bg-[#FCFBF7] pt-20 pb-16 flex flex-col items-center">
-      
+
       {/* 1. EVENT HERO */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 mb-10 text-center md:text-left flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-[#EA580C]/10 pb-8">
         <div className="max-w-2xl">
@@ -261,7 +261,7 @@ export default function Events() {
             {t.eventsSub || (lang === "en" ? "Daily worship, pujas, and assembly schedule at Shree Labriya Mandir" : "श्री लाबरिया मंदिर में दैनिक प्रवचन, पूजा और विशेष सांस्कृतिक कार्यक्रम")}
           </p>
         </div>
-        
+
         {/* Count Badge */}
         <div className="flex justify-center md:justify-end">
           <div className="bg-white border border-[#C28A3E]/20 px-4 py-2 rounded-custom-md shadow-[0_4px_12px_rgba(0,0,0,0.01)] flex items-center gap-2.5">
@@ -293,11 +293,10 @@ export default function Events() {
             <button
               key={chip.value}
               onClick={() => setActiveFilter(chip.value)}
-              className={`px-4 py-2 rounded-custom-md text-xs font-semibold tracking-wide border transition-all duration-150 shrink-0 cursor-pointer ${
-                activeFilter === chip.value
+              className={`px-4 py-2 rounded-custom-md text-xs font-semibold tracking-wide border transition-all duration-150 shrink-0 cursor-pointer ${activeFilter === chip.value
                   ? "bg-[#EA580C] text-white border-transparent shadow-sm"
                   : "bg-white text-text-secondary border-[#F3F4F6] hover:border-[#EA580C]/20 hover:text-text-primary"
-              }`}
+                }`}
             >
               {chip.label}
             </button>
@@ -307,10 +306,10 @@ export default function Events() {
 
       {/* 3. TWO COLUMN EVENTS LAYOUT */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left Column: Events Grid/List (col-span-8) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          
+
           <AnimatePresence mode="popLayout">
             {filteredEvents.length > 0 ? (
               <div className="grid gap-5">
@@ -318,7 +317,7 @@ export default function Events() {
                   const status = getEventStatus(event);
                   const regOpen = isRegistrationOpen(event);
                   const isSelected = selectedEvent?.id === event.id;
-                  
+
                   return (
                     <motion.div
                       key={event.id}
@@ -327,11 +326,10 @@ export default function Events() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       onClick={() => setSelectedEvent(event)}
-                      className={`p-5 rounded-custom-lg border transition-all duration-200 cursor-pointer flex flex-col gap-4 items-start ${
-                        isSelected 
-                          ? "bg-white border-[#EA580C] shadow-premium-hover ring-1 ring-[#EA580C]/20" 
+                      className={`p-5 rounded-custom-lg border transition-all duration-200 cursor-pointer flex flex-col gap-4 items-start ${isSelected
+                          ? "bg-white border-[#EA580C] shadow-premium-hover ring-1 ring-[#EA580C]/20"
                           : "bg-white border-[#EA580C]/5 hover:border-[#C28A3E]/20 shadow-premium"
-                      }`}
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row gap-5 items-start w-full">
                         {/* Event Thumbnail aspect ratio preserved */}
@@ -341,7 +339,7 @@ export default function Events() {
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#EA580C] font-semibold text-2xl">🪷</div>
                           )}
-                          
+
                           {/* Floating Date Overlay */}
                           <div className="absolute top-2 left-2 bg-[#EA580C] text-white text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-custom-sm">
                             {new Date(event.date).toLocaleDateString(lang === "en" ? "en-US" : "hi-IN", { month: "short", day: "numeric" })}
@@ -396,7 +394,7 @@ export default function Events() {
                               {translateEventDescription(event.description)}
                             </p>
                           </div>
-                          
+
                           <div className="flex flex-wrap gap-4 text-xs text-text-secondary font-medium mt-1">
                             <div className="flex items-center gap-1.5">
                               <CalendarIcon size={14} className="text-[#C28A3E]" />
@@ -417,7 +415,7 @@ export default function Events() {
                         <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">
                           {t.addToCalendar}:
                         </span>
-                        
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -445,7 +443,7 @@ export default function Events() {
               </div>
             ) : (
               /* ELEGANT EMPTY STATE */
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="p-10 rounded-custom-lg bg-white border border-[#EA580C]/5 shadow-premium flex flex-col items-center justify-center text-center gap-5 min-h-[300px]"
@@ -456,7 +454,7 @@ export default function Events() {
                     {lang === "en" ? "No Programs Found" : "कोई कार्यक्रम नहीं मिला"}
                   </h4>
                   <p className="text-xs text-text-secondary max-w-sm leading-relaxed">
-                    {lang === "en" 
+                    {lang === "en"
                       ? "There are no events matching your filter query. Explore daily Choghadiya and auspicious timelines on our Panchang page."
                       : "आपकी खोज के अनुसार कोई कार्यक्रम उपलब्ध नहीं है। दैनिक पंचांग और चौघड़िया देखने के लिए पंचांग पृष्ठ पर जाएं।"}
                   </p>
@@ -486,7 +484,7 @@ export default function Events() {
         {/* Right Column: Waitlist / Info Panel (col-span-4) */}
         <div className="lg:col-span-4 w-full">
           <div className="sticky top-24 p-6 sm:p-7 rounded-custom-lg bg-white border border-[#EA580C]/5 shadow-premium flex flex-col gap-6">
-            
+
             {/* Header info */}
             <div className="flex items-center gap-3 pb-3.5 border-b border-[#EA580C]/5">
               <div className="w-10 h-10 rounded-full bg-[#FFF7ED] border border-[#EA580C]/10 flex items-center justify-center text-[#EA580C]">
@@ -534,9 +532,9 @@ export default function Events() {
                     <form onSubmit={handleSubscribe} className="flex flex-col gap-4.5">
                       <div className="flex flex-col gap-1.5">
                         <label htmlFor="sub-name" className="text-[11px] text-text-secondary font-semibold">{t.yourName}</label>
-                        <input 
+                        <input
                           id="sub-name"
-                          type="text" 
+                          type="text"
                           placeholder={lang === "en" ? "e.g. Rahul Shah" : "जैसे: राहुल शाह"}
                           value={subName}
                           onChange={(e) => setSubName(e.target.value)}
@@ -546,9 +544,9 @@ export default function Events() {
 
                       <div className="flex flex-col gap-1.5">
                         <label htmlFor="sub-phone" className="text-[11px] text-text-secondary font-semibold">{t.phoneLabel}</label>
-                        <input 
+                        <input
                           id="sub-phone"
-                          type="tel" 
+                          type="tel"
                           maxLength={10}
                           placeholder={lang === "en" ? "e.g. 9876543210" : "जैसे: 9876543210"}
                           value={subPhone}

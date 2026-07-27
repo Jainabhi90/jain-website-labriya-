@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Heart, 
-  Copy, 
-  Check, 
-  Building, 
-  FileCheck, 
+import {
+  Heart,
+  Copy,
+  Check,
+  Building,
+  FileCheck,
   Download,
   AlertCircle,
   HelpCircle,
@@ -102,9 +102,9 @@ export default function Donate() {
         amount: parsedAmount,
         txnId: txnId.trim()
       });
-      
+
       setCompletedDonation(record);
-      
+
       // Trigger canvas confetti celebration
       confetti({
         particleCount: 150,
@@ -326,18 +326,18 @@ export default function Donate() {
 
   return (
     <div className="w-full min-h-screen bg-[#FCFBF7] pt-20 pb-16 flex flex-col items-center">
-      
+
       {/* 1. HERO SECTION */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 mb-10 text-center flex flex-col items-center gap-4">
         <span className="px-3.5 py-1.5 rounded-full bg-[#FFF7ED] border border-[#C28A3E]/20 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#C28A3E] flex items-center gap-1.5 select-none">
           <Heart size={12} fill="currentColor" className="text-[#EA580C]" />
           {t.sevaContribution || "Seva Contribution"}
         </span>
-        
+
         <h1 className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl mt-2 leading-tight">
           {t.supportChaturmas}
         </h1>
-        
+
         <p className="text-xs sm:text-sm md:text-base text-text-secondary max-w-2xl leading-relaxed">
           {t.donateDescription || "Support the spiritual, cultural, and community arrangements of the Shree Labriya Chaturmas Festival 2026. Your generous Seva enables us to serve sadhus, pilgrims, and local welfare."}
         </p>
@@ -348,10 +348,10 @@ export default function Donate() {
 
       {/* 2. TWO COLUMN GRID LAYOUT */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* LEFT COLUMN: Payment details, Trust cards, FAQs (col-span-7) */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          
+
           {/* Trust Section Pillars */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-custom-md bg-white border border-[#EA580C]/5 shadow-premium text-left">
@@ -359,7 +359,7 @@ export default function Donate() {
               <h4 className="font-semibold text-xs sm:text-sm text-text-primary mt-2">{lang === "en" ? "Temple Care" : "मंदिर व्यवस्था"}</h4>
               <p className="text-[10px] text-text-secondary mt-1">{lang === "en" ? "Daily puja rituals, maintenance & lighting." : "दैनिक महापूजा, सामग्री एवं जीर्णोद्धार व्यवस्था।"}</p>
             </div>
-            
+
             <div className="p-4 rounded-custom-md bg-white border border-[#EA580C]/5 shadow-premium text-left">
               <span className="text-xl">🍲</span>
               <h4 className="font-semibold text-xs sm:text-sm text-text-primary mt-2">{lang === "en" ? "Sadharmik Vatsalya" : "साधर्मिक वात्सल्य"}</h4>
@@ -375,15 +375,15 @@ export default function Donate() {
 
           {/* UPI and QR Card */}
           <div className="p-6 sm:p-7 rounded-custom-lg bg-white border border-[#EA580C]/5 shadow-premium flex flex-col sm:flex-row gap-6 items-center">
-            
+
             {/* QR Code Frame */}
             <div className="flex flex-col items-center gap-2 shrink-0 select-none">
               <div className="w-40 h-40 rounded-custom-lg bg-white border border-[#C28A3E]/20 overflow-hidden shadow-sm relative group flex items-center justify-center p-1.5">
-                <img 
-                  src={cms.donationQr || "/upi_qr_code.png"} 
-                  alt="UPI QR Code" 
+                <img
+                  src={cms.donationQr || "/upi_qr_code.png"}
+                  alt="UPI QR Code"
                   loading="lazy"
-                  className="w-full h-full object-contain" 
+                  className="w-full h-full object-contain"
                 />
               </div>
               <span className="text-[9px] text-[#C28A3E] font-bold tracking-widest uppercase">
@@ -402,7 +402,7 @@ export default function Donate() {
                 <span className="text-xs sm:text-sm font-semibold text-text-primary select-all truncate max-w-[200px] sm:max-w-none">
                   {upiId}
                 </span>
-                <button 
+                <button
                   onClick={() => copyToClipboard(upiId, "upi")}
                   className="p-2 rounded-custom-sm bg-white border border-[#C28A3E]/10 hover:border-[#EA580C]/40 text-[#4B5563] hover:text-[#EA580C] transition-all cursor-pointer shrink-0 shadow-sm"
                   title={t.copyUPIID}
@@ -438,7 +438,7 @@ export default function Donate() {
                 <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider">{t.accountNumber}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-text-primary select-all">{bankDetails.accountNumber}</span>
-                  <button 
+                  <button
                     onClick={() => copyToClipboard(bankDetails.accountNumber, "bank")}
                     className="p-1 rounded hover:bg-[#FFF7ED] text-[#4B5563] hover:text-[#EA580C] transition-all cursor-pointer shadow-sm border border-[#C28A3E]/5 bg-white"
                   >
@@ -451,7 +451,7 @@ export default function Donate() {
                 <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider">{t.ifscCode}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-text-primary select-all">{bankDetails.ifscCode}</span>
-                  <button 
+                  <button
                     onClick={() => copyToClipboard(bankDetails.ifscCode, "ifsc")}
                     className="p-1 rounded hover:bg-[#FFF7ED] text-[#4B5563] hover:text-[#EA580C] transition-all cursor-pointer shadow-sm border border-[#C28A3E]/5 bg-white"
                   >
@@ -498,7 +498,7 @@ export default function Donate() {
                       <span>{faq.q}</span>
                       <ChevronDown size={14} className={`text-text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                     </button>
-                    
+
                     <AnimatePresence initial={false}>
                       {isOpen && (
                         <motion.div
@@ -522,7 +522,7 @@ export default function Donate() {
 
         {/* RIGHT COLUMN: Report verification form & tax status (col-span-5) */}
         <div className="lg:col-span-5 w-full flex flex-col gap-6 sticky top-24">
-          
+
           {/* Submit transaction registration form */}
           <div className="p-6 sm:p-7 rounded-custom-lg bg-white border border-[#EA580C]/5 shadow-premium flex flex-col gap-5 text-left">
             <div className="flex flex-col border-b border-[#EA580C]/5 pb-3">
@@ -531,12 +531,12 @@ export default function Donate() {
             </div>
 
             <form onSubmit={handleDonationSubmit} className="flex flex-col gap-4">
-              
+
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="donor-name" className="text-[11px] text-text-secondary font-semibold">{t.donorNameLabel}</label>
-                <input 
+                <input
                   id="donor-name"
-                  type="text" 
+                  type="text"
                   placeholder={lang === "en" ? "e.g. Abhi Jain" : "जैसे: अभय कुमार जैन"}
                   value={donorName}
                   onChange={(e) => setDonorName(e.target.value)}
@@ -546,9 +546,9 @@ export default function Donate() {
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="donor-phone" className="text-[11px] text-text-secondary font-semibold">{t.phoneNumberLabel}</label>
-                <input 
+                <input
                   id="donor-phone"
-                  type="tel" 
+                  type="tel"
                   maxLength={10}
                   placeholder={lang === "en" ? "e.g. 9876543210" : "जैसे: 9876543210"}
                   value={phone}
@@ -559,9 +559,9 @@ export default function Donate() {
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="donor-amount" className="text-[11px] text-text-secondary font-semibold">{t.amountDonatedLabel}</label>
-                <input 
+                <input
                   id="donor-amount"
-                  type="number" 
+                  type="number"
                   placeholder={lang === "en" ? "e.g. 5100" : "जैसे: 5100"}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -571,9 +571,9 @@ export default function Donate() {
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="txn-ref" className="text-[11px] text-text-secondary font-semibold">{t.upiReferenceLabel}</label>
-                <input 
+                <input
                   id="txn-ref"
-                  type="text" 
+                  type="text"
                   placeholder={lang === "en" ? "e.g. U240711..." : "जैसे: U240711..."}
                   value={txnId}
                   onChange={(e) => setTxnId(e.target.value)}
@@ -613,7 +613,7 @@ export default function Donate() {
                         {lang === "en" ? "Transaction Registered" : "लेनदेन दर्ज कर लिया गया है"}
                       </p>
                       <p className="text-[10px] text-emerald-600/85 mt-0.5 leading-relaxed">
-                        {lang === "en" 
+                        {lang === "en"
                           ? `Thank you! Your donation of INR ${completedDonation.amount.toLocaleString("en-IN")} has been filed under ID: ${completedDonation.txnId}.`
                           : `धन्यवाद! आपकी INR ${completedDonation.amount.toLocaleString("en-IN")} की दान राशि संदर्भ आईडी: ${completedDonation.txnId} के तहत दर्ज कर ली गई है।`}
                       </p>
@@ -621,14 +621,14 @@ export default function Donate() {
                   </div>
 
                   <div className="flex items-center gap-2 select-none">
-                    <button 
+                    <button
                       onClick={() => triggerPrintReceipt(completedDonation)}
                       className="flex-1 py-2 px-3 rounded-custom-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] uppercase tracking-wider shadow flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Download size={12} />
                       <span>{lang === "en" ? "Print Receipt" : "रसीद प्रिंट करें"}</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => setCompletedDonation(null)}
                       className="py-2 px-3 rounded-custom-md bg-white border border-border-custom hover:border-emerald-500/30 text-text-secondary hover:text-emerald-700 font-bold text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
                     >

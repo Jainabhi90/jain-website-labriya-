@@ -6,7 +6,7 @@ import { db } from "@/services/db";
 const CMSContext = createContext({
   cms: {},
   loading: true,
-  refreshCMS: async () => {}
+  refreshCMS: async () => { }
 });
 
 export function CMSProvider({ children }) {

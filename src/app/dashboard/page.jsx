@@ -667,8 +667,8 @@ export default function Dashboard() {
               >
                 <Bell size={14} />
                 {unreadNotifCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center animate-pulse">
-                    {unreadNotifCount}
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EA580C] rounded-full text-white text-[8px] font-bold flex items-center justify-center shadow-sm">
+                    {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
                   </span>
                 )}
               </button>
@@ -678,13 +678,21 @@ export default function Dashboard() {
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setShowNotifMenu(false)} />
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-2 w-64 bg-white border border-[#EA580C]/10 rounded-custom-md shadow-premium z-45 p-3 flex flex-col gap-2 max-h-80 overflow-y-auto"
+                      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-80 bg-white border border-[#EA580C]/10 rounded-custom-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-45 overflow-hidden"
                     >
-                      <div className="flex items-center justify-between pb-2 border-b border-neutral-100 select-none">
-                        <span className="text-[10px] font-bold uppercase text-text-primary">Notifications</span>
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#FFF7ED] border-b border-[#EA580C]/10">
+                        <div className="flex items-center gap-2">
+                          <Bell size={13} className="text-[#EA580C]" />
+                          <span className="text-xs font-bold text-[#1F2937]">Notifications</span>
+                          {unreadNotifCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-[#EA580C] text-white text-[8px] font-bold">{unreadNotifCount} new</span>
+                          )}
+                        </div>
                         {unreadNotifCount > 0 && (
                           <button
                             onClick={async () => {
@@ -692,35 +700,59 @@ export default function Dashboard() {
                                 if (!n.read) await handleMarkNotifRead(n.id);
                               }
                             }}
-                            className="text-[8.5px] font-bold uppercase text-[#EA580C] cursor-pointer hover:underline"
+                            className="text-[9px] font-bold text-[#EA580C] cursor-pointer hover:underline"
                           >
                             Mark all read
                           </button>
                         )}
                       </div>
-                      
-                      {notifications.length === 0 ? (
-                        <p className="text-[10px] text-text-secondary italic text-center py-4 select-none">No notifications yet</p>
-                      ) : (
-                        <div className="flex flex-col gap-1.5 text-left">
-                          {notifications.map(n => (
-                            <div
-                              key={n.id}
-                              onClick={() => handleMarkNotifRead(n.id)}
-                              className={`p-2 rounded text-[10px] cursor-pointer transition-colors border ${
-                                n.read ? "bg-neutral-50/50 text-text-secondary border-transparent" : "bg-[#FFF7ED] text-text-primary border-[#EA580C]/10 border-l-2 border-l-[#EA580C]"
-                              }`}
-                            >
-                              <p className="font-bold flex items-center gap-1">
-                                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] shrink-0" />}
-                                <span>{n.title}</span>
-                              </p>
-                              <p className="mt-0.5 leading-normal text-text-secondary">{n.message}</p>
-                              <span className="text-[7.5px] text-[#C28A3E] font-semibold block mt-1">
-                                {new Date(n.created_at || n.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                          ))}
+
+                      {/* Notification list */}
+                      <div className="max-h-72 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center select-none">
+                            <span className="text-2xl">🔔</span>
+                            <p className="text-xs font-semibold text-text-primary">All caught up!</p>
+                            <p className="text-[10px] text-text-secondary">No notifications yet. Submit your daily Sadhana to receive updates.</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col divide-y divide-neutral-100">
+                            {notifications.map(n => (
+                              <div
+                                key={n.id}
+                                onClick={() => handleMarkNotifRead(n.id)}
+                                className={`px-4 py-3 cursor-pointer transition-colors hover:bg-[#FCFBF7] ${n.read ? "opacity-60" : "bg-white"}`}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  {/* Type icon dot */}
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${n.read ? "bg-neutral-100" : "bg-[#FFF7ED]"}`}>
+                                    <span className="text-sm">
+                                      {n.type === "submission_received" ? "✅" : n.type === "streak_milestone" ? "🔥" : n.type === "badge_earned" ? "🏅" : "🪷"}
+                                    </span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <p className={`text-[11px] font-bold truncate ${n.read ? "text-text-secondary" : "text-text-primary"}`}>
+                                        {n.title}
+                                      </p>
+                                      {!n.read && <span className="w-2 h-2 rounded-full bg-[#EA580C] shrink-0" />}
+                                    </div>
+                                    <p className="text-[10px] text-text-secondary mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
+                                    <span className="text-[9px] text-[#C28A3E] font-semibold mt-1 block">
+                                      {new Date(n.created_at || n.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      {notifications.length > 0 && (
+                        <div className="px-4 py-2.5 border-t border-neutral-100 bg-[#FCFBF7] text-center">
+                          <p className="text-[9px] text-text-secondary">Click a notification to mark it as read</p>
                         </div>
                       )}
                     </motion.div>

@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { 
-  Calendar, 
-  Clock, 
-  Heart, 
-  Megaphone, 
-  ArrowRight, 
+import {
+  Calendar,
+  Clock,
+  Heart,
+  Megaphone,
+  ArrowRight,
   BookOpen,
   CalendarDays
 } from "lucide-react";
@@ -32,8 +32,8 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { type: "spring", stiffness: 100, damping: 15 }
   }
@@ -50,14 +50,14 @@ export default function Home() {
       try {
         const schedData = await db.getSchedules();
         const annData = await db.getAnnouncements();
-        
+
         setSchedules(schedData || []);
         setAnnouncements(annData || []);
       } catch (err) {
         console.error("Error loading homepage data", err);
       }
     };
-    
+
     fetchData();
 
     if (typeof window !== "undefined") {
@@ -84,27 +84,27 @@ export default function Home() {
 
   return (
     <div className="w-full flex flex-col items-center overflow-x-hidden">
-      
+
       {/* 1. HERO SECTION */}
       <section className="relative w-full min-h-[95vh] flex flex-col items-center justify-center px-4 sm:px-6 py-12 md:py-16 lg:py-20 bg-gradient-to-b from-[#FCFBF7] via-[#FFFDF9] to-white border-b border-[#EA580C]/5 overflow-hidden">
         {/* Background Saffron/Yellow Circle Orbs representing purity */}
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1, 1.05, 1],
             x: [0, 15, 0],
             y: [0, -15, 0]
           }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[600px] h-[600px] rounded-full bg-[#FFF7ED] blur-3xl -top-48 -left-48 pointer-events-none -z-10" 
+          className="absolute w-[600px] h-[600px] rounded-full bg-[#FFF7ED] blur-3xl -top-48 -left-48 pointer-events-none -z-10"
         />
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1.05, 1, 1.05],
             x: [0, -20, 0],
             y: [0, 15, 0]
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[500px] h-[500px] rounded-full bg-orange-100/5 blur-3xl -bottom-36 -right-36 pointer-events-none -z-10" 
+          className="absolute w-[500px] h-[500px] rounded-full bg-orange-100/5 blur-3xl -bottom-36 -right-36 pointer-events-none -z-10"
         />
 
         {/* Traditional Jain mandala-inspired layout lines */}
@@ -118,16 +118,16 @@ export default function Home() {
 
         {/* Modern Split Grid Layout */}
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center z-10">
-          
+
           {/* LEFT SIDE: Spiritual content, CTAs, details */}
-          <motion.div 
+          <motion.div
             initial="hidden"
             animate="visible"
             variants={containerVariants}
             className="col-span-1 lg:col-span-7 flex flex-col items-start text-left gap-5"
           >
             {/* Top Badge */}
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="px-4 py-1.5 rounded-full bg-[#FFF7ED] border border-[#C28A3E]/20 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#C28A3E] flex items-center gap-2"
             >
@@ -136,7 +136,7 @@ export default function Home() {
             </motion.div>
 
             {/* Temple Name */}
-            <motion.h2 
+            <motion.h2
               variants={itemVariants}
               className="font-display font-semibold text-text-secondary text-xs sm:text-sm tracking-widest uppercase leading-none"
             >
@@ -144,7 +144,7 @@ export default function Home() {
             </motion.h2>
 
             {/* Hero Main Title */}
-            <motion.h1 
+            <motion.h1
               variants={itemVariants}
               className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-[54px] tracking-tight leading-[1.1] max-w-2xl"
             >
@@ -162,7 +162,7 @@ export default function Home() {
             )}
 
             {/* Description */}
-            <motion.p 
+            <motion.p
               variants={itemVariants}
               className="text-[#4B5563] text-xs sm:text-sm md:text-base max-w-xl leading-relaxed"
             >
@@ -170,7 +170,7 @@ export default function Home() {
             </motion.p>
 
             {/* CTA Buttons - Side by Side on Desktop, Stacked on Mobile */}
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2"
             >
@@ -191,7 +191,7 @@ export default function Home() {
             </motion.div>
 
             {/* Quick Information Cards */}
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 w-full mt-4"
             >
@@ -242,7 +242,7 @@ export default function Home() {
             </motion.div>
 
             {/* Countdown timer */}
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="w-full mt-4"
             >
@@ -261,17 +261,17 @@ export default function Home() {
             {/* Saffron soft glow background behind image */}
             <div className="absolute inset-0 bg-[#FFF7ED] rounded-2xl filter blur-xl scale-95 opacity-50 -z-10 pointer-events-none" />
 
-            <motion.div 
+            <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               className="relative w-full max-w-[480px] aspect-[16/11.5] sm:aspect-[16/11] lg:aspect-[16/12] rounded-custom-lg border border-[#C28A3E]/20 shadow-premium overflow-hidden bg-white select-none group"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent z-10" />
-              <img 
-                src={cms.heroBanner || "/jain_hero_spiritual.png"} 
-                alt={cms.templeName || "Shree Labriya Jain Shwetambar Mandir Chaturmas 2026"} 
+              <img
+                src={cms.heroBanner || "/jain_hero_spiritual.png"}
+                alt={cms.templeName || "Shree Labriya Jain Shwetambar Mandir Chaturmas 2026"}
                 loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]" 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
               />
 
               {/* Floating Overlay Card A (Chaturmas Year badge) */}
@@ -297,7 +297,7 @@ export default function Home() {
         </div>
 
         {/* Scroll down animated indicator (visible on desktop) */}
-        <div 
+        <div
           className="hidden lg:flex flex-col items-center gap-1 absolute bottom-6 left-1/2 -translate-x-1/2 cursor-pointer text-[#4B5563] hover:text-[#EA580C] transition-colors duration-150 z-10 select-none"
           onClick={() => scrollToSection("schedule")}
         >
@@ -317,16 +317,16 @@ export default function Home() {
 
       {/* 2. QUICK ACCESS GRID */}
       <section className="max-w-6xl w-full px-6 py-12">
-        <motion.div 
+        <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={containerVariants}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          
+
           {/* Featured Sadhana Tracker Banner */}
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="col-span-full group relative overflow-hidden p-6 sm:p-8 rounded-custom-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-premium transition-all duration-300 min-h-[160px] flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer"
             onClick={() => window.location.href = "/dashboard"}
@@ -354,9 +354,9 @@ export default function Home() {
               <ArrowRight size={14} />
             </div>
           </motion.div>
-          
+
           {/* Schedule Card */}
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             whileHover={{ y: -5, boxShadow: "0 12px 30px -4px rgba(234, 88, 12, 0.08)" }}
             onClick={() => scrollToSection("schedule")}
@@ -391,7 +391,7 @@ export default function Home() {
           </motion.div>
 
           {/* Announcements Card */}
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             whileHover={{ y: -5, boxShadow: "0 12px 30px -4px rgba(234, 88, 12, 0.08)" }}
             onClick={() => scrollToSection("announcements")}
@@ -425,37 +425,7 @@ export default function Home() {
             </Link>
           </motion.div>
 
-          {/* Donate Card */}
-          <motion.div variants={itemVariants}>
-            <Link href="/donate" className="group p-6 rounded-custom-lg bg-white border border-border-custom hover:border-primary/20 shadow-premium transition-all duration-300 flex flex-col justify-between min-h-[160px] block">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-primary">
-                  <Heart size={20} />
-                </div>
-                <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.donationDesk}</h3>
-                <p className="text-xs text-text-secondary">{t.donationDeskDesc}</p>
-              </div>
-            </Link>
-          </motion.div>
-
-          {/* About Card */}
-          <motion.div variants={itemVariants}>
-            <Link href="/about" className="group p-6 rounded-custom-lg bg-white border border-border-custom hover:border-primary/20 shadow-premium transition-all duration-300 flex flex-col justify-between min-h-[160px] block">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-primary">
-                  <BookOpen size={20} />
-                </div>
-                <ArrowRight size={16} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{t.aboutMandir}</h3>
-                <p className="text-xs text-text-secondary">{t.aboutMandirDesc}</p>
-              </div>
-            </Link>
-          </motion.div>
+          {/* Donate & About cards removed — re-enable when needed */}
 
         </motion.div>
       </section>
@@ -463,7 +433,7 @@ export default function Home() {
       {/* 3. TODAY'S SCHEDULE SECTION */}
       <section id="schedule" className="w-full bg-secondary/10 border-y border-border-custom py-24 px-6 scroll-mt-10">
         <div className="max-w-5xl mx-auto flex flex-col items-center">
-          
+
           <div className="text-center max-w-2xl mb-16">
             <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{t.dailyWorshipTimeline}</span>
             <h2 className="font-display font-semibold text-text-primary text-3xl mt-1">{t.todaysSchedule}</h2>
@@ -472,18 +442,18 @@ export default function Home() {
 
           {schedules.length > 0 ? (
             <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12">
-              
+
               {/* Morning Timeline */}
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3 pb-3 border-b border-border-custom">
                   <span className="text-lg">☀️</span>
                   <h3 className="font-display font-semibold text-text-primary text-base uppercase tracking-wider">{t.morningSessions}</h3>
                 </div>
-                
+
                 <div className="flex flex-col gap-4">
                   {morningSchedules.length > 0 ? (
                     morningSchedules.map((item, idx) => (
-                      <motion.div 
+                      <motion.div
                         key={item.id}
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}
@@ -511,11 +481,11 @@ export default function Home() {
                   <span className="text-lg">🌙</span>
                   <h3 className="font-display font-semibold text-text-primary text-base uppercase tracking-wider">{t.eveningSessions}</h3>
                 </div>
-                
+
                 <div className="flex flex-col gap-4">
                   {eveningSchedules.length > 0 ? (
                     eveningSchedules.map((item, idx) => (
-                      <motion.div 
+                      <motion.div
                         key={item.id}
                         initial={{ opacity: 0, x: 20 }}
                         whileInView={{ opacity: 1, x: 0 }}
@@ -568,7 +538,7 @@ export default function Home() {
           <p className="text-sm text-text-secondary mt-2">{t.announcementsSub}</p>
         </div>
 
-        <motion.div 
+        <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
@@ -577,22 +547,22 @@ export default function Home() {
         >
           {announcements.length > 0 ? (
             announcements.map((ann) => {
-              const typeLabelStyles = ann.type === "program" 
-                ? "bg-emerald-50 text-emerald-700 border-emerald-500/10" 
-                : ann.type === "update" 
-                ? "bg-blue-50 text-blue-700 border-blue-500/10" 
-                : "bg-orange-50 text-primary border-primary/10";
+              const typeLabelStyles = ann.type === "program"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-500/10"
+                : ann.type === "update"
+                  ? "bg-blue-50 text-blue-700 border-blue-500/10"
+                  : "bg-orange-50 text-primary border-primary/10";
 
               const typeText = lang === "en"
-              ? (ann.type ?? "").toUpperCase()
+                ? (ann.type ?? "").toUpperCase()
                 : ann.type === "program"
-                ? "उत्सव कार्यक्रम"
-                : ann.type === "update"
-                ? "अपडेट"
-                : "सूचना";
+                  ? "उत्सव कार्यक्रम"
+                  : ann.type === "update"
+                    ? "अपडेट"
+                    : "सूचना";
 
               return (
-                <motion.div 
+                <motion.div
                   key={ann.id}
                   variants={itemVariants}
                   whileHover={{ y: -3, boxShadow: "0 10px 25px -4px rgba(0, 0, 0, 0.03)" }}
@@ -610,7 +580,7 @@ export default function Home() {
                     <h3 className="font-display font-semibold text-text-primary text-base leading-snug">
                       {ann.title}
                     </h3>
-                    <div 
+                    <div
                       className="text-xs text-text-secondary leading-relaxed whitespace-pre-line"
                       dangerouslySetInnerHTML={{ __html: sanitizeHTML(ann.content) }}
                     />
@@ -626,8 +596,8 @@ export default function Home() {
                 {lang === "en" ? "Updates Pending" : "नवीनतम समाचार प्रतीक्षित"}
               </h3>
               <p className="text-xs text-text-secondary max-w-sm leading-relaxed mt-1">
-                {lang === "en" 
-                  ? "Daily notices, program lists, and trust announcements will be posted here. Check back soon." 
+                {lang === "en"
+                  ? "Daily notices, program lists, and trust announcements will be posted here. Check back soon."
                   : "दैनिक सूचनाएं, विशेष घोषणाएं और प्रवचन कार्यक्रम यहां पोस्ट किए जाएंगे। कृपया शीघ्र जांचें।"}
               </p>
             </div>

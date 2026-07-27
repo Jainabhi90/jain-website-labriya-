@@ -95,7 +95,7 @@ function ImageUpload({ label, value, onChange, accept = "image/png, image/jpeg, 
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">{label}</label>
-      
+
       {value ? (
         <div className="relative flex items-center gap-4 p-3 rounded-xl border border-neutral-200 bg-white shadow-sm">
           <div className="w-16 h-16 rounded-lg bg-neutral-50 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
@@ -134,11 +134,10 @@ function ImageUpload({ label, value, onChange, accept = "image/png, image/jpeg, 
           onDragOver={handleDrag}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-            dragActive
+          className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${dragActive
               ? "border-[#EA580C] bg-[#FFF7ED]"
               : "border-neutral-200 bg-white hover:border-[#EA580C]/40 hover:bg-[#FFF7ED]/20"
-          }`}
+            }`}
         >
           <div className="w-10 h-10 rounded-full bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center text-lg">
             📷
@@ -744,10 +743,10 @@ export default function Admin() {
           type="button"
           onClick={() => setPanchangDate(dateStr)}
           className={`h-10 border border-neutral-100 text-left p-1 text-[10px] font-semibold flex flex-col justify-between transition-all select-none hover:bg-primary/5 cursor-pointer ${isSelected
-              ? "bg-primary/10 text-primary border-primary/30 font-bold ring-1 ring-primary"
-              : isToday
-                ? "bg-orange-50 text-primary border-orange-200"
-                : "bg-white text-text-primary"
+            ? "bg-primary/10 text-primary border-primary/30 font-bold ring-1 ring-primary"
+            : isToday
+              ? "bg-orange-50 text-primary border-orange-200"
+              : "bg-white text-text-primary"
             }`}
         >
           <div className="flex justify-between items-center w-full">
@@ -1002,6 +1001,19 @@ export default function Admin() {
       showNotification("Failed to add event.", "error");
     }
   };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!confirm("Delete this event? This cannot be undone.")) return;
+    try {
+      await db.deleteEvent(eventId);
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+      showNotification("Event deleted successfully.");
+    } catch (err) {
+      console.error(err);
+      showNotification("Failed to delete event.", "error");
+    }
+  };
+
 
   // --- CRUD: Donations Receipts ---
   const handleApproveDonation = async (id) => {
@@ -1258,9 +1270,9 @@ export default function Admin() {
       try { initialObj = JSON.parse(initialSettingsRef.current || "{}"); } catch { /* ignore */ }
 
       // 1. Storage Upload Phase: Upload each physical image ONCE to Supabase Storage & sync aliases
-      const { processedObj, uploadCount, uploadedFields, totalUploadTimeMs } = 
+      const { processedObj, uploadCount, uploadedFields, totalUploadTimeMs } =
         await storageService.processImageUploadsWithAliases(templeSettings, initialObj);
-      
+
       // Update form state with returned Storage HTTPS URLs (0 Base64 strings survive)
       setTempleSettings(processedObj);
 
@@ -1375,11 +1387,10 @@ export default function Admin() {
       {/* Floating Top Notification Toast */}
       {floatingToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
-          <div className={`px-5 py-3 rounded-full shadow-2xl border text-xs font-semibold flex items-center gap-3 select-none backdrop-blur-md ${
-            floatingToast.type === "success"
+          <div className={`px-5 py-3 rounded-full shadow-2xl border text-xs font-semibold flex items-center gap-3 select-none backdrop-blur-md ${floatingToast.type === "success"
               ? "bg-emerald-900/95 text-emerald-100 border-emerald-500/30 shadow-emerald-950/20"
               : "bg-red-900/95 text-red-100 border-red-500/30 shadow-red-950/20"
-          }`}>
+            }`}>
             <span className="text-base">{floatingToast.type === "success" ? "✓" : "⚠️"}</span>
             <div className="flex flex-col">
               <span className="font-bold leading-none">{floatingToast.type === "success" ? "Changes Saved Successfully" : "Save Error"}</span>
@@ -1514,8 +1525,8 @@ export default function Admin() {
       {/* Message Notifications Banner */}
       {statusMessage && (
         <div className={`w-full p-4 mb-6 rounded-custom-md border text-xs font-semibold flex items-center justify-between shadow-premium select-none ${statusType === "success"
-            ? "bg-green-50 text-green-700 border-green-500/10"
-            : "bg-red-50 text-red-600 border-red-500/10"
+          ? "bg-green-50 text-green-700 border-green-500/10"
+          : "bg-red-50 text-red-600 border-red-500/10"
           }`}>
           <span>{statusMessage}</span>
           <button onClick={() => setStatusMessage("")} className="text-xs uppercase font-bold shrink-0">Dismiss</button>
@@ -1548,8 +1559,8 @@ export default function Admin() {
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setStatusMessage(""); }}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-custom-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer lg:w-full text-left shrink-0 ${isTabActive
-                    ? "bg-primary text-white shadow-premium"
-                    : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
+                  ? "bg-primary text-white shadow-premium"
+                  : "bg-white border border-border-custom text-text-secondary hover:text-text-primary hover:border-primary/20"
                   }`}
               >
                 <Icon size={14} />
@@ -1733,8 +1744,8 @@ export default function Admin() {
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold text-xs text-text-primary">{log.devoteeName}</span>
                                   <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
-                                      : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                    : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
                                     }`}>{log.status}</span>
                                 </div>
                                 <span className="text-[9px] text-text-secondary leading-normal mt-0.5">
@@ -1931,8 +1942,8 @@ export default function Admin() {
                                   <span className="text-[10px] text-text-secondary ml-3">{log.points} pts</span>
                                 </div>
                                 <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200"
-                                    : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  : log.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
                                   }`}>{log.status}</span>
                               </div>
                             ))
@@ -2089,8 +2100,8 @@ export default function Admin() {
                                                 {member.fullName}
                                               </span>
                                               <span className={`text-[7px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${member.memberNumber === 1
-                                                  ? "bg-primary/10 text-primary border border-primary/20"
-                                                  : "bg-neutral-100 text-text-secondary border border-neutral-200"
+                                                ? "bg-primary/10 text-primary border border-primary/20"
+                                                : "bg-neutral-100 text-text-secondary border border-neutral-200"
                                                 }`}>
                                                 {member.memberNumber === 1 ? "Primary" : "Secondary"}
                                               </span>
@@ -2533,10 +2544,10 @@ export default function Admin() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="font-semibold text-text-primary">{ann.title}</span>
                                       <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ann.priority === "high"
-                                          ? "bg-red-50 text-red-600 border-red-500/10"
-                                          : ann.priority === "low"
-                                            ? "bg-blue-50 text-blue-600 border-blue-500/10"
-                                            : "bg-orange-50 text-primary border-primary/10"
+                                        ? "bg-red-50 text-red-600 border-red-500/10"
+                                        : ann.priority === "low"
+                                          ? "bg-blue-50 text-blue-600 border-blue-500/10"
+                                          : "bg-orange-50 text-primary border-primary/10"
                                         }`}>
                                         {ann.priority}
                                       </span>
@@ -2636,10 +2647,10 @@ export default function Admin() {
                           <div className="flex flex-col gap-3">
                             <div className="flex items-center justify-between">
                               <span className={`text-[9px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${annPreview.priority === "high"
-                                  ? "bg-red-50 text-red-700 border-red-500/10"
-                                  : annPreview.priority === "low"
-                                    ? "bg-blue-50 text-blue-700 border-blue-500/10"
-                                    : "bg-orange-50 text-primary border-primary/10"
+                                ? "bg-red-50 text-red-700 border-red-500/10"
+                                : annPreview.priority === "low"
+                                  ? "bg-blue-50 text-blue-700 border-blue-500/10"
+                                  : "bg-orange-50 text-primary border-primary/10"
                                 }`}>
                                 {annPreview.priority === "high" ? "PROGRAM" : annPreview.priority === "low" ? "NOTICE" : "UPDATE"}
                               </span>
@@ -3147,7 +3158,7 @@ export default function Admin() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {events.map(e => (
-                      <div key={e.id} className="p-4 rounded-custom-md border border-border-custom bg-white flex flex-col justify-between hover:shadow-premium transition-shadow">
+                      <div key={e.id} className="p-4 rounded-custom-md border border-border-custom bg-white flex flex-col justify-between hover:shadow-premium transition-shadow gap-3">
                         <div>
                           <h4 className="font-semibold text-text-primary text-xs">{e.title}</h4>
                           <p className="text-[10px] text-text-secondary mt-1 flex items-center gap-1.5">
@@ -3157,6 +3168,13 @@ export default function Admin() {
                           </p>
                           <p className="text-[10px] text-text-secondary mt-2 leading-relaxed">{e.description}</p>
                         </div>
+                        <button
+                          onClick={() => handleDeleteEvent(e.id)}
+                          className="mt-auto self-end px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -3213,8 +3231,8 @@ export default function Admin() {
                                   <td className="p-3 font-mono text-text-secondary text-[10px]">{d.txnId}</td>
                                   <td className="p-3 text-center">
                                     <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block ${d.verified
-                                        ? "bg-green-50 text-green-700 border-green-500/10"
-                                        : "bg-orange-50 text-orange-700 border-orange-500/10"
+                                      ? "bg-green-50 text-green-700 border-green-500/10"
+                                      : "bg-orange-50 text-orange-700 border-orange-500/10"
                                       }`}>
                                       {d.verified ? "Verified" : "Pending"}
                                     </span>
@@ -3381,7 +3399,7 @@ export default function Admin() {
                   </div>
 
                   <form onSubmit={handleSaveSettings} className="flex flex-col gap-6">
-                    
+
                     {/* CARD A: TEMPLE IDENTITY */}
                     <div className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-5">
                       <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
@@ -3771,11 +3789,10 @@ export default function Admin() {
                     <button
                       type="submit"
                       disabled={!isDirty || isSavingCms}
-                      className={`px-6 py-3 rounded-xl text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 w-full sm:w-fit ml-auto ${
-                        !isDirty || isSavingCms
+                      className={`px-6 py-3 rounded-xl text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 w-full sm:w-fit ml-auto ${!isDirty || isSavingCms
                           ? "bg-neutral-300 cursor-not-allowed opacity-70"
                           : "bg-[#EA580C] hover:bg-[#EA580C]/90 cursor-pointer shadow-md"
-                      }`}
+                        }`}
                     >
                       {isSavingCms ? (
                         <>

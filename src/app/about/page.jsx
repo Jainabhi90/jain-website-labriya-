@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useCMS } from "@/context/CMSContext";
-import { 
-  History, 
-  BookOpen, 
-  Award, 
-  Users, 
-  Compass, 
+import {
+  History,
+  BookOpen,
+  Award,
+  Users,
+  Compass,
   Sparkles,
   Clock,
   MapPin,
@@ -69,18 +69,18 @@ export default function About() {
 
   return (
     <div className="w-full min-h-screen bg-[#FCFBF7] pt-20 pb-16 flex flex-col items-center">
-      
+
       {/* 1. ABOUT HERO SECTION */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 mb-12 text-center flex flex-col items-center gap-4 relative overflow-hidden">
         {/* Sanskrit Verse Accent */}
         <span className="text-[10px] sm:text-xs font-bold text-[#EA580C] tracking-widest uppercase bg-[#FFF7ED] px-4 py-1.5 rounded-full border border-[#C28A3E]/20 select-none">
           {lang === "en" ? "🌸 Mangalam Bhagwan Viro..." : "🌸 मंगलम् भगवान वीरो, मंगलम् गौतम प्रभु..."}
         </span>
-        
+
         <h1 className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl mt-2 leading-tight">
           {cms.templeName || "Shree Labriya Jain Mandir"}
         </h1>
-        
+
         <p className="text-xs sm:text-sm md:text-base text-text-secondary max-w-2xl leading-relaxed">
           {cms.aboutTempleSummary || "Step into a century-old heritage of spiritual peace, deep devotion, and continuous community service. Guided by revered Gurus, Shree Labriya Mandir stands as a monument of pure dharma."}
         </p>
@@ -95,7 +95,7 @@ export default function About() {
 
       {/* 2. MAIN NARRATIVE PANELS */}
       <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 flex flex-col gap-12 sm:gap-16">
-        
+
         {/* A. TEMPLE STORY TIMELINE */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center text-left">
           <div className="md:col-span-7 flex flex-col gap-4">
@@ -105,7 +105,7 @@ export default function About() {
                 {lang === "en" ? "Historical Story & Architecture" : "ऐतिहासिक गाथा एवं शिल्प"}
               </h2>
             </div>
-            
+
             <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
               {cms.templeHistory || "Established over a century ago in the quiet, scenic landscapes of Labriya, Madhya Pradesh, Shree Labriya Jain Shwetambar Mandir is a sanctified monument of peace. Dedicated to the Tirthankaras, the temple features intricate marble carvings, domes, and a peaceful environment that naturally invites quietude."}
             </p>
@@ -117,9 +117,9 @@ export default function About() {
           </div>
 
           <div className="md:col-span-5 aspect-[4/3] rounded-custom-lg overflow-hidden border border-[#C28A3E]/20 shadow-premium relative bg-white group select-none">
-            <img 
-              src={cms.aboutHeroBanner || cms.heroBanner || "https://images.unsplash.com/photo-1609137144814-0e31189c445a?q=80&w=800&auto=format&fit=crop"} 
-              alt="Temple Banner" 
+            <img
+              src={cms.aboutHeroBanner || cms.heroBanner || "https://images.unsplash.com/photo-1609137144814-0e31189c445a?q=80&w=800&auto=format&fit=crop"}
+              alt="Temple Banner"
               className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
               loading="lazy"
             />
@@ -167,7 +167,7 @@ export default function About() {
               {lang === "en" ? "What is Chaturmas?" : "चातुर्मास की महिमा"}
             </h3>
           </div>
-          
+
           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
             {cms.chaturmasDescription || (lang === "en"
               ? "Chaturmas (four months) is the holy monsoon retreat when Jain ascetics (Sadhu-Sadhvi) temporarily suspend barefoot vihar to avoid causing harm to tiny micro-organisms that multiply during rains. This period is highly auspicious for devotees to deepen spiritual studies, observe vows, practice meditation, and absorb daily discourses (Pravachan)."
@@ -191,11 +191,11 @@ export default function About() {
             <span className="text-[9.5px] uppercase font-bold text-[#EA580C] tracking-wider leading-none">
               {lang === "en" ? "Lineage Guidance" : "गुरुदेव संदेश"}
             </span>
-            
+
             <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
               {cms.guruBio || guruLineage.bio}
             </p>
-            
+
             <div className="flex flex-col gap-2 pt-3.5 border-t border-[#EA580C]/10">
               <span className="text-[10px] text-text-secondary uppercase tracking-widest font-bold flex items-center gap-1.5">
                 <Sparkles size={12} className="text-[#EA580C]" />
@@ -267,7 +267,7 @@ export default function About() {
               {lang === "en" ? "Trust Committee Directory" : "ट्रस्ट प्रबन्धन समिति"}
             </h3>
           </div>
-          
+
           <p className="text-xs sm:text-sm text-text-secondary max-w-2xl leading-relaxed">
             {cms.trustInformation || "The Shree Labriya Jain Trust Committee functions purely as a non-profit volunteer body. Members handle the operational administration of the temple, dharamshala accommodation, bhandara logistics, and chaturmas event management."}
           </p>

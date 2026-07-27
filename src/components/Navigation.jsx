@@ -4,12 +4,10 @@ import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { 
-  Home, 
-  Calendar, 
-  Heart, 
-  Info, 
-  User, 
+import {
+  Home,
+  Calendar,
+  User,
   Sparkles,
   LayoutDashboard,
   LogOut,
@@ -39,7 +37,7 @@ export default function Navigation() {
   // Sync initial language and handle changes
   useEffect(() => {
     document.documentElement.classList.add("js-loaded");
-    
+
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("lang") || "en");
     }
@@ -108,7 +106,7 @@ export default function Navigation() {
           'a[href], button:not([disabled]), input, select, textarea, [tabindex="0"]'
         );
         if (focusableElements.length === 0) return;
-        
+
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -165,32 +163,30 @@ export default function Navigation() {
     { label: t.home, href: "/", icon: Home },
     { label: t.events, href: "/events", icon: Sparkles },
     { label: t.panchang, href: "/panchang", icon: Calendar },
-    { label: t.donate, href: "/donate", icon: Heart },
-    { label: t.about, href: "/about", icon: Info },
   ];
 
   // Mobile Group Layout links
-  const exploreLinks = navLinks.slice(0, 3); // Home, Events, Panchang
-  const templeLinks = navLinks.slice(3); // Donate, About
+  const exploreLinks = navLinks; // Home, Events, Panchang
+  const templeLinks = []; // Donate & About removed (re-enable when needed)
 
   // Framer Motion Drawer Animation Settings
   const drawerVariants = {
-    closed: { 
+    closed: {
       x: "100%",
       transition: { duration: 0.3, ease: "easeInOut" }
     },
-    open: { 
+    open: {
       x: 0,
       transition: { duration: 0.3, ease: "easeInOut" }
     }
   };
 
   const overlayVariants = {
-    closed: { 
+    closed: {
       opacity: 0,
       transition: { duration: 0.25, ease: "easeInOut" }
     },
-    open: { 
+    open: {
       opacity: 1,
       transition: { duration: 0.25, ease: "easeInOut" }
     }
@@ -199,21 +195,19 @@ export default function Navigation() {
   return (
     <>
       {/* HEADER COMPONENT (STICKY AND ANIMATED) */}
-      <header 
-        className={`sticky top-0 left-0 right-0 z-50 w-full transition-all duration-250 ease-out border-b ${
-          scrollState.visible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"
-        } ${
-          scrollState.isAtTop
+      <header
+        className={`sticky top-0 left-0 right-0 z-50 w-full transition-all duration-250 ease-out border-b ${scrollState.visible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"
+          } ${scrollState.isAtTop
             ? "bg-[#FCFBF7]/40 backdrop-blur-sm border-transparent"
             : "bg-[#FCFBF7]/95 backdrop-blur-md border-[#EA580C]/10 shadow-[0_4px_20px_-2px_rgba(234,88,12,0.03)]"
-        }`}
+          }`}
         style={{
           paddingTop: "calc(0.5rem + env(safe-area-inset-top))",
           paddingBottom: "0.5rem"
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 sm:h-16 md:h-18">
-          
+
           {/* Logo & Brand Info */}
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group select-none">
             <div className="w-[38px] h-[38px] sm:w-[44px] sm:h-[44px] md:w-[52px] md:h-[52px] rounded-full bg-[#FFF7ED] border border-[#EA580C]/20 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm transition-transform duration-300 group-hover:scale-105">
@@ -241,11 +235,10 @@ export default function Navigation() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative px-4 py-2 text-sm transition-colors duration-150 rounded-custom-md font-medium select-none ${
-                    isActive 
-                      ? "text-[#EA580C] font-semibold" 
+                  className={`relative px-4 py-2 text-sm transition-colors duration-150 rounded-custom-md font-medium select-none ${isActive
+                      ? "text-[#EA580C] font-semibold"
                       : "text-[#4B5563] hover:text-[#1F2937]"
-                  }`}
+                    }`}
                 >
                   <span>{link.label}</span>
                   {isActive && (
@@ -282,7 +275,7 @@ export default function Navigation() {
                     <span>{profile?.role === "admin" ? t.admin : t.portal}</span>
                   </button>
                 </Link>
-                
+
                 <button
                   onClick={handleLogout}
                   className="w-9 h-9 rounded-custom-md bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition-colors duration-150 cursor-pointer border border-red-100"
@@ -383,7 +376,7 @@ export default function Navigation() {
 
               {/* Grouped Links Body */}
               <div className="flex-1 py-6 overflow-y-auto space-y-6">
-                
+
                 {/* EXPLORE GROUP */}
                 <div className="space-y-2">
                   <h3 className="text-[10px] uppercase font-bold tracking-widest text-[#C28A3E]">
@@ -398,11 +391,10 @@ export default function Navigation() {
                           key={link.href}
                           href={link.href}
                           onClick={() => setDrawerOpen(false)}
-                          className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${
-                            isActive 
-                              ? "bg-[#FFF7ED] text-[#EA580C] border-l-2 border-[#EA580C]" 
+                          className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${isActive
+                              ? "bg-[#FFF7ED] text-[#EA580C] border-l-2 border-[#EA580C]"
                               : "text-[#4B5563] hover:bg-[#FFF7ED]/30 hover:text-[#1F2937] border-l-2 border-transparent"
-                          }`}
+                            }`}
                           style={{ minHeight: "48px" }}
                         >
                           <Icon size={16} className={isActive ? "text-[#EA580C]" : "text-[#C28A3E]"} />
@@ -412,35 +404,7 @@ export default function Navigation() {
                     })}
                   </div>
                 </div>
-
-                {/* TEMPLE GROUP */}
-                <div className="space-y-2">
-                  <h3 className="text-[10px] uppercase font-bold tracking-widest text-[#C28A3E]">
-                    {lang === "en" ? "Temple" : "मंदिर"}
-                  </h3>
-                  <div className="grid gap-1">
-                    {templeLinks.map((link) => {
-                      const isActive = pathname === link.href;
-                      const Icon = link.icon;
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setDrawerOpen(false)}
-                          className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${
-                            isActive 
-                              ? "bg-[#FFF7ED] text-[#EA580C] border-l-2 border-[#EA580C]" 
-                              : "text-[#4B5563] hover:bg-[#FFF7ED]/30 hover:text-[#1F2937] border-l-2 border-transparent"
-                          }`}
-                          style={{ minHeight: "48px" }}
-                        >
-                          <Icon size={16} className={isActive ? "text-[#EA580C]" : "text-[#C28A3E]"} />
-                          <span>{link.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* TEMPLE GROUP (Donate & About) — hidden, re-enable when needed */}
 
                 {/* ACCOUNT GROUP */}
                 <div className="space-y-2 pt-2 border-t border-[#EA580C]/10">
@@ -453,17 +417,16 @@ export default function Navigation() {
                         <Link
                           href={profile?.role === "admin" ? "/admin" : "/dashboard"}
                           onClick={() => setDrawerOpen(false)}
-                          className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${
-                            pathname === "/admin" || pathname === "/dashboard"
+                          className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${pathname === "/admin" || pathname === "/dashboard"
                               ? "bg-[#FFF7ED] text-[#EA580C] border-l-2 border-[#EA580C]"
                               : "text-[#4B5563] hover:bg-[#FFF7ED]/30 hover:text-[#1F2937] border-l-2 border-transparent"
-                          }`}
+                            }`}
                           style={{ minHeight: "48px" }}
                         >
                           <LayoutDashboard size={16} className="text-[#C28A3E]" />
                           <span>{profile?.role === "admin" ? t.admin : t.portal}</span>
                         </Link>
-                        
+
                         <button
                           onClick={handleLogout}
                           className="flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium text-red-600 hover:bg-red-50/50 transition-colors duration-150 border-l-2 border-transparent w-full text-left cursor-pointer"
@@ -477,11 +440,10 @@ export default function Navigation() {
                       <Link
                         href="/login"
                         onClick={() => setDrawerOpen(false)}
-                        className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${
-                          pathname === "/login"
+                        className={`flex items-center gap-3 py-3 px-3 rounded-custom-md text-sm font-medium transition-all duration-150 ${pathname === "/login"
                             ? "bg-[#FFF7ED] text-[#EA580C] border-l-2 border-[#EA580C]"
                             : "text-[#4B5563] hover:bg-[#FFF7ED]/30 hover:text-[#1F2937] border-l-2 border-transparent"
-                        }`}
+                          }`}
                         style={{ minHeight: "48px" }}
                       >
                         <User size={16} className="text-[#C28A3E]" />
@@ -494,7 +456,7 @@ export default function Navigation() {
               </div>
 
               {/* Drawer Footer Quote */}
-              <div 
+              <div
                 className="pt-4 border-t border-[#EA580C]/10 text-center select-none"
                 style={{
                   paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))"
