@@ -111,59 +111,59 @@ export default function Home() {
     <div className="w-full flex flex-col items-center overflow-x-hidden">
 
       {/* 1. HERO SECTION */}
-      <section className="relative w-full min-h-[95vh] flex flex-col items-center justify-center px-4 sm:px-6 py-12 md:py-16 lg:py-20 bg-gradient-to-b from-[#FCFBF7] via-[#FFFDF9] to-white border-b border-[#EA580C]/5 overflow-hidden">
+      <section className="relative w-full min-h-[90vh] lg:min-h-[95vh] flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-[#FCFBF7] via-[#FFFDF9] to-white border-b border-[#EA580C]/10 overflow-hidden">
         {/* Background Saffron/Yellow Circle Orbs representing purity */}
         <motion.div
           animate={{
-            scale: [1, 1.05, 1],
+            scale: [1, 1.06, 1],
             x: [0, 15, 0],
             y: [0, -15, 0]
           }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[600px] h-[600px] rounded-full bg-[#FFF7ED] blur-3xl -top-48 -left-48 pointer-events-none -z-10"
+          className="absolute w-[600px] h-[600px] rounded-full bg-[#FFF7ED] blur-3xl -top-48 -left-48 pointer-events-none -z-10 opacity-70"
         />
         <motion.div
           animate={{
-            scale: [1.05, 1, 1.05],
+            scale: [1.06, 1, 1.06],
             x: [0, -20, 0],
             y: [0, 15, 0]
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[500px] h-[500px] rounded-full bg-orange-100/5 blur-3xl -bottom-36 -right-36 pointer-events-none -z-10"
+          className="absolute w-[500px] h-[500px] rounded-full bg-amber-100/40 blur-3xl -bottom-36 -right-36 pointer-events-none -z-10 opacity-60"
         />
 
         {/* Traditional Jain mandala-inspired layout lines */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-[#EA580C]/3 animate-pulse-soft flex items-center justify-center -z-10 pointer-events-none">
-          <div className="w-[400px] h-[400px] rounded-full border border-[#C28A3E]/3 flex items-center justify-center">
-            <div className="w-[300px] h-[300px] rounded-full border border-[#EA580C]/3 flex items-center justify-center">
-              <div className="w-[200px] h-[200px] rounded-full border border-[#C28A3E]/2" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] rounded-full border border-[#EA580C]/5 animate-pulse-soft flex items-center justify-center -z-10 pointer-events-none">
+          <div className="w-[440px] h-[440px] rounded-full border border-[#C28A3E]/5 flex items-center justify-center">
+            <div className="w-[320px] h-[320px] rounded-full border border-[#EA580C]/5 flex items-center justify-center">
+              <div className="w-[220px] h-[220px] rounded-full border border-[#C28A3E]/4" />
             </div>
           </div>
         </div>
 
         {/* Modern Split Grid Layout */}
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center z-10">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12 items-center z-10">
 
           {/* LEFT SIDE: Spiritual content, CTAs, details */}
           <motion.div
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="col-span-1 lg:col-span-7 flex flex-col items-start text-left gap-5"
+            className="col-span-1 lg:col-span-7 flex flex-col items-start text-left gap-4 sm:gap-5"
           >
             {/* Top Badge */}
             <motion.div
               variants={itemVariants}
-              className="px-4 py-1.5 rounded-full bg-[#FFF7ED] border border-[#C28A3E]/20 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#C28A3E] flex items-center gap-2"
+              className="px-3.5 py-1.5 rounded-full bg-[#FFF7ED] border border-[#C28A3E]/30 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#C28A3E] flex items-center gap-2 shadow-sm"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-[#EA580C] animate-ping" />
               <span>{lang === "en" ? "🌸 Jai Jinendra" : "🌸 जय जिनेन्द्र"}</span>
             </motion.div>
 
             {/* Temple Name */}
             <motion.h2
               variants={itemVariants}
-              className="font-display font-semibold text-text-secondary text-xs sm:text-sm tracking-widest uppercase leading-none"
+              className="font-display font-semibold text-[#8C6228] text-xs sm:text-sm tracking-[0.2em] uppercase leading-none"
             >
               {cms.templeName || t.shreeLabriyaMandir}
             </motion.h2>
@@ -171,7 +171,7 @@ export default function Home() {
             {/* Hero Main Title */}
             <motion.h1
               variants={itemVariants}
-              className="font-display font-bold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-[54px] tracking-tight leading-[1.1] max-w-2xl"
+              className="font-display font-extrabold text-text-primary text-3xl sm:text-4xl md:text-5xl lg:text-[52px] tracking-tight leading-[1.12] max-w-2xl text-balance"
             >
               {lang === "hi" 
                 ? (cms.heroTitle_hi || "पावन चातुर्मास महोत्सव २०२६")
@@ -181,7 +181,7 @@ export default function Home() {
             {/* Hero Subtitle */}
             <motion.p
               variants={itemVariants}
-              className="text-[#EA580C] text-sm sm:text-base font-semibold tracking-wide uppercase leading-none"
+              className="text-[#EA580C] text-xs sm:text-sm md:text-base font-bold tracking-wider uppercase leading-snug"
             >
               {lang === "hi" 
                 ? (cms.heroSubtitle_hi || "आत्म-शुद्धि, संयम एवं धर्म-प्रवचन का पावन काल।")
@@ -191,29 +191,29 @@ export default function Home() {
             {/* Description */}
             <motion.p
               variants={itemVariants}
-              className="text-[#4B5563] text-xs sm:text-sm md:text-base max-w-xl leading-relaxed"
+              className="text-[#4B5563] text-xs sm:text-sm md:text-base max-w-xl leading-relaxed font-normal"
             >
               {lang === "hi" 
                 ? (cms.heroDescription_hi || t.welcomeDescription)
                 : (cms.heroDescription || t.welcomeDescription)}
             </motion.p>
 
-            {/* CTA Buttons - Side by Side on Desktop, Stacked on Mobile */}
+            {/* CTA Buttons */}
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2"
+              className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto pt-1"
             >
               {/* Primary button */}
               <button
                 onClick={() => scrollToSection("schedule")}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-custom-md bg-[#EA580C] text-white font-semibold text-sm shadow-sm hover:bg-[#EA580C]/90 active:bg-[#EA580C]/95 transition-all cursor-pointer text-center select-none"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-custom-md bg-[#EA580C] hover:bg-[#D94E03] active:scale-[0.99] text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-center select-none"
               >
                 {t.viewTodaySchedule}
               </button>
 
               {/* Secondary button */}
               <Link href="/panchang" className="w-full sm:w-auto">
-                <button className="w-full px-8 py-3.5 rounded-custom-md border border-[#C28A3E]/20 bg-white text-[#C28A3E] hover:bg-[#FFF7ED]/30 hover:border-[#C28A3E]/40 active:bg-[#FFF7ED]/50 transition-all font-semibold text-sm shadow-sm cursor-pointer text-center select-none">
+                <button className="w-full sm:w-auto px-7 py-3.5 rounded-custom-md border border-[#C28A3E]/30 bg-white text-[#C28A3E] hover:bg-[#FFF7ED] hover:border-[#C28A3E]/50 active:scale-[0.99] font-bold text-xs sm:text-sm uppercase tracking-wider shadow-sm transition-all duration-200 cursor-pointer text-center select-none">
                   {lang === "en" ? "View Panchang" : "पंचांग देखें"}
                 </button>
               </Link>
@@ -222,17 +222,17 @@ export default function Home() {
             {/* Quick Information Cards */}
             <motion.div
               variants={itemVariants}
-              className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 w-full mt-4"
+              className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 w-full pt-2"
             >
               {/* Card 1: Location */}
               {cms.templeAddress && (
-                <div className="flex items-center gap-2 p-2.5 rounded-custom-sm bg-white border border-[#C28A3E]/10 shadow-[0_4px_12px_rgba(0,0,0,0.01)] text-left shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-custom-sm bg-white/90 backdrop-blur-sm border border-[#C28A3E]/15 shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-left shrink-0">
                   <span className="text-base">📍</span>
                   <div className="flex flex-col">
                     <span className="text-[9px] text-[#C28A3E] uppercase font-bold tracking-wider leading-none">
                       {lang === "en" ? "Location" : "स्थान"}
                     </span>
-                    <span className="text-[11px] text-text-primary font-medium mt-0.5 max-w-[110px] truncate">
+                    <span className="text-[11px] text-text-primary font-semibold mt-0.5 max-w-[120px] truncate">
                       {cms.templeAddress.split(",")[1]?.trim() || cms.templeAddress.split(",")[0]?.trim() || "Labriya"}
                     </span>
                   </div>
@@ -241,13 +241,13 @@ export default function Home() {
 
               {/* Card 2: Year */}
               {cms.chaturmasYear && (
-                <div className="flex items-center gap-2 p-2.5 rounded-custom-sm bg-white border border-[#C28A3E]/10 shadow-[0_4px_12px_rgba(0,0,0,0.01)] text-left shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-custom-sm bg-white/90 backdrop-blur-sm border border-[#C28A3E]/15 shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-left shrink-0">
                   <span className="text-base">🗓</span>
                   <div className="flex flex-col">
                     <span className="text-[9px] text-[#C28A3E] uppercase font-bold tracking-wider leading-none">
                       {lang === "en" ? "Year" : "वर्ष"}
                     </span>
-                    <span className="text-[11px] text-text-primary font-medium mt-0.5">
+                    <span className="text-[11px] text-text-primary font-semibold mt-0.5">
                       {cms.chaturmasYear}
                     </span>
                   </div>
@@ -256,13 +256,13 @@ export default function Home() {
 
               {/* Card 3: Daily Timing */}
               {(cms.aartiTiming || cms.dailyTimings) && (
-                <div className="flex items-center gap-2 p-2.5 rounded-custom-sm bg-white border border-[#C28A3E]/10 shadow-[0_4px_12px_rgba(0,0,0,0.01)] text-left shrink-0 col-span-2 sm:col-span-1">
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-custom-sm bg-white/90 backdrop-blur-sm border border-[#C28A3E]/15 shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-left shrink-0 col-span-2 sm:col-span-1">
                   <span className="text-base">🙏</span>
                   <div className="flex flex-col">
                     <span className="text-[9px] text-[#C28A3E] uppercase font-bold tracking-wider leading-none">
                       {lang === "en" ? "Worship" : "दर्शन/आरती"}
                     </span>
-                    <span className="text-[11px] text-text-primary font-medium mt-0.5 max-w-[130px] truncate">
+                    <span className="text-[11px] text-text-primary font-semibold mt-0.5 max-w-[130px] truncate">
                       {cms.aartiTiming || cms.dailyTimings}
                     </span>
                   </div>
@@ -273,7 +273,7 @@ export default function Home() {
             {/* Countdown timer */}
             <motion.div
               variants={itemVariants}
-              className="w-full mt-4"
+              className="w-full pt-1"
             >
               <Countdown />
             </motion.div>
@@ -285,38 +285,39 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
-            className="col-span-1 lg:col-span-5 flex items-center justify-center relative w-full mt-6 lg:mt-0"
+            className="col-span-1 lg:col-span-5 flex items-center justify-center relative w-full mt-8 lg:mt-0"
           >
-            {/* Saffron soft glow background behind image */}
-            <div className="absolute inset-0 bg-[#FFF7ED] rounded-2xl filter blur-xl scale-95 opacity-50 -z-10 pointer-events-none" />
+            {/* Soft glow behind hero card */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#EA580C]/10 via-[#FFF7ED] to-[#C28A3E]/15 rounded-3xl filter blur-2xl scale-95 opacity-70 -z-10 pointer-events-none" />
 
             <motion.div
-              animate={{ y: [0, -8, 0] }}
+              animate={{ y: [0, -6, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-[480px] aspect-[16/11.5] sm:aspect-[16/11] lg:aspect-[16/12] rounded-custom-lg border border-[#C28A3E]/20 shadow-premium overflow-hidden bg-white select-none group"
+              className="relative w-full max-w-[490px] aspect-[16/11.5] sm:aspect-[16/11] lg:aspect-[16/12] rounded-2xl border border-[#C28A3E]/30 shadow-[0_20px_50px_rgba(234,88,12,0.12)] overflow-hidden bg-white select-none group"
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent z-10" />
+              {/* Subtle top & bottom lighting gradients */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10 z-10 pointer-events-none" />
               <img
                 src={cms.heroBanner || "/jain_hero_spiritual.png"}
                 alt={cms.templeName || "Shree Labriya Jain Shwetambar Mandir Chaturmas 2026"}
                 loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
               />
 
               {/* Floating Overlay Card A (Chaturmas Year badge) */}
               {cms.chaturmasYear && (
-                <div className="bg-white/95 backdrop-blur-sm border border-[#C28A3E]/10 px-3 py-1.5 rounded-custom-sm flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] absolute top-3 right-3 z-20 select-none">
-                  <span className="text-[10px] text-[#C28A3E]">🕊</span>
-                  <span className="text-[10px] font-semibold text-text-primary tracking-wider uppercase">
+                <div className="bg-white/90 backdrop-blur-md border border-[#C28A3E]/20 px-3.5 py-1.5 rounded-custom-sm flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.08)] absolute top-3.5 right-3.5 z-20 select-none">
+                  <span className="text-[11px] text-[#C28A3E]">🕊</span>
+                  <span className="text-[10px] font-bold text-text-primary tracking-wider uppercase">
                     {lang === "en" ? "Chaturmas" : "चातुर्मास"} {cms.chaturmasYear}
                   </span>
                 </div>
               )}
 
               {/* Floating Overlay Card B (Location badge) */}
-              <div className="bg-white/95 backdrop-blur-sm border border-[#C28A3E]/10 px-3 py-1.5 rounded-custom-sm flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] absolute bottom-3 left-3 z-20 select-none">
-                <span className="text-[10px] text-[#C28A3E]">📍</span>
-                <span className="text-[10px] font-semibold text-[#1F2937] tracking-wider">
+              <div className="bg-white/90 backdrop-blur-md border border-[#C28A3E]/20 px-3.5 py-1.5 rounded-custom-sm flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.08)] absolute bottom-3.5 left-3.5 z-20 select-none">
+                <span className="text-[11px] text-[#C28A3E]">📍</span>
+                <span className="text-[10px] font-bold text-[#1F2937] tracking-wider">
                   {cms.templeAddress ? cms.templeAddress.split(",").slice(0, 2).join(",").trim() : (lang === "en" ? "Labriya Mandir, Dhar" : "लाबड़िया मंदिर, धार")}
                 </span>
               </div>
